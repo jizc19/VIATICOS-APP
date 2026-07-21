@@ -1,0 +1,4016 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Viáticos — Control de Proyectos (vista previa autocontenida)</title>
+<meta name="theme-color" content="#0b0f16" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Viáticos" />
+<meta name="mobile-web-app-capable" content="yes" />
+<style>
+/* ============================================================
+   TOKENS — Sistema de Viáticos — Tema oscuro
+   Dirección: "Libro contable nocturno" — tinta profunda, papel
+   oscuro y un dorado tipo sello de cera para la acción principal.
+   Los estados (comprobante) usan verde/ámbar/rojo semánticos,
+   no un único acento genérico repetido en todo.
+   ============================================================ */
+:root {
+  /* Fondo y superficies — azul-tinta, no negro plano */
+  --bg-950: #0b0f16;      /* fondo de la app */
+  --bg-900: #10151e;      /* fondo de paneles grandes */
+  --surface-800: #161d29; /* tarjetas */
+  --surface-700: #1c2431; /* tarjetas elevadas / hover */
+  --surface-600: #232c3b; /* inputs, superficies interactivas */
+  --line: #2a3444;        /* bordes y reglas finas */
+  --line-strong: #38455a;
+
+  /* Texto */
+  --text-100: #eef1f2;
+  --text-300: #b6c0cc;
+  --text-500: #7b8798;
+
+  /* Acento principal — dorado sello de cera (acción primaria) */
+  --gold-400: #e8c07a;
+  --gold-500: #d4a24f;
+  --gold-600: #b8863a;
+  --gold-bg: #2b2416;
+
+  /* Estados del comprobante — semánticos */
+  --state-ok: #4fb08a;
+  --state-ok-bg: #16281f;
+  --state-pending: #dda23f;
+  --state-pending-bg: #2c2013;
+  --state-missing: #e0685f;
+  --state-missing-bg: #2c1917;
+
+  --danger: #e0685f;
+  --danger-bg: #2c1917;
+  --danger-strong: #c94c43;
+
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-body: "Inter", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-base: 0.9375rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.875rem;
+  --fs-2xl: 2.5rem;
+
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.03) inset, 0 6px 20px rgba(0,0,0,0.35);
+  --shadow-pop: 0 20px 50px rgba(0,0,0,0.5);
+
+  --sidebar-w: 248px;
+  --topbar-h: 64px;
+  --bottomnav-h: 64px;
+
+  /* Alias retrocompatibles con nombres usados en los módulos existentes */
+  --paper-0: var(--bg-950);
+  --paper-50: var(--surface-800);
+  --paper-100: var(--surface-700);
+  --ink-900: var(--text-100);
+  --ink-700: var(--text-100);
+  --ink-500: var(--text-300);
+  --ledger-700: var(--gold-500);
+  --ledger-500: var(--gold-400);
+  --ledger-100: var(--gold-bg);
+  --stamp-ok: var(--state-ok); --stamp-ok-bg: var(--state-ok-bg);
+  --stamp-pending: var(--state-pending); --stamp-pending-bg: var(--state-pending-bg);
+  --stamp-missing: var(--state-missing); --stamp-missing-bg: var(--state-missing-bg);
+}
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg-950);
+  color: var(--text-100);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  overscroll-behavior-y: contain;
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(212,162,79,0.05), transparent),
+    radial-gradient(ellipse 700px 500px at 100% 0%, rgba(79,176,138,0.04), transparent);
+  background-attachment: fixed;
+}
+
+button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+.tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.mono { font-family: var(--font-mono); }
+
+:focus-visible {
+  outline: 2px solid var(--gold-400);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* ---------- Shell ---------- */
+#app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--bg-900);
+  border-right: 1px solid var(--line);
+  color: var(--text-100);
+  padding: var(--sp-5) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2);
+}
+.brand-mark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-lg);
+  letter-spacing: -0.01em;
+  background: linear-gradient(135deg, var(--gold-400), var(--gold-600));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-sub {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: var(--text-500);
+  text-transform: uppercase;
+}
+
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: var(--text-500);
+  text-transform: uppercase;
+  padding: var(--sp-2) var(--sp-2) var(--sp-1);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-300);
+  border-left: 2px solid transparent;
+}
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.85; }
+.nav-item:hover { background: var(--surface-700); color: var(--text-100); }
+.nav-item.active {
+  background: var(--gold-bg);
+  color: var(--gold-400);
+  border-left-color: var(--gold-500);
+}
+
+.sidebar-foot {
+  margin-top: auto;
+  font-size: var(--fs-xs);
+  color: var(--text-500);
+  padding: 0 var(--sp-2);
+}
+
+.main-col { display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--sp-6);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-900);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.topbar h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-lg);
+  letter-spacing: -0.01em;
+}
+.topbar-actions { display: flex; gap: var(--sp-3); align-items: center; }
+
+.view { padding: var(--sp-6); flex: 1; }
+
+/* ---------- Botones — cada acción se entiende por su color ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: filter 0.12s ease, transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.btn:active { transform: translateY(1px); }
+
+/* Primaria — dorado sello, para crear / guardar / avanzar */
+.btn-primary {
+  background: linear-gradient(180deg, var(--gold-400), var(--gold-500));
+  color: #1c1406;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(212,162,79,0.18);
+}
+.btn-primary:hover { filter: brightness(1.08); }
+
+/* Secundaria — contorno neutro, para acciones sin riesgo (cancelar, editar) */
+.btn-secondary { background: var(--surface-700); border-color: var(--line-strong); color: var(--text-100); }
+.btn-secondary:hover { border-color: var(--gold-500); }
+
+/* Ghost — navegación terciaria */
+.btn-ghost { background: transparent; color: var(--text-300); }
+.btn-ghost:hover { color: var(--text-100); background: var(--surface-700); }
+
+/* Éxito — confirmar, cerrar viático correctamente */
+.btn-success { background: var(--state-ok-bg); color: var(--state-ok); border-color: rgba(79,176,138,0.35); }
+.btn-success:hover { background: rgba(79,176,138,0.18); }
+
+/* Advertencia — acciones con pendientes (revisar antes de cerrar) */
+.btn-warning { background: var(--state-pending-bg); color: var(--state-pending); border-color: rgba(221,162,63,0.35); }
+.btn-warning:hover { background: rgba(221,162,63,0.18); }
+
+/* Peligro — eliminar */
+.btn-danger { background: var(--danger-bg); color: var(--danger); border-color: rgba(224,104,95,0.35); }
+.btn-danger:hover { background: rgba(224,104,95,0.2); }
+
+.btn-sm { padding: var(--sp-2) var(--sp-3); font-size: var(--fs-xs); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+
+/* ---------- Tarjetas ---------- */
+.card {
+  background: var(--surface-800);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--sp-5);
+}
+.card-elevated {
+  background: var(--surface-700);
+  box-shadow: var(--shadow-card);
+  border-color: var(--line-strong);
+}
+
+/* ---------- Estampas de estado (elemento distintivo — sello foliado) ---------- */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 3px;
+  border: 1.5px solid currentColor;
+  transform: rotate(-1deg);
+}
+.stamp::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+.stamp-ok { color: var(--state-ok); background: var(--state-ok-bg); }
+.stamp-pending { color: var(--state-pending); background: var(--state-pending-bg); transform: rotate(1deg); }
+.stamp-missing { color: var(--state-missing); background: var(--state-missing-bg); transform: rotate(-0.6deg); }
+
+/* ---------- Formularios ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: var(--fs-xs); font-weight: 600; color: var(--text-500); text-transform: uppercase; letter-spacing: 0.04em; }
+.field input, .field select, .field textarea {
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-600);
+  color: var(--text-100);
+}
+.field input::placeholder, .field textarea::placeholder { color: var(--text-500); }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold-500); }
+.field-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-4); }
+
+/* ---------- Modal ---------- */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(4,6,10,0.7);
+  backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50; padding: var(--sp-4);
+}
+.modal {
+  background: var(--surface-800);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  width: 100%; max-width: 480px;
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-pop);
+}
+.modal h2 { font-family: var(--font-display); font-size: var(--fs-md); margin-bottom: var(--sp-3); }
+.modal-actions { display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-5); }
+
+/* ---------- Toast ---------- */
+#toast-region {
+  position: fixed; bottom: var(--sp-5); right: var(--sp-5);
+  display: flex; flex-direction: column; gap: var(--sp-2); z-index: 60;
+}
+.toast {
+  background: var(--surface-700); color: var(--text-100);
+  border: 1px solid var(--line-strong);
+  padding: var(--sp-3) var(--sp-4); border-radius: var(--radius-sm);
+  font-size: var(--fs-sm); box-shadow: var(--shadow-pop);
+}
+
+/* ---------- Mobile nav ---------- */
+.bottom-nav { display: none; }
+
+@media (max-width: 860px) {
+  #app-shell { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .view { padding: var(--sp-4); padding-bottom: calc(var(--bottomnav-h) + var(--sp-4)); }
+  .topbar { padding: 0 var(--sp-4); }
+  .field-row { grid-template-columns: 1fr; }
+
+  .bottom-nav {
+    display: flex;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: var(--bottomnav-h);
+    background: var(--bg-900);
+    border-top: 1px solid var(--line);
+    z-index: 40;
+  }
+  .bottom-nav-item {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px;
+    font-size: 0.65rem; font-weight: 600; color: var(--text-500);
+  }
+  .bottom-nav-item svg { width: 20px; height: 20px; }
+  .bottom-nav-item.active { color: var(--gold-400); }
+  .bottom-nav-item.fab {
+    background: linear-gradient(180deg, var(--gold-400), var(--gold-500));
+    color: #1c1406;
+    border-radius: 50%; width: 48px; height: 48px;
+    margin-top: -24px; box-shadow: 0 4px 16px rgba(212,162,79,0.35);
+    justify-content: center;
+  }
+  .bottom-nav-item.fab span { display: none; }
+}
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+@media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+.kpi-card {
+  background: var(--paper-100);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4) var(--sp-5);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.kpi-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-500);
+}
+.kpi-value {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.kpi-value.small { font-size: var(--fs-xl); }
+.kpi-sub { font-size: var(--fs-xs); color: var(--ink-500); }
+.kpi-card.accent-danger .kpi-value { color: var(--danger); }
+.kpi-card.accent-ledger .kpi-value { color: var(--ledger-700); }
+.kpi-card.accent-success .kpi-value { color: var(--state-ok); }
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--sp-5);
+}
+@media (max-width: 1100px) { .dash-grid { grid-template-columns: 1fr; } }
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  margin-bottom: var(--sp-4);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.proj-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+.proj-row:last-child { border-bottom: none; }
+.proj-name { font-weight: 600; font-size: var(--fs-sm); }
+.proj-meta { font-size: var(--fs-xs); color: var(--ink-500); }
+
+.empty-state {
+  text-align: center;
+  padding: var(--sp-7) var(--sp-4);
+  color: var(--ink-500);
+}
+.empty-state .lead { font-family: var(--font-display); font-size: var(--fs-md); color: var(--ink-900); margin-bottom: var(--sp-2); }
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--sp-5); gap: var(--sp-3); flex-wrap: wrap;
+}
+.toolbar-filters { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+.chip {
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--line); font-size: var(--fs-xs); font-weight: 600;
+  color: var(--ink-500); background: var(--paper-100);
+}
+.chip.active { background: var(--gold-bg); color: var(--gold-400); border-color: var(--gold-500); }
+
+.proj-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--sp-4);
+}
+
+.proj-card {
+  background: var(--paper-100);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+  display: flex; flex-direction: column; gap: var(--sp-3);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.proj-card:hover { border-color: var(--ink-500); }
+
+.proj-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-2); }
+.proj-card-title { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-md); }
+.proj-card-client { font-size: var(--fs-xs); color: var(--ink-500); }
+
+.state-tag {
+  font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 3px; font-weight: 700;
+  flex-shrink: 0;
+}
+.state-planificado { background: var(--surface-600); color: var(--text-300); }
+.state-activo { background: var(--stamp-ok-bg); color: var(--stamp-ok); }
+.state-finalizado { background: #201a30; color: #a89bd6; }
+.state-archivado { background: var(--surface-600); color: var(--text-500); }
+
+.proj-card-metrics { display: flex; gap: var(--sp-5); }
+.proj-card-metric .num { font-family: var(--font-mono); font-weight: 600; font-size: var(--fs-sm); }
+.proj-card-metric .lbl { font-size: 0.65rem; color: var(--ink-500); text-transform: uppercase; letter-spacing: 0.04em; }
+
+.detail-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: var(--sp-5); gap: var(--sp-4); flex-wrap: wrap;
+}
+.detail-title { font-family: var(--font-display); font-size: var(--fs-xl); font-weight: 600; }
+.detail-meta { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-2); font-size: var(--fs-sm); color: var(--ink-500); }
+.detail-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+.tabs { display: flex; gap: var(--sp-2); border-bottom: 1px solid var(--line); margin-bottom: var(--sp-5); }
+.tab-btn {
+  padding: var(--sp-3) var(--sp-2); font-size: var(--fs-sm); font-weight: 600;
+  color: var(--ink-500); border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab-btn.active { color: var(--ink-900); border-bottom-color: var(--ledger-700); }
+.comprobante-preview {
+  width: 100%;
+  max-width: 220px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  display: block;
+}
+
+.deteccion-card {
+  background: var(--surface-600);
+  border: 1px dashed var(--gold-500);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-4);
+  margin-top: var(--sp-3);
+}
+.deteccion-card h3 {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-400);
+  margin-bottom: var(--sp-3);
+}
+.deteccion-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
+
+.tabs-modo { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.tabs-modo .chip { cursor: pointer; }
+
+.gasto-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 100px 90px auto;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-sm);
+}
+.gasto-row:last-child { border-bottom: none; }
+.gasto-row .desc { font-weight: 500; }
+.gasto-row .cat { font-size: var(--fs-xs); color: var(--text-500); }
+.gasto-row .acciones { display: flex; gap: var(--sp-2); justify-content: flex-end; }
+.gasto-row .acciones button { background: transparent; border: none; color: var(--text-500); padding: 4px; }
+.gasto-row .acciones button:hover { color: var(--text-100); }
+
+@media (max-width: 700px) {
+  .gasto-row { grid-template-columns: 1fr; gap: 4px; }
+  .gasto-row .acciones { justify-content: flex-start; margin-top: 4px; }
+}
+
+.entrada-rapida-box { display: flex; gap: var(--sp-2); }
+.entrada-rapida-box input { flex: 1; }
+.hoja-informe {
+  background: #fdfcf9;
+  color: #1b1f27;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 48px 56px;
+  border-radius: 3px;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.45);
+  font-family: var(--font-body);
+}
+.hoja-informe * { color: inherit; }
+.hoja-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  border-bottom: 2px solid #1b1f27; padding-bottom: 16px; margin-bottom: 24px;
+}
+.hoja-header .empresa { font-family: var(--font-display); font-weight: 600; font-size: 1.25rem; }
+.hoja-header .meta { text-align: right; font-size: 0.75rem; color: #5c6270; }
+.hoja-titulo { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; }
+.hoja-subtitulo { font-size: 0.85rem; color: #5c6270; margin-bottom: 24px; }
+
+.hoja-seccion { margin-bottom: 28px; }
+.hoja-seccion h3 {
+  font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #8a6a2a; border-bottom: 1px solid #d8d2c4; padding-bottom: 6px; margin-bottom: 12px;
+}
+.hoja-datos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 24px; font-size: 0.85rem; }
+.hoja-datos-grid .lbl { color: #5c6270; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+.hoja-financiero { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.hoja-fin-item { border: 1px solid #d8d2c4; border-radius: 4px; padding: 10px 14px; }
+.hoja-fin-item .lbl { font-size: 0.65rem; text-transform: uppercase; color: #5c6270; letter-spacing: 0.04em; }
+.hoja-fin-item .val { font-family: var(--font-mono); font-weight: 600; font-size: 1.05rem; }
+
+.hoja-tabla { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.hoja-tabla th {
+  text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #5c6270; border-bottom: 1.5px solid #1b1f27; padding: 6px 8px;
+}
+.hoja-tabla td { padding: 7px 8px; border-bottom: 1px solid #e8e4da; }
+.hoja-tabla tr:last-child td { border-bottom: none; }
+.hoja-tabla .num { font-family: var(--font-mono); text-align: right; }
+
+.hoja-estado-mini {
+  font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 2px; border: 1px solid currentColor;
+}
+.hoja-estado-con { color: #1f5e4d; }
+.hoja-estado-pendiente { color: #9a6a1f; }
+.hoja-estado-sin { color: #8a2f2a; }
+
+.hoja-firma-linea { border-top: 1px solid #1b1f27; margin-top: 48px; padding-top: 6px; font-size: 0.75rem; text-align: center; }
+.hoja-firmas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; margin-top: 24px; }
+
+.hoja-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #d8d2c4; font-size: 0.68rem; color: #8a8f9a; display: flex; justify-content: space-between; }
+
+#zona-impresion { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  #zona-impresion, #zona-impresion * { visibility: visible; }
+  #zona-impresion {
+    display: block !important;
+    position: absolute; top: 0; left: 0; width: 100%;
+    background: #fff;
+  }
+  #zona-impresion .hoja-informe { box-shadow: none; margin: 0 auto; }
+  @page { size: A4; margin: 16mm; }
+}
+
+</style>
+</head>
+<body>
+  <div id="app-shell">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main-col">
+      <main class="view" id="vista" role="main"></main>
+    </div>
+    <nav class="bottom-nav" id="bottom-nav" aria-label="Navegación principal"></nav>
+  </div>
+  <div id="toast-region" aria-live="polite"></div>
+  <div id="zona-impresion"></div>
+  <script>
+(function(){
+  "use strict";
+  const __modules__ = {};
+
+  // ==== core/router ====
+  __modules__['core/router'] = (function(){
+  /**
+   * router.js — Enrutador basado en hash, sin dependencias externas.
+   * Rutas registradas como patrones simples: 'dashboard', 'proyectos',
+   * 'proyectos/:id', etc.
+   */
+  const rutas = [];
+  let contenedorVista = null;
+  let alCambiarRuta = null;
+
+  function registrarRuta(patron, render) {
+    const partes = patron.split('/');
+    rutas.push({ patron, partes, render });
+  }
+
+  function definirContenedor(elemento) {
+    contenedorVista = elemento;
+  }
+
+  function alNavegar(callback) {
+    alCambiarRuta = callback;
+  }
+
+  function emparejar(hashPartes) {
+    for (const ruta of rutas) {
+      if (ruta.partes.length !== hashPartes.length) continue;
+      const params = {};
+      let coincide = true;
+      for (let i = 0; i < ruta.partes.length; i++) {
+        const p = ruta.partes[i];
+        if (p.startsWith(':')) {
+          params[p.slice(1)] = decodeURIComponent(hashPartes[i]);
+        } else if (p !== hashPartes[i]) {
+          coincide = false;
+          break;
+        }
+      }
+      if (coincide) return { ruta, params };
+    }
+    return null;
+  }
+
+  async function procesarHash() {
+    const hash = (location.hash || '#dashboard').replace(/^#\/?/, '');
+    const partes = hash.split('/').filter(Boolean);
+    const resultado = emparejar(partes.length ? partes : ['dashboard']);
+    if (!contenedorVista) return;
+
+    if (!resultado) {
+      contenedorVista.innerHTML = `<div class="empty-state"><p class="lead">Página no encontrada</p></div>`;
+      return;
+    }
+    alCambiarRuta?.(resultado.ruta.patron, resultado.params);
+    await resultado.ruta.render(contenedorVista, resultado.params);
+  }
+
+  function irA(ruta) {
+    location.hash = ruta.startsWith('#') ? ruta : `#${ruta}`;
+  }
+
+  function iniciarRouter() {
+    window.addEventListener('hashchange', procesarHash);
+    procesarHash();
+  }
+
+  return { registrarRuta, definirContenedor, alNavegar, irA, iniciarRouter };
+  })();
+
+  // ==== components/icons ====
+  __modules__['components/icons'] = (function(){
+  const iconos = {
+    dashboard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>`,
+    proyectos: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>`,
+    gastos: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5.5c0-1.5-2-2.5-5-2.5s-5 1.2-5 3 2 2.7 5 3 5 1.4 5 3-2 3-5 3-5-1-5-2.5"/></svg>`,
+    informes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h6M9 16h6"/></svg>`,
+    config: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.8a7 7 0 0 0-2-1.2L14 3h-4l-.6 2.5a7 7 0 0 0-2 1.2l-2.3-.8-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.8a7 7 0 0 0 2 1.2L10 21h4l.6-2.5a7 7 0 0 0 2-1.2l2.3.8 2-3.4-2-1.5c.07-.4.1-.8.1-1.2Z"/></svg>`,
+    camara: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8a2 2 0 0 1 2-2h1l1.2-2h7.6L17 6h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
+    mas: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`,
+    papelera: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>`,
+    flechaAtras: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg>`,
+  };
+
+  function icono(nombre) {
+    return iconos[nombre] || '';
+  }
+
+  return { iconos, icono };
+  })();
+
+  // ==== components/nav ====
+  __modules__['components/nav'] = (function(){
+  const { icono } = __modules__['components/icons'];
+
+
+  const ITEMS = [
+    { ruta: 'dashboard', etiqueta: 'Dashboard', icono: 'dashboard' },
+    { ruta: 'proyectos', etiqueta: 'Proyectos', icono: 'proyectos' },
+    { ruta: 'informes', etiqueta: 'Informes', icono: 'informes' },
+    { ruta: 'configuracion', etiqueta: 'Configuración', icono: 'config' },
+  ];
+
+  function renderSidebar() {
+    const el = document.getElementById('sidebar');
+    el.innerHTML = `
+      <div class="brand">
+        <span class="brand-mark">Viáticos</span>
+      </div>
+      <span class="brand-sub" style="margin-top:-20px; padding-left:2px;">Control por proyecto</span>
+      <nav class="nav-group">
+        <span class="nav-label">Navegación</span>
+        ${ITEMS.map((item) => `
+          <a class="nav-item" data-ruta="${item.ruta}" href="#${item.ruta}">
+            ${icono(item.icono)}<span>${item.etiqueta}</span>
+          </a>
+        `).join('')}
+      </nav>
+      <div class="sidebar-foot">
+        Almacenamiento local · v1.0
+      </div>
+    `;
+  }
+
+  function renderBottomNav() {
+    const el = document.getElementById('bottom-nav');
+    el.innerHTML = `
+      <a class="bottom-nav-item" data-ruta="dashboard" href="#dashboard">${icono('dashboard')}<span>Inicio</span></a>
+      <a class="bottom-nav-item" data-ruta="proyectos" href="#proyectos">${icono('proyectos')}<span>Proyectos</span></a>
+      <a class="bottom-nav-item fab" href="#proyectos/nuevo" aria-label="Nuevo proyecto">${icono('mas')}</a>
+      <a class="bottom-nav-item" data-ruta="informes" href="#informes">${icono('informes')}<span>Informes</span></a>
+      <a class="bottom-nav-item" data-ruta="configuracion" href="#configuracion">${icono('config')}<span>Ajustes</span></a>
+    `;
+  }
+
+  function marcarRutaActiva(patron) {
+    const base = patron.split('/')[0];
+    document.querySelectorAll('.nav-item, .bottom-nav-item').forEach((el) => {
+      el.classList.toggle('active', el.dataset.ruta === base);
+    });
+  }
+
+  return { renderSidebar, renderBottomNav, marcarRutaActiva };
+  })();
+
+  // ==== storage/db ====
+  __modules__['storage/db'] = (function(){
+  /**
+   * db.js — Capa de acceso a IndexedDB.
+   * Toda la persistencia del sistema pasa por aquí. Ningún módulo debe
+   * abrir IndexedDB directamente: siempre a través de este wrapper.
+   * Preparado para que, al migrar a backend, solo se reemplace esta capa
+   * por llamadas HTTP manteniendo la misma interfaz (get/getAll/put/delete).
+   */
+
+  const DB_NAME = 'viaticos-db';
+  const DB_VERSION = 1;
+
+  const STORES = {
+    proyectos: 'id',
+    ingresos: 'id',
+    gastos: 'id',
+    comprobantes: 'id',
+    proyecciones: 'id',
+    papelera: 'id',
+    informes: 'id',
+    plantillas: 'id',
+    configuracion: 'clave',
+    colaSincronizacion: 'id',
+  };
+
+  let dbInstance = null;
+
+  function abrirConexion() {
+    if (dbInstance) return Promise.resolve(dbInstance);
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+
+      req.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        for (const [nombre, keyPath] of Object.entries(STORES)) {
+          if (!db.objectStoreNames.contains(nombre)) {
+            const store = db.createObjectStore(nombre, { keyPath });
+            if (nombre === 'gastos') {
+              store.createIndex('porProyecto', 'proyectoId', { unique: false });
+              store.createIndex('porEstadoComprobante', 'estadoComprobante', { unique: false });
+            }
+            if (nombre === 'ingresos') {
+              store.createIndex('porProyecto', 'proyectoId', { unique: false });
+            }
+            if (nombre === 'comprobantes') {
+              store.createIndex('porGasto', 'gastoId', { unique: false });
+            }
+            if (nombre === 'papelera') {
+              store.createIndex('porProyecto', 'proyectoId', { unique: false });
+            }
+            if (nombre === 'proyecciones') {
+              store.createIndex('porProyecto', 'proyectoId', { unique: false });
+            }
+          }
+        }
+      };
+
+      req.onsuccess = (event) => {
+        dbInstance = event.target.result;
+        resolve(dbInstance);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function conTransaccion(nombreStore, modo, fn) {
+    const db = await abrirConexion();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(nombreStore, modo);
+      const store = tx.objectStore(nombreStore);
+      const resultado = fn(store);
+      tx.oncomplete = () => resolve(resultado);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  function envolver(req) {
+    return new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  const db = {
+    async put(storeName, valor) {
+      return conTransaccion(storeName, 'readwrite', (store) => store.put(valor));
+    },
+
+    async get(storeName, key) {
+      const db = await abrirConexion();
+      const tx = db.transaction(storeName, 'readonly');
+      return envolver(tx.objectStore(storeName).get(key));
+    },
+
+    async getAll(storeName) {
+      const db = await abrirConexion();
+      const tx = db.transaction(storeName, 'readonly');
+      return envolver(tx.objectStore(storeName).getAll());
+    },
+
+    async getAllPorIndice(storeName, indiceNombre, valor) {
+      const db = await abrirConexion();
+      const tx = db.transaction(storeName, 'readonly');
+      const indice = tx.objectStore(storeName).index(indiceNombre);
+      return envolver(indice.getAll(valor));
+    },
+
+    async delete(storeName, key) {
+      return conTransaccion(storeName, 'readwrite', (store) => store.delete(key));
+    },
+
+    async clear(storeName) {
+      return conTransaccion(storeName, 'readwrite', (store) => store.clear());
+    },
+  };
+
+  function generarId(prefijo = 'id') {
+    return `${prefijo}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  return { db, generarId };
+  })();
+
+  // ==== core/models ====
+  __modules__['core/models'] = (function(){
+  const { generarId } = __modules__['storage/db'];
+  /**
+   * models.js — Definición de entidades del sistema.
+   * Estas fábricas garantizan que todo registro nuevo tenga la forma
+   * correcta y valores por defecto consistentes.
+   */
+
+
+  const ESTADOS_PROYECTO = ['planificado', 'activo', 'finalizado', 'archivado'];
+
+  const ESTADOS_COMPROBANTE = {
+    CON: 'con_comprobante',
+    PENDIENTE: 'pendiente_comprobante',
+    SIN: 'sin_comprobante',
+  };
+
+  const CATEGORIAS_DEFECTO = [
+    { id: 'alimentacion', nombre: 'Alimentación' },
+    { id: 'hospedaje', nombre: 'Hospedaje' },
+    { id: 'transporte', nombre: 'Transporte' },
+    { id: 'peajes', nombre: 'Peajes' },
+    { id: 'materiales', nombre: 'Materiales' },
+    { id: 'imprevistos', nombre: 'Imprevistos' },
+    { id: 'otros', nombre: 'Otros' },
+  ];
+
+  function crearProyecto(datos) {
+    const ahora = new Date().toISOString();
+    return {
+      id: generarId('proy'),
+      nombre: datos.nombre?.trim() || 'Proyecto sin nombre',
+      cliente: datos.cliente?.trim() || '',
+      ciudad: datos.ciudad?.trim() || '',
+      provincia: datos.provincia?.trim() || '',
+      fechaInicio: datos.fechaInicio || null,
+      fechaFinEstimada: datos.fechaFinEstimada || null,
+      fechaFinReal: datos.fechaFinReal || null,
+      responsable: datos.responsable?.trim() || '',
+      numeroPersonas: Number(datos.numeroPersonas) || 1,
+      motivoViaje: datos.motivoViaje?.trim() || '',
+      observaciones: datos.observaciones?.trim() || '',
+      estado: datos.estado || 'planificado',
+      creadoEn: ahora,
+      actualizadoEn: ahora,
+    };
+  }
+
+  function actualizarProyecto(proyecto, cambios) {
+    return {
+      ...proyecto,
+      ...cambios,
+      id: proyecto.id, // el id nunca cambia
+      creadoEn: proyecto.creadoEn,
+      actualizadoEn: new Date().toISOString(),
+    };
+  }
+
+  function crearIngreso(proyectoId, datos) {
+    return {
+      id: generarId('ing'),
+      proyectoId,
+      fecha: datos.fecha || new Date().toISOString().slice(0, 10),
+      concepto: datos.concepto?.trim() || '',
+      valor: Number(datos.valor) || 0,
+      observaciones: datos.observaciones?.trim() || '',
+      creadoEn: new Date().toISOString(),
+    };
+  }
+
+  function crearGasto(proyectoId, datos) {
+    return {
+      id: generarId('gas'),
+      proyectoId,
+      fecha: datos.fecha || new Date().toISOString().slice(0, 10),
+      descripcion: datos.descripcion?.trim() || '',
+      categoria: datos.categoria || 'otros',
+      valor: Number(datos.valor) || 0,
+      estadoComprobante: datos.estadoComprobante || ESTADOS_COMPROBANTE.SIN,
+      comprobanteId: datos.comprobanteId || null,
+      origenRegistro: datos.origenRegistro || 'manual', // 'manual' | 'foto'
+      observaciones: datos.observaciones?.trim() || '',
+      eliminado: false,
+      creadoEn: new Date().toISOString(),
+      actualizadoEn: new Date().toISOString(),
+    };
+  }
+
+  function crearProyeccionItem(proyectoId, datos) {
+    return {
+      id: generarId('proj_it'),
+      proyectoId,
+      categoria: datos.categoria || 'otros',
+      cantidad: Number(datos.cantidad) || 0,
+      precioUnitario: Number(datos.precioUnitario) || 0,
+    };
+  }
+
+  // Nota: el total NUNCA se guarda como propiedad calculada dentro del
+  // registro (los getters no sobreviven la clonación estructurada que usa
+  // IndexedDB). Siempre se deriva con esta función a partir de los datos
+  // guardados, para evitar totales desincronizados.
+  function totalProyeccionItem(item) {
+    return Number((item.cantidad * item.precioUnitario).toFixed(2));
+  }
+
+  const ESTADO_INTERPRETACION = {
+    NO_APLICA: 'no_aplica',       // gasto manual, sin foto
+    PENDIENTE_CONEXION: 'pendiente_conexion', // foto guardada, sin internet aún
+    PROCESANDO: 'procesando',
+    LISTO: 'listo',
+    ERROR: 'error',
+  };
+
+  /**
+   * Un comprobante siempre queda asociado 1 a 1 a un gasto.
+   * `imagenBlob` es la foto ya comprimida. `datosDetectados` es lo que
+   * devuelva la interpretación automática (nunca se aplica solo).
+   */
+  function crearComprobante(gastoId, datos) {
+    return {
+      id: generarId('cmp'),
+      gastoId,
+      imagenBlob: datos.imagenBlob || null,
+      miniaturaBlob: datos.miniaturaBlob || null,
+      estadoInterpretacion: datos.estadoInterpretacion || ESTADO_INTERPRETACION.NO_APLICA,
+      datosDetectados: datos.datosDetectados || null, // { establecimiento, fecha, numeroFactura, subtotal, iva, total, categoriaProbable }
+      creadoEn: new Date().toISOString(),
+    };
+  }
+
+  function crearElementoCola(comprobanteId, gastoId) {
+    return {
+      id: generarId('cola'),
+      comprobanteId,
+      gastoId,
+      intentos: 0,
+      creadoEn: new Date().toISOString(),
+    };
+  }
+
+  return { ESTADOS_PROYECTO, ESTADOS_COMPROBANTE, CATEGORIAS_DEFECTO, crearProyecto, actualizarProyecto, crearIngreso, crearGasto, crearProyeccionItem, totalProyeccionItem, ESTADO_INTERPRETACION, crearComprobante, crearElementoCola };
+  })();
+
+  // ==== core/finanzas ====
+  __modules__['core/finanzas'] = (function(){
+  const { ESTADOS_COMPROBANTE } = __modules__['core/models'];
+  /**
+   * finanzas.js — Reglas contables del sistema (ver punto 36 del brief).
+   * Única fuente de verdad para todos los cálculos financieros de un
+   * proyecto. Ningún módulo debe recalcular totales por su cuenta.
+   */
+
+
+  function redondear(valor) {
+    return Number((Math.round((valor + Number.EPSILON) * 100) / 100).toFixed(2));
+  }
+
+  /**
+   * @param {Array} ingresos - ingresos del proyecto
+   * @param {Array} gastos - gastos ACTIVOS del proyecto (sin los de la papelera)
+   */
+  function calcularResumenFinanciero(ingresos, gastos) {
+    const totalRecibido = redondear(ingresos.reduce((acc, i) => acc + i.valor, 0));
+
+    const activos = gastos.filter((g) => !g.eliminado);
+    const totalGastado = redondear(activos.reduce((acc, g) => acc + g.valor, 0));
+
+    const totalConComprobante = redondear(
+      activos.filter((g) => g.estadoComprobante === ESTADOS_COMPROBANTE.CON)
+        .reduce((acc, g) => acc + g.valor, 0)
+    );
+    const totalPendiente = redondear(
+      activos.filter((g) => g.estadoComprobante === ESTADOS_COMPROBANTE.PENDIENTE)
+        .reduce((acc, g) => acc + g.valor, 0)
+    );
+    const totalSinComprobante = redondear(
+      activos.filter((g) => g.estadoComprobante === ESTADOS_COMPROBANTE.SIN)
+        .reduce((acc, g) => acc + g.valor, 0)
+    );
+
+    const saldo = redondear(totalRecibido - totalGastado);
+    const reembolsoPendiente = saldo < 0 ? redondear(Math.abs(saldo)) : 0;
+
+    return {
+      totalRecibido,
+      totalGastado,
+      totalConComprobante,
+      totalPendiente,
+      totalSinComprobante,
+      saldo,
+      reembolsoPendiente,
+      cantidadGastos: activos.length,
+    };
+  }
+
+  function agruparGastosPorCategoria(gastos) {
+    const activos = gastos.filter((g) => !g.eliminado);
+    const mapa = {};
+    for (const g of activos) {
+      mapa[g.categoria] = redondear((mapa[g.categoria] || 0) + g.valor);
+    }
+    return mapa;
+  }
+
+  return { calcularResumenFinanciero, agruparGastosPorCategoria };
+  })();
+
+  // ==== core/repositorio ====
+  __modules__['core/repositorio'] = (function(){
+  const { db, generarId } = __modules__['storage/db'];
+  const { crearProyecto, actualizarProyecto } = __modules__['core/models'];
+  const { calcularResumenFinanciero } = __modules__['core/finanzas'];
+
+
+
+
+  async function listarProyectos() {
+    const proyectos = await db.getAll('proyectos');
+    return proyectos.sort((a, b) => new Date(b.actualizadoEn) - new Date(a.actualizadoEn));
+  }
+
+  async function obtenerProyecto(id) {
+    return db.get('proyectos', id);
+  }
+
+  async function guardarProyectoNuevo(datos) {
+    const proyecto = crearProyecto(datos);
+    await db.put('proyectos', proyecto);
+    return proyecto;
+  }
+
+  async function guardarProyectoEditado(proyectoExistente, cambios) {
+    const actualizado = actualizarProyecto(proyectoExistente, cambios);
+    await db.put('proyectos', actualizado);
+    return actualizado;
+  }
+
+  async function cambiarEstadoProyecto(id, nuevoEstado) {
+    const proyecto = await db.get('proyectos', id);
+    if (!proyecto) return null;
+    const actualizado = actualizarProyecto(proyecto, {
+      estado: nuevoEstado,
+      fechaFinReal: nuevoEstado === 'finalizado' ? new Date().toISOString().slice(0, 10) : proyecto.fechaFinReal,
+    });
+    await db.put('proyectos', actualizado);
+    return actualizado;
+  }
+
+  async function ingresosDeProyecto(proyectoId) {
+    return db.getAllPorIndice('ingresos', 'porProyecto', proyectoId);
+  }
+
+  async function gastosDeProyecto(proyectoId) {
+    const todos = await db.getAllPorIndice('gastos', 'porProyecto', proyectoId);
+    return todos.filter((g) => !g.eliminado);
+  }
+
+  async function gastosEnPapeleraDeProyecto(proyectoId) {
+    const todos = await db.getAllPorIndice('gastos', 'porProyecto', proyectoId);
+    return todos.filter((g) => g.eliminado);
+  }
+
+  /** Devuelve el resumen financiero { totalRecibido, totalGastado, saldo, ... } de un proyecto */
+  async function resumenFinancieroProyecto(proyectoId) {
+    const [ingresos, gastos] = await Promise.all([
+      ingresosDeProyecto(proyectoId),
+      gastosDeProyecto(proyectoId),
+    ]);
+    return calcularResumenFinanciero(ingresos, gastos);
+  }
+
+  /** Para el dashboard: totales agregados de TODOS los proyectos */
+  async function resumenGlobal() {
+    const proyectos = await listarProyectos();
+    const [todosIngresos, todosGastos] = await Promise.all([
+      db.getAll('ingresos'),
+      db.getAll('gastos'),
+    ]);
+
+    const activos = todosGastos.filter((g) => !g.eliminado);
+    const resumen = calcularResumenFinanciero(todosIngresos, activos);
+
+    return {
+      ...resumen,
+      proyectosActivos: proyectos.filter((p) => p.estado === 'activo').length,
+      proyectosCerrados: proyectos.filter((p) => p.estado === 'finalizado' || p.estado === 'archivado').length,
+      proyectosRecientes: proyectos.slice(0, 5),
+      gastos: activos,
+    };
+  }
+
+  function nuevoId(prefijo) {
+    return generarId(prefijo);
+  }
+
+  return { listarProyectos, obtenerProyecto, guardarProyectoNuevo, guardarProyectoEditado, cambiarEstadoProyecto, ingresosDeProyecto, gastosDeProyecto, gastosEnPapeleraDeProyecto, resumenFinancieroProyecto, resumenGlobal, nuevoId };
+  })();
+
+  // ==== utils/format ====
+  __modules__['utils/format'] = (function(){
+  function formatoMoneda(valor, moneda = 'USD') {
+    const num = Number(valor) || 0;
+    return num.toLocaleString('es-EC', {
+      style: 'currency',
+      currency: moneda,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function formatoFecha(fechaISO) {
+    if (!fechaISO) return '—';
+    const [anio, mes, dia] = fechaISO.slice(0, 10).split('-');
+    if (!anio) return '—';
+    return `${dia}/${mes}/${anio}`;
+  }
+
+  function formatoFechaLarga(fechaISO) {
+    if (!fechaISO) return '—';
+    const fecha = new Date(fechaISO);
+    return fecha.toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  const ETIQUETAS_ESTADO_COMPROBANTE = {
+    con_comprobante: { texto: 'Con comprobante', clase: 'stamp-ok' },
+    pendiente_comprobante: { texto: 'Pendiente', clase: 'stamp-pending' },
+    sin_comprobante: { texto: 'Sin comprobante', clase: 'stamp-missing' },
+  };
+
+  const ETIQUETAS_ESTADO_PROYECTO = {
+    planificado: 'Planificado',
+    activo: 'Activo',
+    finalizado: 'Finalizado',
+    archivado: 'Archivado',
+  };
+
+  return { formatoMoneda, formatoFecha, formatoFechaLarga, ETIQUETAS_ESTADO_COMPROBANTE, ETIQUETAS_ESTADO_PROYECTO };
+  })();
+
+  // ==== modules/dashboard/dashboard.view ====
+  __modules__['modules/dashboard/dashboard.view'] = (function(){
+  const { resumenGlobal } = __modules__['core/repositorio'];
+  const { agruparGastosPorCategoria } = __modules__['core/finanzas'];
+  const { formatoMoneda, formatoFecha, ETIQUETAS_ESTADO_PROYECTO } = __modules__['utils/format'];
+  const { CATEGORIAS_DEFECTO } = __modules__['core/models'];
+  const { icono } = __modules__['components/icons'];
+
+
+
+
+
+
+  function graficoBarrasCategoria(mapaCategoria) {
+    const entradas = Object.entries(mapaCategoria).sort((a, b) => b[1] - a[1]);
+    if (!entradas.length) {
+      return `<div class="empty-state"><p class="lead">Sin gastos aún</p><p>Los gastos por categoría aparecerán aquí.</p></div>`;
+    }
+    const max = Math.max(...entradas.map(([, v]) => v));
+    const nombreCat = (id) => CATEGORIAS_DEFECTO.find((c) => c.id === id)?.nombre || id;
+
+    return `
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        ${entradas.map(([cat, valor]) => `
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:var(--fs-xs); margin-bottom:4px;">
+              <span style="font-weight:600;">${nombreCat(cat)}</span>
+              <span class="mono tabular">${formatoMoneda(valor)}</span>
+            </div>
+            <div style="height:8px; background:var(--paper-0); border-radius:4px; overflow:hidden;">
+              <div style="height:100%; width:${(valor / max) * 100}%; background:var(--ledger-700);"></div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function filaProyectoReciente(p) {
+    return `
+      <div class="proj-row">
+        <div>
+          <div class="proj-name">${p.nombre}</div>
+          <div class="proj-meta">${p.ciudad || 'Sin ciudad'} · ${ETIQUETAS_ESTADO_PROYECTO[p.estado]}</div>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="#proyectos/${p.id}">Ver →</a>
+      </div>
+    `;
+  }
+
+  async function renderDashboard(contenedor) {
+    contenedor.innerHTML = `<div class="empty-state">Cargando…</div>`;
+    const resumen = await resumenGlobal();
+    const porCategoria = agruparGastosPorCategoria(resumen.gastos);
+
+    contenedor.innerHTML = `
+      <div class="topbar-inline" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--sp-5);">
+        <div>
+          <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600;">Dashboard</h1>
+          <p style="color:var(--ink-500); font-size:var(--fs-sm);">Resumen general de todos los proyectos</p>
+        </div>
+        <a href="#proyectos/nuevo" class="btn btn-primary">${icono('mas')} Nuevo proyecto</a>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">Proyectos activos</span>
+          <span class="kpi-value">${resumen.proyectosActivos}</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Proyectos cerrados</span>
+          <span class="kpi-value">${resumen.proyectosCerrados}</span>
+        </div>
+        <div class="kpi-card accent-ledger">
+          <span class="kpi-label">Total recibido</span>
+          <span class="kpi-value small tabular">${formatoMoneda(resumen.totalRecibido)}</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Total gastado</span>
+          <span class="kpi-value small tabular">${formatoMoneda(resumen.totalGastado)}</span>
+        </div>
+        <div class="kpi-card ${resumen.saldo < 0 ? 'accent-danger' : 'accent-success'}">
+          <span class="kpi-label">Saldo disponible</span>
+          <span class="kpi-value small tabular">${formatoMoneda(resumen.saldo)}</span>
+          ${resumen.reembolsoPendiente > 0 ? `<span class="kpi-sub" style="color:var(--danger);">Reembolso pendiente: ${formatoMoneda(resumen.reembolsoPendiente)}</span>` : ''}
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Con comprobante</span>
+          <span class="kpi-value small tabular">${formatoMoneda(resumen.totalConComprobante)}</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Pendiente de comprobante</span>
+          <span class="kpi-value small tabular">${formatoMoneda(resumen.totalPendiente)}</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Sin comprobante</span>
+          <span class="kpi-value small tabular">${formatoMoneda(resumen.totalSinComprobante)}</span>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card card-elevated">
+          <div class="section-title">Proyectos recientes</div>
+          ${resumen.proyectosRecientes.length
+            ? resumen.proyectosRecientes.map(filaProyectoReciente).join('')
+            : `<div class="empty-state"><p class="lead">Aún no hay proyectos</p><p>Crea tu primer proyecto para comenzar a registrar viáticos.</p><a href="#proyectos/nuevo" class="btn btn-primary" style="margin-top:16px; display:inline-flex;">${icono('mas')} Crear proyecto</a></div>`}
+        </div>
+        <div class="card card-elevated">
+          <div class="section-title">Gastos por categoría</div>
+          ${graficoBarrasCategoria(porCategoria)}
+        </div>
+      </div>
+    `;
+  }
+
+  return { renderDashboard };
+  })();
+
+  // ==== modules/proyectos/proyectos.list ====
+  __modules__['modules/proyectos/proyectos.list'] = (function(){
+  const { listarProyectos, resumenFinancieroProyecto } = __modules__['core/repositorio'];
+  const { formatoMoneda, ETIQUETAS_ESTADO_PROYECTO } = __modules__['utils/format'];
+  const { icono } = __modules__['components/icons'];
+
+
+
+
+  const FILTROS = ['todos', 'planificado', 'activo', 'finalizado', 'archivado'];
+  let filtroActual = 'todos';
+  let busquedaActual = '';
+
+  function tarjetaProyecto(p, resumen) {
+    return `
+      <a class="proj-card" href="#proyectos/${p.id}">
+        <div class="proj-card-head">
+          <div>
+            <div class="proj-card-title">${p.nombre}</div>
+            <div class="proj-card-client">${p.cliente || 'Sin cliente'} · ${p.ciudad || 'Sin ciudad'}</div>
+          </div>
+          <span class="state-tag state-${p.estado}">${ETIQUETAS_ESTADO_PROYECTO[p.estado]}</span>
+        </div>
+        <div class="proj-card-metrics">
+          <div class="proj-card-metric">
+            <div class="num tabular">${formatoMoneda(resumen.totalRecibido)}</div>
+            <div class="lbl">Recibido</div>
+          </div>
+          <div class="proj-card-metric">
+            <div class="num tabular">${formatoMoneda(resumen.totalGastado)}</div>
+            <div class="lbl">Gastado</div>
+          </div>
+          <div class="proj-card-metric">
+            <div class="num tabular" style="color:${resumen.saldo < 0 ? 'var(--danger)' : 'var(--state-ok)'};">${formatoMoneda(resumen.saldo)}</div>
+            <div class="lbl">Saldo</div>
+          </div>
+        </div>
+      </a>
+    `;
+  }
+
+  async function renderProyectosLista(contenedor) {
+    contenedor.innerHTML = `<div class="empty-state">Cargando…</div>`;
+    const proyectos = await listarProyectos();
+
+    const proyectosFiltrados = proyectos.filter((p) => {
+      const pasaEstado = filtroActual === 'todos' || p.estado === filtroActual;
+      const pasaBusqueda = !busquedaActual || p.nombre.toLowerCase().includes(busquedaActual.toLowerCase()) || (p.cliente || '').toLowerCase().includes(busquedaActual.toLowerCase());
+      return pasaEstado && pasaBusqueda;
+    });
+
+    const resumenes = await Promise.all(proyectosFiltrados.map((p) => resumenFinancieroProyecto(p.id)));
+
+    contenedor.innerHTML = `
+      <div class="toolbar">
+        <div>
+          <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600;">Proyectos</h1>
+          <p style="color:var(--ink-500); font-size:var(--fs-sm);">${proyectos.length} proyecto(s) en total</p>
+        </div>
+        <a href="#proyectos/nuevo" class="btn btn-primary">${icono('mas')} Crear proyecto</a>
+      </div>
+
+      <div class="toolbar" style="margin-bottom:var(--sp-4);">
+        <div class="toolbar-filters" id="filtros-estado">
+          ${FILTROS.map((f) => `<button class="chip ${f === filtroActual ? 'active' : ''}" data-filtro="${f}">${f === 'todos' ? 'Todos' : ETIQUETAS_ESTADO_PROYECTO[f]}</button>`).join('')}
+        </div>
+        <input type="search" id="buscador-proyectos" placeholder="Buscar por nombre o cliente…" value="${busquedaActual}"
+          style="padding:8px 12px; border:1px solid var(--line); border-radius:6px; min-width:220px; background:var(--paper-100);" />
+      </div>
+
+      <div id="proyectos-grid">
+        ${proyectosFiltrados.length
+          ? `<div class="proj-grid">${proyectosFiltrados.map((p, i) => tarjetaProyecto(p, resumenes[i])).join('')}</div>`
+          : `<div class="empty-state"><p class="lead">No se encontraron proyectos</p><p>Ajusta los filtros o crea un nuevo proyecto.</p></div>`}
+      </div>
+    `;
+
+    contenedor.querySelectorAll('[data-filtro]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        filtroActual = btn.dataset.filtro;
+        renderProyectosLista(contenedor);
+      });
+    });
+
+    const buscador = contenedor.querySelector('#buscador-proyectos');
+    buscador.addEventListener('input', (e) => {
+      busquedaActual = e.target.value;
+      renderProyectosLista(contenedor);
+    });
+    // Devolver el foco al buscador tras re-render si el usuario seguía escribiendo
+    if (document.activeElement?.id !== 'buscador-proyectos' && busquedaActual) {
+      buscador.focus();
+      buscador.setSelectionRange(busquedaActual.length, busquedaActual.length);
+    }
+  }
+
+  return { renderProyectosLista };
+  })();
+
+  // ==== utils/validate ====
+  __modules__['utils/validate'] = (function(){
+  function esValorMonetarioValido(valor) {
+    const num = Number(valor);
+    return !Number.isNaN(num) && Number.isFinite(num) && num >= 0;
+  }
+
+  function esFechaValida(fechaStr) {
+    if (!fechaStr) return false;
+    const fecha = new Date(fechaStr);
+    return !Number.isNaN(fecha.getTime());
+  }
+
+  function validarProyecto(datos) {
+    const errores = {};
+    if (!datos.nombre || !datos.nombre.trim()) errores.nombre = 'El nombre del proyecto es obligatorio.';
+    if (datos.fechaInicio && datos.fechaFinEstimada) {
+      if (new Date(datos.fechaFinEstimada) < new Date(datos.fechaInicio)) {
+        errores.fechaFinEstimada = 'La fecha estimada de fin no puede ser anterior al inicio.';
+      }
+    }
+    if (datos.numeroPersonas !== undefined && Number(datos.numeroPersonas) < 1) {
+      errores.numeroPersonas = 'Debe haber al menos 1 persona.';
+    }
+    return { valido: Object.keys(errores).length === 0, errores };
+  }
+
+  return { esValorMonetarioValido, esFechaValida, validarProyecto };
+  })();
+
+  // ==== components/toast ====
+  __modules__['components/toast'] = (function(){
+  function mostrarToast(mensaje, duracionMs = 3200) {
+    const region = document.getElementById('toast-region');
+    if (!region) return;
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.setAttribute('role', 'status');
+    el.textContent = mensaje;
+    region.appendChild(el);
+    setTimeout(() => el.remove(), duracionMs);
+  }
+
+  return { mostrarToast };
+  })();
+
+  // ==== modules/proyectos/proyectos.form ====
+  __modules__['modules/proyectos/proyectos.form'] = (function(){
+  const { obtenerProyecto, guardarProyectoNuevo, guardarProyectoEditado } = __modules__['core/repositorio'];
+  const { validarProyecto } = __modules__['utils/validate'];
+  const { mostrarToast } = __modules__['components/toast'];
+  const { irA } = __modules__['core/router'];
+
+
+
+
+
+  function campo(label, name, type = 'text', valor = '', extra = '') {
+    return `
+      <div class="field">
+        <label for="f-${name}">${label}</label>
+        <input id="f-${name}" name="${name}" type="${type}" value="${valor ?? ''}" ${extra} />
+      </div>
+    `;
+  }
+
+  async function renderProyectoForm(contenedor, params) {
+    const editando = params?.id && params.id !== 'nuevo';
+    const proyecto = editando ? await obtenerProyecto(params.id) : null;
+
+    if (editando && !proyecto) {
+      contenedor.innerHTML = `<div class="empty-state"><p class="lead">Proyecto no encontrado</p></div>`;
+      return;
+    }
+
+    const d = proyecto || {};
+
+    contenedor.innerHTML = `
+      <div class="toolbar">
+        <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600;">
+          ${editando ? 'Editar proyecto' : 'Crear proyecto'}
+        </h1>
+        <a href="#proyectos" class="btn btn-ghost">Cancelar</a>
+      </div>
+
+      <form id="form-proyecto" class="card card-elevated" style="max-width:720px; display:flex; flex-direction:column; gap:var(--sp-4);">
+        ${campo('Nombre del proyecto *', 'nombre', 'text', d.nombre)}
+        <div class="field-row">
+          ${campo('Cliente', 'cliente', 'text', d.cliente)}
+          ${campo('Responsable', 'responsable', 'text', d.responsable)}
+        </div>
+        <div class="field-row">
+          ${campo('Ciudad', 'ciudad', 'text', d.ciudad)}
+          ${campo('Provincia', 'provincia', 'text', d.provincia)}
+        </div>
+        <div class="field-row">
+          ${campo('Fecha de inicio', 'fechaInicio', 'date', d.fechaInicio)}
+          ${campo('Fecha estimada de finalización', 'fechaFinEstimada', 'date', d.fechaFinEstimada)}
+        </div>
+        <div class="field-row">
+          ${campo('Número de personas', 'numeroPersonas', 'number', d.numeroPersonas || 1, 'min="1" step="1"')}
+          <div class="field">
+            <label for="f-estado">Estado</label>
+            <select id="f-estado" name="estado">
+              ${['planificado', 'activo', 'finalizado', 'archivado'].map((e) => `<option value="${e}" ${d.estado === e ? 'selected' : ''}>${e[0].toUpperCase() + e.slice(1)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-motivo">Motivo del viaje</label>
+          <textarea id="f-motivo" name="motivoViaje" rows="2">${d.motivoViaje || ''}</textarea>
+        </div>
+        <div class="field">
+          <label for="f-obs">Observaciones</label>
+          <textarea id="f-obs" name="observaciones" rows="2">${d.observaciones || ''}</textarea>
+        </div>
+        <div id="errores-form" style="color:var(--danger); font-size:var(--fs-sm);"></div>
+        <div class="modal-actions" style="justify-content:flex-start;">
+          <button type="submit" class="btn btn-primary">${editando ? 'Guardar cambios' : 'Crear proyecto'}</button>
+          <a href="#proyectos" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </form>
+    `;
+
+    contenedor.querySelector('#form-proyecto').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const datos = Object.fromEntries(fd.entries());
+
+      const { valido, errores } = validarProyecto(datos);
+      const boxErrores = contenedor.querySelector('#errores-form');
+      if (!valido) {
+        boxErrores.innerHTML = Object.values(errores).map((m) => `<div>${m}</div>`).join('');
+        return;
+      }
+      boxErrores.innerHTML = '';
+
+      if (editando) {
+        await guardarProyectoEditado(proyecto, datos);
+        mostrarToast('Proyecto actualizado.');
+        irA(`proyectos/${proyecto.id}`);
+      } else {
+        const nuevo = await guardarProyectoNuevo(datos);
+        mostrarToast('Proyecto creado.');
+        irA(`proyectos/${nuevo.id}`);
+      }
+    });
+  }
+
+  return { renderProyectoForm };
+  })();
+
+  // ==== components/modal ====
+  __modules__['components/modal'] = (function(){
+  let backdropActual = null;
+
+  function cerrarModal() {
+    if (backdropActual) {
+      backdropActual.remove();
+      backdropActual = null;
+    }
+  }
+
+  /**
+   * Muestra un modal genérico. `contenidoHtml` es el cuerpo (sin los
+   * botones). `botones` es un arreglo de { texto, clase, onClick, cerrar }.
+   */
+  function abrirModal({ titulo, contenidoHtml, botones = [] }) {
+    cerrarModal();
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true" aria-label="${titulo}">
+        <h2>${titulo}</h2>
+        <div class="modal-body">${contenidoHtml}</div>
+        <div class="modal-actions"></div>
+      </div>
+    `;
+    const acciones = backdrop.querySelector('.modal-actions');
+    botones.forEach((btn) => {
+      const b = document.createElement('button');
+      b.className = `btn ${btn.clase || 'btn-secondary'}`;
+      b.textContent = btn.texto;
+      b.addEventListener('click', () => {
+        btn.onClick?.();
+        if (btn.cerrar !== false) cerrarModal();
+      });
+      acciones.appendChild(b);
+    });
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) cerrarModal();
+    });
+    document.body.appendChild(backdrop);
+    backdropActual = backdrop;
+    return backdrop;
+  }
+
+  /** Confirmación de eliminación segura (ver punto 12 del brief) */
+  function confirmarEliminacionGasto(gasto, formatoMoneda, formatoFecha, onConfirmar) {
+    abrirModal({
+      titulo: '¿Eliminar este gasto?',
+      contenidoHtml: `
+        <p style="margin-bottom:8px;"><strong>${gasto.descripcion || '(sin descripción)'}</strong></p>
+        <p style="font-size: 0.85rem; color: var(--ink-500); margin-bottom:4px;">Fecha: ${formatoFecha(gasto.fecha)}</p>
+        <p style="font-size: 0.85rem; color: var(--ink-500); margin-bottom: 12px;">Valor: ${formatoMoneda(gasto.valor)}</p>
+        <p style="font-size: 0.85rem; color: var(--danger);">Esta acción modificará el total gastado y el saldo disponible del proyecto. El gasto se enviará a la papelera.</p>
+      `,
+      botones: [
+        { texto: 'Cancelar', clase: 'btn-secondary' },
+        { texto: 'Sí, eliminar gasto', clase: 'btn-danger', onClick: onConfirmar },
+      ],
+    });
+  }
+
+  return { cerrarModal, abrirModal, confirmarEliminacionGasto };
+  })();
+
+  // ==== modules/ingresos/ingresos.repo ====
+  __modules__['modules/ingresos/ingresos.repo'] = (function(){
+  const { db } = __modules__['storage/db'];
+  const { crearIngreso } = __modules__['core/models'];
+
+
+
+  async function listarIngresos(proyectoId) {
+    const todos = await db.getAllPorIndice('ingresos', 'porProyecto', proyectoId);
+    return todos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  }
+
+  async function crearNuevoIngreso(proyectoId, datos) {
+    const ingreso = crearIngreso(proyectoId, datos);
+    await db.put('ingresos', ingreso);
+    return ingreso;
+  }
+
+  async function editarIngreso(ingreso, cambios) {
+    const actualizado = { ...ingreso, ...cambios, id: ingreso.id, proyectoId: ingreso.proyectoId };
+    actualizado.valor = Number(actualizado.valor) || 0;
+    await db.put('ingresos', actualizado);
+    return actualizado;
+  }
+
+  async function eliminarIngreso(id) {
+    return db.delete('ingresos', id);
+  }
+
+  return { listarIngresos, crearNuevoIngreso, editarIngreso, eliminarIngreso };
+  })();
+
+  // ==== modules/ingresos/ingresos.view ====
+  __modules__['modules/ingresos/ingresos.view'] = (function(){
+  const { listarIngresos, crearNuevoIngreso, editarIngreso, eliminarIngreso } = __modules__['modules/ingresos/ingresos.repo'];
+  const { formatoMoneda, formatoFecha } = __modules__['utils/format'];
+  const { abrirModal, cerrarModal } = __modules__['components/modal'];
+  const { mostrarToast } = __modules__['components/toast'];
+  const { icono } = __modules__['components/icons'];
+
+
+
+
+
+
+  function formularioIngreso(proyectoId, ingresoExistente, onGuardado) {
+    const d = ingresoExistente || {};
+    const editando = Boolean(ingresoExistente);
+    const modal = abrirModal({
+      titulo: editando ? 'Editar ingreso' : 'Registrar dinero recibido',
+      contenidoHtml: `
+        <form id="form-ingreso" style="display:flex; flex-direction:column; gap:var(--sp-4);">
+          <div class="field-row">
+            <div class="field"><label>Fecha</label><input type="date" name="fecha" value="${d.fecha || new Date().toISOString().slice(0, 10)}" /></div>
+            <div class="field"><label>Valor (USD)</label><input type="number" name="valor" step="0.01" min="0" value="${d.valor ?? ''}" /></div>
+          </div>
+          <div class="field"><label>Concepto</label><input type="text" name="concepto" value="${d.concepto || ''}" placeholder="Ej. Anticipo inicial" /></div>
+          <div class="field"><label>Observaciones</label><textarea name="observaciones" rows="2">${d.observaciones || ''}</textarea></div>
+        </form>
+      `,
+      botones: [
+        { texto: 'Cancelar', clase: 'btn-secondary' },
+        {
+          texto: editando ? 'Guardar cambios' : 'Registrar ingreso', clase: 'btn-primary', cerrar: false,
+          onClick: async () => {
+            const form = modal.querySelector('#form-ingreso');
+            const datos = Object.fromEntries(new FormData(form).entries());
+            if (!(Number(datos.valor) > 0)) { mostrarToast('Ingresa un valor mayor a cero.'); return; }
+            if (editando) await editarIngreso(ingresoExistente, datos);
+            else await crearNuevoIngreso(proyectoId, datos);
+            mostrarToast(editando ? 'Ingreso actualizado.' : 'Ingreso registrado.');
+            cerrarModal();
+            onGuardado();
+          },
+        },
+      ],
+    });
+  }
+
+  async function renderIngresos(contenedor, proyectoId) {
+    const pintar = async () => {
+      const ingresos = await listarIngresos(proyectoId);
+      const total = ingresos.reduce((a, i) => a + i.valor, 0);
+
+      contenedor.innerHTML = `
+        <div class="toolbar">
+          <div>
+            <div class="section-title" style="margin-bottom:2px;">Dinero recibido</div>
+            <p style="font-size:var(--fs-sm); color:var(--text-500);">Total recibido: <strong class="tabular">${formatoMoneda(total)}</strong></p>
+          </div>
+          <button class="btn btn-primary" id="btn-nuevo-ingreso">${icono('mas')} Registrar ingreso</button>
+        </div>
+        <div class="card card-elevated">
+          ${ingresos.length ? ingresos.map((i) => `
+            <div class="proj-row">
+              <div>
+                <div class="proj-name">${i.concepto || '(sin concepto)'}</div>
+                <div class="proj-meta">${formatoFecha(i.fecha)}${i.observaciones ? ' · ' + i.observaciones : ''}</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:var(--sp-4);">
+                <span class="tabular" style="font-weight:600; color:var(--state-ok);">${formatoMoneda(i.valor)}</span>
+                <div style="display:flex; gap:4px;">
+                  <button class="btn btn-ghost btn-sm" data-editar="${i.id}">Editar</button>
+                  <button class="btn btn-ghost btn-sm" data-eliminar="${i.id}" style="color:var(--danger);">Eliminar</button>
+                </div>
+              </div>
+            </div>
+          `).join('') : `<div class="empty-state"><p class="lead">Aún no hay ingresos registrados</p><p>Registra el anticipo inicial para comenzar a controlar el saldo.</p></div>`}
+        </div>
+      `;
+
+      contenedor.querySelector('#btn-nuevo-ingreso').addEventListener('click', () => formularioIngreso(proyectoId, null, pintar));
+      contenedor.querySelectorAll('[data-editar]').forEach((btn) => btn.addEventListener('click', () => {
+        const ingreso = ingresos.find((i) => i.id === btn.dataset.editar);
+        formularioIngreso(proyectoId, ingreso, pintar);
+      }));
+      contenedor.querySelectorAll('[data-eliminar]').forEach((btn) => btn.addEventListener('click', () => {
+        abrirModal({
+          titulo: '¿Eliminar este ingreso?',
+          contenidoHtml: `<p>Esta acción modificará el total recibido y el saldo disponible del proyecto.</p>`,
+          botones: [
+            { texto: 'Cancelar', clase: 'btn-secondary' },
+            { texto: 'Sí, eliminar', clase: 'btn-danger', onClick: async () => { await eliminarIngreso(btn.dataset.eliminar); mostrarToast('Ingreso eliminado.'); pintar(); } },
+          ],
+        });
+      }));
+    };
+
+    await pintar();
+  }
+
+  return { renderIngresos };
+  })();
+
+  // ==== modules/gastos/gastos.repo ====
+  __modules__['modules/gastos/gastos.repo'] = (function(){
+  const { db } = __modules__['storage/db'];
+  const { crearGasto } = __modules__['core/models'];
+
+
+
+  async function listarGastosActivos(proyectoId) {
+    const todos = await db.getAllPorIndice('gastos', 'porProyecto', proyectoId);
+    return todos.filter((g) => !g.eliminado).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  }
+
+  async function listarGastosEnPapelera(proyectoId) {
+    const todos = await db.getAllPorIndice('gastos', 'porProyecto', proyectoId);
+    return todos.filter((g) => g.eliminado).sort((a, b) => new Date(b.eliminadoEn || b.fecha) - new Date(a.eliminadoEn || a.fecha));
+  }
+
+  async function obtenerGasto(id) {
+    return db.get('gastos', id);
+  }
+
+  async function crearNuevoGasto(proyectoId, datos) {
+    const gasto = crearGasto(proyectoId, datos);
+    await db.put('gastos', gasto);
+    return gasto;
+  }
+
+  async function editarGasto(gasto, cambios) {
+    const actualizado = {
+      ...gasto,
+      ...cambios,
+      id: gasto.id,
+      proyectoId: gasto.proyectoId,
+      eliminado: gasto.eliminado,
+      creadoEn: gasto.creadoEn,
+      actualizadoEn: new Date().toISOString(),
+    };
+    actualizado.valor = Number(actualizado.valor) || 0;
+    await db.put('gastos', actualizado);
+    return actualizado;
+  }
+
+  /** Envía el gasto a la papelera (soft delete). NUNCA se borra directo. */
+  async function enviarAPapelera(id) {
+    const gasto = await db.get('gastos', id);
+    if (!gasto) return null;
+    const actualizado = { ...gasto, eliminado: true, eliminadoEn: new Date().toISOString() };
+    await db.put('gastos', actualizado);
+    return actualizado;
+  }
+
+  async function restaurarDePapelera(id) {
+    const gasto = await db.get('gastos', id);
+    if (!gasto) return null;
+    const actualizado = { ...gasto, eliminado: false, eliminadoEn: null };
+    await db.put('gastos', actualizado);
+    return actualizado;
+  }
+
+  /** Elimina definitivamente. Requiere confirmación explícita en la UI. */
+  async function eliminarDefinitivamente(id) {
+    const gasto = await db.get('gastos', id);
+    if (gasto?.comprobanteId) {
+      await db.delete('comprobantes', gasto.comprobanteId);
+    }
+    return db.delete('gastos', id);
+  }
+
+  async function vincularComprobante(gastoId, comprobanteId, nuevoEstadoComprobante) {
+    const gasto = await db.get('gastos', gastoId);
+    if (!gasto) return null;
+    const actualizado = {
+      ...gasto,
+      comprobanteId,
+      estadoComprobante: nuevoEstadoComprobante || gasto.estadoComprobante,
+      actualizadoEn: new Date().toISOString(),
+    };
+    await db.put('gastos', actualizado);
+    return actualizado;
+  }
+
+  return { listarGastosActivos, listarGastosEnPapelera, obtenerGasto, crearNuevoGasto, editarGasto, enviarAPapelera, restaurarDePapelera, eliminarDefinitivamente, vincularComprobante };
+  })();
+
+  // ==== modules/gastos/gastos.parser ====
+  __modules__['modules/gastos/gastos.parser'] = (function(){
+  /**
+   * gastos.parser.js — Interpreta frases libres tipo "Parqueadero obra $3".
+   * IMPORTANTE: esto solo propone datos. El módulo que lo use SIEMPRE debe
+   * mostrar el resultado para editar/confirmar antes de guardar (regla 5).
+   */
+  const PALABRAS_CLAVE_CATEGORIA = {
+    alimentacion: ['almuerzo', 'desayuno', 'cena', 'comida', 'refrigerio', 'restaurante', 'menu'],
+    hospedaje: ['hospedaje', 'hotel', 'hostal', 'noche', 'alojamiento'],
+    transporte: ['taxi', 'bus', 'transporte', 'uber', 'combustible', 'gasolina', 'diesel', 'parqueadero', 'parqueo'],
+    peajes: ['peaje', 'peajes'],
+    materiales: ['material', 'materiales', 'herramienta', 'insumo'],
+    imprevistos: ['imprevisto', 'emergencia'],
+  };
+
+  function detectarCategoria(textoLower) {
+    for (const [categoria, palabras] of Object.entries(PALABRAS_CLAVE_CATEGORIA)) {
+      if (palabras.some((p) => textoLower.includes(p))) return categoria;
+    }
+    return 'otros';
+  }
+
+  /**
+   * @param {string} texto - ej. "Parqueadero obra $3" o "Combustible viaje Manta $45"
+   * @returns {{ descripcion: string, categoria: string, valor: number|null, confianza: 'alta'|'media'|'baja' }}
+   */
+  function interpretarEntradaRapida(texto) {
+    const original = texto.trim();
+    if (!original) return { descripcion: '', categoria: 'otros', valor: null, confianza: 'baja' };
+
+    // Busca un valor monetario: $45, $28.50, 45.00, etc. Prioriza el que tenga signo $.
+    const conSigno = original.match(/\$\s*(\d+(?:[.,]\d{1,2})?)/);
+    const sinSigno = original.match(/(\d+(?:[.,]\d{1,2})?)\s*$/);
+    const match = conSigno || sinSigno;
+
+    let valor = null;
+    let descripcion = original;
+    if (match) {
+      valor = Number(match[1].replace(',', '.'));
+      descripcion = (original.slice(0, match.index) + original.slice(match.index + match[0].length)).trim();
+      descripcion = descripcion.replace(/\s{2,}/g, ' ').trim();
+    }
+
+    const categoria = detectarCategoria(original.toLowerCase());
+    const confianza = match ? (conSigno ? 'alta' : 'media') : 'baja';
+
+    return {
+      descripcion: descripcion || original,
+      categoria,
+      valor,
+      confianza,
+    };
+  }
+
+  return { interpretarEntradaRapida };
+  })();
+
+  // ==== modules/comprobantes/imagen.util ====
+  __modules__['modules/comprobantes/imagen.util'] = (function(){
+  /**
+   * imagen.util.js — Compresión de fotos de comprobantes antes de guardarlas.
+   * Redimensiona al lado más largo y comprime a JPEG, con una segunda
+   * pasada de compresión si el resultado sigue pesando demasiado.
+   */
+  const LADO_MAX = 1600;
+  const LADO_MINIATURA = 300;
+  const CALIDAD_INICIAL = 0.8;
+  const PESO_MAX_BYTES = 500 * 1024; // 500KB
+
+  function cargarImagen(archivoOBlob) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = URL.createObjectURL(archivoOBlob);
+    });
+  }
+
+  function dibujarEnCanvas(img, ladoMax) {
+    const escala = Math.min(1, ladoMax / Math.max(img.width, img.height));
+    const w = Math.round(img.width * escala);
+    const h = Math.round(img.height * escala);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas;
+  }
+
+  function canvasABlob(canvas, calidad) {
+    return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', calidad));
+  }
+
+  /**
+   * Comprime una foto de comprobante.
+   * @returns {{ imagenBlob: Blob, miniaturaBlob: Blob }}
+   */
+  async function comprimirComprobante(archivoOBlob) {
+    const img = await cargarImagen(archivoOBlob);
+
+    const canvasGrande = dibujarEnCanvas(img, LADO_MAX);
+    let calidad = CALIDAD_INICIAL;
+    let imagenBlob = await canvasABlob(canvasGrande, calidad);
+
+    // Segunda pasada si sigue pesando demasiado (facturas muy largas, etc.)
+    let intentos = 0;
+    while (imagenBlob.size > PESO_MAX_BYTES && calidad > 0.4 && intentos < 3) {
+      calidad -= 0.15;
+      imagenBlob = await canvasABlob(canvasGrande, calidad);
+      intentos++;
+    }
+
+    const canvasMini = dibujarEnCanvas(img, LADO_MINIATURA);
+    const miniaturaBlob = await canvasABlob(canvasMini, 0.7);
+
+    URL.revokeObjectURL(img.src);
+    return { imagenBlob, miniaturaBlob };
+  }
+
+  function blobAUrl(blob) {
+    if (!blob) return '';
+    return URL.createObjectURL(blob);
+  }
+
+  async function blobABase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  return { comprimirComprobante, blobAUrl, blobABase64 };
+  })();
+
+  // ==== modules/comprobantes/interpretacion.service ====
+  __modules__['modules/comprobantes/interpretacion.service'] = (function(){
+  const { db } = __modules__['storage/db'];
+  const { blobABase64 } = __modules__['modules/comprobantes/imagen.util'];
+  /**
+   * interpretacion.service.js — Interpretación real de comprobantes por foto.
+   *
+   * Usa la API de Anthropic (modelo con visión) para extraer: establecimiento,
+   * fecha, número de factura, subtotal, IVA, total y categoría probable.
+   *
+   * Esto es una app standalone (no un artifact de Claude.ai), así que NO hay
+   * una llave gestionada automáticamente: el usuario debe pegar su propia
+   * clave de API en Configuración. Sin clave configurada, o sin internet,
+   * el sistema NO simula un resultado — deja el gasto como
+   * "pendiente_conexion" / "requiere configuración" y permite registro manual.
+   */
+
+
+
+  const MODELO = 'claude-sonnet-4-6';
+
+  const PROMPT_SISTEMA = `Analiza esta imagen de un comprobante de gasto (factura, recibo, ticket o nota de venta) y responde ÚNICAMENTE con un objeto JSON, sin texto adicional, sin markdown, con esta forma exacta:
+  {"establecimiento": string|null, "fecha": "YYYY-MM-DD"|null, "numeroFactura": string|null, "subtotal": number|null, "iva": number|null, "total": number|null, "categoriaProbable": "alimentacion"|"hospedaje"|"transporte"|"peajes"|"materiales"|"imprevistos"|"otros"}
+  Si no puedes leer algún dato con confianza, usa null en ese campo. No inventes valores.`;
+
+  async function obtenerClaveApi() {
+    const config = await db.get('configuracion', 'general');
+    return config?.claveApiAnthropic || null;
+  }
+
+  async function haySesionParaInterpretar() {
+    const clave = await obtenerClaveApi();
+    return Boolean(clave) && navigator.onLine;
+  }
+
+  /**
+   * @param {Blob} imagenBlob
+   * @returns {Promise<{ok: true, datos: object} | {ok: false, motivo: 'sin_clave'|'sin_conexion'|'error', detalle?: string}>}
+   */
+  async function interpretarComprobante(imagenBlob) {
+    if (!navigator.onLine) return { ok: false, motivo: 'sin_conexion' };
+
+    const clave = await obtenerClaveApi();
+    if (!clave) return { ok: false, motivo: 'sin_clave' };
+
+    try {
+      const base64 = await blobABase64(imagenBlob);
+      const respuesta = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': clave,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: MODELO,
+          max_tokens: 500,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+              { type: 'text', text: PROMPT_SISTEMA },
+            ],
+          }],
+        }),
+      });
+
+      if (!respuesta.ok) {
+        const detalle = await respuesta.text().catch(() => '');
+        return { ok: false, motivo: 'error', detalle: `HTTP ${respuesta.status}: ${detalle.slice(0, 200)}` };
+      }
+
+      const data = await respuesta.json();
+      const texto = (data.content || []).map((b) => b.text || '').join('').trim();
+      const limpio = texto.replace(/```json|```/g, '').trim();
+      const datos = JSON.parse(limpio);
+      return { ok: true, datos };
+    } catch (err) {
+      return { ok: false, motivo: 'error', detalle: err.message };
+    }
+  }
+
+  return { obtenerClaveApi, haySesionParaInterpretar, interpretarComprobante };
+  })();
+
+  // ==== modules/comprobantes/cola.service ====
+  __modules__['modules/comprobantes/cola.service'] = (function(){
+  const { db, generarId } = __modules__['storage/db'];
+  const { interpretarComprobante } = __modules__['modules/comprobantes/interpretacion.service'];
+  const { ESTADO_INTERPRETACION } = __modules__['core/models'];
+  const { mostrarToast } = __modules__['components/toast'];
+  /**
+   * cola.service.js — Cola de comprobantes pendientes de interpretar.
+   * Si no hay internet (o no hay clave de API) al momento de tomar la foto,
+   * el gasto queda guardado igual y se agrega aquí. Al recuperar conexión,
+   * se reintenta automáticamente y se notifica al usuario para que revise
+   * y confirme — nunca se sobrescribe un gasto sin su aprobación.
+   */
+
+
+
+
+
+  let escuchando = false;
+  let alHaberSugerencia = null;
+
+  function alRecibirSugerencia(callback) {
+    alHaberSugerencia = callback;
+  }
+
+  async function agregarAColaSincronizacion(comprobanteId, gastoId) {
+    await db.put('colaSincronizacion', {
+      id: generarId('cola'),
+      comprobanteId,
+      gastoId,
+      intentos: 0,
+      creadoEn: new Date().toISOString(),
+    });
+  }
+
+  async function procesarColaSincronizacion() {
+    if (!navigator.onLine) return;
+    const pendientes = await db.getAll('colaSincronizacion');
+    if (!pendientes.length) return;
+
+    for (const item of pendientes) {
+      const comprobante = await db.get('comprobantes', item.comprobanteId);
+      if (!comprobante) {
+        await db.delete('colaSincronizacion', item.id);
+        continue;
+      }
+      const resultado = await interpretarComprobante(comprobante.imagenBlob);
+      if (resultado.ok) {
+        await db.put('comprobantes', {
+          ...comprobante,
+          estadoInterpretacion: ESTADO_INTERPRETACION.LISTO,
+          datosDetectados: resultado.datos,
+        });
+        await db.delete('colaSincronizacion', item.id);
+        mostrarToast(`Se detectó información nueva para un gasto. Revísala en el detalle.`);
+        alHaberSugerencia?.(item.gastoId, resultado.datos);
+      } else if (resultado.motivo === 'sin_conexion' || resultado.motivo === 'sin_clave') {
+        // se reintentará en la próxima reconexión / cuando configure la clave
+        break;
+      } else {
+        const actualizado = { ...item, intentos: item.intentos + 1 };
+        if (actualizado.intentos >= 3) {
+          await db.put('comprobantes', { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.ERROR });
+          await db.delete('colaSincronizacion', item.id);
+        } else {
+          await db.put('colaSincronizacion', actualizado);
+        }
+      }
+    }
+  }
+
+  function iniciarEscuchaDeConexion() {
+    if (escuchando) return;
+    escuchando = true;
+    window.addEventListener('online', () => {
+      mostrarToast('Conexión recuperada. Revisando comprobantes pendientes…');
+      procesarColaSincronizacion();
+    });
+    if (navigator.onLine) procesarColaSincronizacion();
+  }
+
+  async function contarPendientes() {
+    const pendientes = await db.getAll('colaSincronizacion');
+    return pendientes.length;
+  }
+
+  return { alRecibirSugerencia, agregarAColaSincronizacion, procesarColaSincronizacion, iniciarEscuchaDeConexion, contarPendientes };
+  })();
+
+  // ==== modules/comprobantes/captura ====
+  __modules__['modules/comprobantes/captura'] = (function(){
+  const { db, generarId } = __modules__['storage/db'];
+  const { comprimirComprobante } = __modules__['modules/comprobantes/imagen.util'];
+  const { interpretarComprobante } = __modules__['modules/comprobantes/interpretacion.service'];
+  const { agregarAColaSincronizacion } = __modules__['modules/comprobantes/cola.service'];
+  const { crearComprobante, ESTADO_INTERPRETACION } = __modules__['core/models'];
+  const { icono } = __modules__['components/icons'];
+  const { mostrarToast } = __modules__['components/toast'];
+
+
+
+
+
+
+
+
+  /**
+   * Renderiza los botones "Tomar foto" / "Elegir de galería" dentro de
+   * `contenedor`. Cuando el usuario selecciona una imagen, la comprime,
+   * crea el registro de comprobante, intenta interpretarla si hay
+   * conexión + clave configurada, y llama a `onListo(comprobante)`.
+   * Si no hay conexión, la deja en cola y llama a `onListo` igual
+   * (con estadoInterpretacion = pendiente_conexion) para no bloquear al usuario.
+   */
+  function renderBotonesCaptura(contenedor, onListo) {
+    contenedor.innerHTML = `
+      <div style="display:flex; gap:var(--sp-3); flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary" id="btn-camara">${icono('camara')} Tomar foto</button>
+        <button type="button" class="btn btn-secondary" id="btn-galeria">${icono('camara')} Elegir de galería</button>
+      </div>
+      <input type="file" accept="image/*" capture="environment" id="input-camara" style="display:none;" />
+      <input type="file" accept="image/*" id="input-galeria" style="display:none;" />
+      <div id="captura-estado" style="font-size:var(--fs-xs); color:var(--text-500); margin-top:var(--sp-2);"></div>
+    `;
+
+    const inputCamara = contenedor.querySelector('#input-camara');
+    const inputGaleria = contenedor.querySelector('#input-galeria');
+    const estadoEl = contenedor.querySelector('#captura-estado');
+
+    contenedor.querySelector('#btn-camara').addEventListener('click', () => inputCamara.click());
+    contenedor.querySelector('#btn-galeria').addEventListener('click', () => inputGaleria.click());
+
+    const manejarArchivo = async (archivo) => {
+      if (!archivo) return;
+      estadoEl.textContent = 'Comprimiendo imagen…';
+      try {
+        const { imagenBlob, miniaturaBlob } = await comprimirComprobante(archivo);
+
+        let comprobante = crearComprobante(null, { imagenBlob, miniaturaBlob });
+
+        const enLinea = navigator.onLine;
+        if (enLinea) {
+          estadoEl.textContent = 'Interpretando comprobante…';
+          const resultado = await interpretarComprobante(imagenBlob);
+          if (resultado.ok) {
+            comprobante = { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.LISTO, datosDetectados: resultado.datos };
+          } else if (resultado.motivo === 'sin_clave') {
+            comprobante = { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.NO_APLICA };
+            mostrarToast('No hay clave de API configurada — registra el gasto manualmente.');
+          } else {
+            comprobante = { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.PENDIENTE_CONEXION };
+            await agregarAColaSincronizacion(comprobante.id, null);
+          }
+        } else {
+          comprobante = { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.PENDIENTE_CONEXION };
+          await agregarAColaSincronizacion(comprobante.id, null);
+          mostrarToast('Sin conexión: la foto se guardó y se interpretará automáticamente cuando vuelva internet.');
+        }
+
+        await db.put('comprobantes', comprobante);
+        estadoEl.textContent = '';
+        onListo(comprobante);
+      } catch (err) {
+        estadoEl.textContent = '';
+        mostrarToast('No se pudo procesar la imagen. Intenta de nuevo.');
+        console.error(err);
+      }
+    };
+
+    inputCamara.addEventListener('change', (e) => manejarArchivo(e.target.files[0]));
+    inputGaleria.addEventListener('change', (e) => manejarArchivo(e.target.files[0]));
+  }
+
+  return { renderBotonesCaptura };
+  })();
+
+  // ==== modules/gastos/gastos.form ====
+  __modules__['modules/gastos/gastos.form'] = (function(){
+  const { abrirModal, cerrarModal } = __modules__['components/modal'];
+  const { mostrarToast } = __modules__['components/toast'];
+  const { CATEGORIAS_DEFECTO, ESTADOS_COMPROBANTE, ESTADO_INTERPRETACION } = __modules__['core/models'];
+  const { crearNuevoGasto, editarGasto, vincularComprobante } = __modules__['modules/gastos/gastos.repo'];
+  const { interpretarEntradaRapida } = __modules__['modules/gastos/gastos.parser'];
+  const { renderBotonesCaptura } = __modules__['modules/comprobantes/captura'];
+  const { blobAUrl } = __modules__['modules/comprobantes/imagen.util'];
+  const { formatoMoneda } = __modules__['utils/format'];
+  const { db } = __modules__['storage/db'];
+
+
+
+
+
+
+
+
+
+
+  const ETIQUETAS_ESTADO = {
+    [ESTADOS_COMPROBANTE.CON]: 'Con comprobante',
+    [ESTADOS_COMPROBANTE.PENDIENTE]: 'Pendiente de comprobante',
+    [ESTADOS_COMPROBANTE.SIN]: 'Sin comprobante',
+  };
+
+  function opcionesCategoria(seleccion) {
+    return CATEGORIAS_DEFECTO.map((c) => `<option value="${c.id}" ${c.id === seleccion ? 'selected' : ''}>${c.nombre}</option>`).join('');
+  }
+
+  function opcionesEstadoComprobante(seleccion) {
+    return Object.entries(ETIQUETAS_ESTADO).map(([v, l]) => `<option value="${v}" ${v === seleccion ? 'selected' : ''}>${l}</option>`).join('');
+  }
+
+  function campoManual(d = {}) {
+    return `
+      <div class="field-row">
+        <div class="field"><label>Fecha</label><input type="date" name="fecha" value="${d.fecha || new Date().toISOString().slice(0, 10)}" /></div>
+        <div class="field"><label>Valor (USD)</label><input type="number" name="valor" step="0.01" min="0" value="${d.valor ?? ''}" /></div>
+      </div>
+      <div class="field"><label>Descripción</label><input type="text" name="descripcion" value="${d.descripcion || ''}" placeholder="Ej. Almuerzo equipo obra" /></div>
+      <div class="field-row">
+        <div class="field"><label>Categoría</label><select name="categoria">${opcionesCategoria(d.categoria || 'otros')}</select></div>
+        <div class="field"><label>Estado del comprobante</label><select name="estadoComprobante">${opcionesEstadoComprobante(d.estadoComprobante || ESTADOS_COMPROBANTE.SIN)}</select></div>
+      </div>
+      <div class="field"><label>Observaciones</label><textarea name="observaciones" rows="2">${d.observaciones || ''}</textarea></div>
+    `;
+  }
+
+  /**
+   * Abre el modal de registro/edición de gasto.
+   * @param {{proyectoId: string, gastoExistente?: object, onGuardado: function}} opts
+   */
+  function abrirFormularioGasto({ proyectoId, gastoExistente, onGuardado }) {
+    const editando = Boolean(gastoExistente);
+    let modo = 'manual'; // 'manual' | 'rapida' | 'foto'
+    let comprobantePendiente = null; // { id, imagenBlob, datosDetectados, estadoInterpretacion }
+
+    const modal = abrirModal({
+      titulo: editando ? 'Editar gasto' : 'Registrar gasto',
+      contenidoHtml: `
+        <div class="tabs-modo">
+          <button type="button" class="chip active" data-modo="manual">Manual</button>
+          ${editando ? '' : '<button type="button" class="chip" data-modo="rapida">Entrada rápida</button>'}
+          ${editando ? '' : '<button type="button" class="chip" data-modo="foto">Tomar foto / Galería</button>'}
+        </div>
+        <form id="form-gasto">${campoManual(gastoExistente)}</form>
+        <div id="zona-modo-especial"></div>
+      `,
+      botones: [
+        { texto: 'Cancelar', clase: 'btn-secondary' },
+        {
+          texto: editando ? 'Guardar cambios' : 'Confirmar y guardar',
+          clase: 'btn-primary',
+          cerrar: false,
+          onClick: async () => {
+            const form = modal.querySelector('#form-gasto');
+            const datos = Object.fromEntries(new FormData(form).entries());
+            if (!datos.descripcion?.trim() && !comprobantePendiente) {
+              mostrarToast('Escribe una descripción para el gasto.');
+              return;
+            }
+            if (!(Number(datos.valor) >= 0)) {
+              mostrarToast('El valor debe ser un número válido.');
+              return;
+            }
+
+            let gasto;
+            if (editando) {
+              gasto = await editarGasto(gastoExistente, datos);
+            } else {
+              gasto = await crearNuevoGasto(proyectoId, {
+                ...datos,
+                origenRegistro: comprobantePendiente ? 'foto' : 'manual',
+              });
+            }
+
+            if (comprobantePendiente) {
+              await db.put('comprobantes', { ...comprobantePendiente, gastoId: gasto.id });
+              const nuevoEstado = comprobantePendiente.estadoInterpretacion === ESTADO_INTERPRETACION.PENDIENTE_CONEXION
+                ? ESTADOS_COMPROBANTE.PENDIENTE
+                : ESTADOS_COMPROBANTE.CON;
+              await vincularComprobante(gasto.id, comprobantePendiente.id, nuevoEstado);
+            }
+
+            mostrarToast(editando ? 'Gasto actualizado.' : 'Gasto registrado.');
+            cerrarModal();
+            onGuardado?.();
+          },
+        },
+      ],
+    });
+
+    const zonaEspecial = modal.querySelector('#zona-modo-especial');
+    const formEl = modal.querySelector('#form-gasto');
+
+    function pintarZonaEspecial() {
+      if (modo === 'manual') { zonaEspecial.innerHTML = ''; return; }
+
+      if (modo === 'rapida') {
+        zonaEspecial.innerHTML = `
+          <div class="field" style="margin-top:var(--sp-3);">
+            <label>Escribe el gasto en una frase</label>
+            <div class="entrada-rapida-box">
+              <input type="text" id="input-rapida" placeholder='Ej. "Parqueadero obra $3"' />
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-interpretar">Interpretar</button>
+            </div>
+          </div>
+          <div id="resultado-rapida"></div>
+        `;
+        zonaEspecial.querySelector('#btn-interpretar').addEventListener('click', () => {
+          const texto = zonaEspecial.querySelector('#input-rapida').value;
+          const interpretado = interpretarEntradaRapida(texto);
+          zonaEspecial.querySelector('#resultado-rapida').innerHTML = `
+            <div class="deteccion-card">
+              <h3>Interpretado — revisa antes de guardar</h3>
+              <p style="font-size:var(--fs-xs); color:var(--text-500); margin-bottom:8px;">Confianza: ${interpretado.confianza}</p>
+            </div>
+          `;
+          // Vuelca lo interpretado en el formulario manual para que el usuario confirme/edite ahí mismo
+          formEl.querySelector('[name="descripcion"]').value = interpretado.descripcion;
+          formEl.querySelector('[name="categoria"]').value = interpretado.categoria;
+          if (interpretado.valor !== null) formEl.querySelector('[name="valor"]').value = interpretado.valor;
+          mostrarToast('Datos interpretados. Revisa el formulario y confirma.');
+        });
+        return;
+      }
+
+      if (modo === 'foto') {
+        zonaEspecial.innerHTML = `<div id="zona-captura" style="margin-top:var(--sp-3);"></div><div id="zona-deteccion"></div>`;
+        renderBotonesCaptura(zonaEspecial.querySelector('#zona-captura'), (comprobante) => {
+          comprobantePendiente = comprobante;
+          const zonaDeteccion = zonaEspecial.querySelector('#zona-deteccion');
+          const url = blobAUrl(comprobante.miniaturaBlob || comprobante.imagenBlob);
+
+          if (comprobante.estadoInterpretacion === ESTADO_INTERPRETACION.LISTO && comprobante.datosDetectados) {
+            const d = comprobante.datosDetectados;
+            zonaDeteccion.innerHTML = `
+              <img src="${url}" class="comprobante-preview" style="margin-top:var(--sp-3);" />
+              <div class="deteccion-card">
+                <h3>Información detectada — edita si es necesario</h3>
+                <p style="font-size:var(--fs-sm);">
+                  ${d.establecimiento ? `<strong>${d.establecimiento}</strong><br>` : ''}
+                  ${d.fecha ? `Fecha: ${d.fecha}<br>` : ''}
+                  ${d.numeroFactura ? `N.º factura: ${d.numeroFactura}<br>` : ''}
+                  ${d.total != null ? `Total: ${formatoMoneda(d.total)}` : ''}
+                </p>
+              </div>
+            `;
+            // Prellenar el formulario manual con lo detectado — el usuario debe confirmar/editar y luego dar clic en "Confirmar y guardar"
+            if (d.establecimiento) formEl.querySelector('[name="descripcion"]').value = d.establecimiento;
+            if (d.total != null) formEl.querySelector('[name="valor"]').value = d.total;
+            if (d.fecha) formEl.querySelector('[name="fecha"]').value = d.fecha;
+            if (d.categoriaProbable) formEl.querySelector('[name="categoria"]').value = d.categoriaProbable;
+          } else if (comprobante.estadoInterpretacion === ESTADO_INTERPRETACION.PENDIENTE_CONEXION) {
+            zonaDeteccion.innerHTML = `
+              <img src="${url}" class="comprobante-preview" style="margin-top:var(--sp-3);" />
+              <div class="deteccion-card">
+                <h3>Sin conexión — foto guardada</h3>
+                <p style="font-size:var(--fs-sm);">Se interpretará automáticamente cuando vuelva el internet. Por ahora completa el gasto manualmente abajo; el estado quedará como "Pendiente de comprobante".</p>
+              </div>
+            `;
+          } else {
+            zonaDeteccion.innerHTML = `
+              <img src="${url}" class="comprobante-preview" style="margin-top:var(--sp-3);" />
+              <div class="deteccion-card">
+                <h3>Foto guardada</h3>
+                <p style="font-size:var(--fs-sm);">Completa los datos manualmente abajo. El estado del comprobante se marcará como "Con comprobante".</p>
+              </div>
+            `;
+          }
+        });
+      }
+    }
+
+    modal.querySelectorAll('[data-modo]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        modo = btn.dataset.modo;
+        modal.querySelectorAll('[data-modo]').forEach((b) => b.classList.toggle('active', b === btn));
+        pintarZonaEspecial();
+      });
+    });
+  }
+
+  return { abrirFormularioGasto };
+  })();
+
+  // ==== modules/gastos/gastos.view ====
+  __modules__['modules/gastos/gastos.view'] = (function(){
+  const { listarGastosActivos, listarGastosEnPapelera, obtenerGasto, enviarAPapelera, restaurarDePapelera, eliminarDefinitivamente } = __modules__['modules/gastos/gastos.repo'];
+  const { formatoMoneda, formatoFecha, ETIQUETAS_ESTADO_COMPROBANTE } = __modules__['utils/format'];
+  const { CATEGORIAS_DEFECTO } = __modules__['core/models'];
+  const { abrirModal, cerrarModal, confirmarEliminacionGasto } = __modules__['components/modal'];
+  const { mostrarToast } = __modules__['components/toast'];
+  const { icono } = __modules__['components/icons'];
+  const { abrirFormularioGasto } = __modules__['modules/gastos/gastos.form'];
+  const { db } = __modules__['storage/db'];
+  const { blobAUrl } = __modules__['modules/comprobantes/imagen.util'];
+
+
+
+
+
+
+
+
+
+
+  const FILTROS = [
+    { id: 'todos', label: 'Todos' },
+    { id: 'con_comprobante', label: 'Con comprobante' },
+    { id: 'pendiente_comprobante', label: 'Pendientes' },
+    { id: 'sin_comprobante', label: 'Sin comprobante' },
+  ];
+
+  function nombreCategoria(id) {
+    return CATEGORIAS_DEFECTO.find((c) => c.id === id)?.nombre || id;
+  }
+
+  function filaGasto(g) {
+    const estado = ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante];
+    return `
+      <div class="gasto-row">
+        <div class="mono tabular" style="color:var(--text-500);">${formatoFecha(g.fecha)}</div>
+        <div>
+          <div class="desc">${g.descripcion || '(sin descripción)'}</div>
+          <div class="cat">${nombreCategoria(g.categoria)}</div>
+        </div>
+        <div><span class="stamp ${estado.clase}">${estado.texto}</span></div>
+        <div class="mono tabular" style="font-weight:600;">${formatoMoneda(g.valor)}</div>
+        <div class="acciones">
+          <button data-ver="${g.id}" title="Ver">${icono('informes')}</button>
+          <button data-editar="${g.id}" title="Editar">✎</button>
+          <button data-eliminar="${g.id}" title="Eliminar" style="color:var(--danger);">${icono('papelera')}</button>
+        </div>
+      </div>
+    `;
+  }
+
+  async function abrirVistaGasto(gastoId) {
+    const gasto = await obtenerGasto(gastoId);
+    let imgHtml = '';
+    if (gasto.comprobanteId) {
+      const comp = await db.get('comprobantes', gasto.comprobanteId);
+      if (comp?.imagenBlob) imgHtml = `<img src="${blobAUrl(comp.imagenBlob)}" class="comprobante-preview" />`;
+    }
+    const estado = ETIQUETAS_ESTADO_COMPROBANTE[gasto.estadoComprobante];
+    abrirModal({
+      titulo: gasto.descripcion || 'Detalle del gasto',
+      contenidoHtml: `
+        ${imgHtml}
+        <p style="margin-top:${imgHtml ? 'var(--sp-3)' : '0'};"><strong class="tabular">${formatoMoneda(gasto.valor)}</strong> · ${formatoFecha(gasto.fecha)}</p>
+        <p style="font-size:var(--fs-sm); color:var(--text-500); margin:6px 0;">${nombreCategoria(gasto.categoria)}</p>
+        <span class="stamp ${estado.clase}">${estado.texto}</span>
+        ${gasto.observaciones ? `<p style="margin-top:var(--sp-3); font-size:var(--fs-sm);">${gasto.observaciones}</p>` : ''}
+      `,
+      botones: [{ texto: 'Cerrar', clase: 'btn-secondary' }],
+    });
+  }
+
+  async function abrirPapelera(proyectoId, alRestaurar) {
+    const items = await listarGastosEnPapelera(proyectoId);
+    const modal = abrirModal({
+      titulo: 'Papelera de gastos',
+      contenidoHtml: items.length ? `
+        <div style="max-height:360px; overflow:auto;">
+          ${items.map((g) => `
+            <div class="proj-row">
+              <div>
+                <div class="proj-name">${g.descripcion || '(sin descripción)'}</div>
+                <div class="proj-meta">${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-secondary btn-sm" data-restaurar="${g.id}">Restaurar</button>
+                <button class="btn btn-danger btn-sm" data-eliminar-def="${g.id}">Eliminar definitivamente</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : `<div class="empty-state"><p class="lead">La papelera está vacía</p></div>`,
+      botones: [{ texto: 'Cerrar', clase: 'btn-secondary' }],
+    });
+
+    modal.querySelectorAll('[data-restaurar]').forEach((btn) => btn.addEventListener('click', async () => {
+      await restaurarDePapelera(btn.dataset.restaurar);
+      mostrarToast('Gasto restaurado.');
+      cerrarModal();
+      alRestaurar();
+    }));
+    modal.querySelectorAll('[data-eliminar-def]').forEach((btn) => btn.addEventListener('click', () => {
+      abrirModal({
+        titulo: 'Eliminar definitivamente',
+        contenidoHtml: `<p style="color:var(--danger);">Esta acción no se puede deshacer. El gasto y su comprobante se borrarán por completo.</p>`,
+        botones: [
+          { texto: 'Cancelar', clase: 'btn-secondary' },
+          { texto: 'Eliminar para siempre', clase: 'btn-danger', onClick: async () => {
+            await eliminarDefinitivamente(btn.dataset.eliminarDef);
+            mostrarToast('Gasto eliminado definitivamente.');
+            abrirPapelera(proyectoId, alRestaurar);
+          } },
+        ],
+      });
+    }));
+  }
+
+  async function renderGastos(contenedor, proyectoId) {
+    let filtro = 'todos';
+    let busqueda = '';
+
+    const pintar = async () => {
+      const [todos, papelera] = await Promise.all([listarGastosActivos(proyectoId), listarGastosEnPapelera(proyectoId)]);
+      const filtrados = todos.filter((g) => {
+        const pasaFiltro = filtro === 'todos' || g.estadoComprobante === filtro;
+        const pasaBusqueda = !busqueda || g.descripcion.toLowerCase().includes(busqueda.toLowerCase());
+        return pasaFiltro && pasaBusqueda;
+      });
+
+      contenedor.innerHTML = `
+        <div class="toolbar">
+          <div class="section-title" style="margin-bottom:0;">Gastos registrados</div>
+          <div style="display:flex; gap:var(--sp-2);">
+            <button class="btn btn-secondary" id="btn-papelera">${icono('papelera')} Papelera ${papelera.length ? `(${papelera.length})` : ''}</button>
+            <button class="btn btn-primary" id="btn-nuevo-gasto">${icono('mas')} Registrar gasto</button>
+          </div>
+        </div>
+        <div class="toolbar" style="margin-bottom:var(--sp-4);">
+          <div class="toolbar-filters">
+            ${FILTROS.map((f) => `<button class="chip ${f.id === filtro ? 'active' : ''}" data-filtro="${f.id}">${f.label}</button>`).join('')}
+          </div>
+          <input type="search" id="buscar-gasto" placeholder="Buscar por descripción…" value="${busqueda}" style="padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:var(--surface-600); color:var(--text-100);" />
+        </div>
+        <div class="card card-elevated">
+          ${filtrados.length ? filtrados.map(filaGasto).join('') : `<div class="empty-state"><p class="lead">No hay gastos que coincidan</p></div>`}
+        </div>
+      `;
+
+      contenedor.querySelector('#btn-nuevo-gasto').addEventListener('click', () => {
+        abrirFormularioGasto({ proyectoId, onGuardado: pintar });
+      });
+      contenedor.querySelector('#btn-papelera').addEventListener('click', () => abrirPapelera(proyectoId, pintar));
+      contenedor.querySelectorAll('[data-filtro]').forEach((btn) => btn.addEventListener('click', () => { filtro = btn.dataset.filtro; pintar(); }));
+
+      const buscador = contenedor.querySelector('#buscar-gasto');
+      buscador.addEventListener('input', (e) => { busqueda = e.target.value; pintar(); });
+      if (busqueda) { buscador.focus(); buscador.setSelectionRange(busqueda.length, busqueda.length); }
+
+      contenedor.querySelectorAll('[data-ver]').forEach((btn) => btn.addEventListener('click', () => abrirVistaGasto(btn.dataset.ver)));
+      contenedor.querySelectorAll('[data-editar]').forEach((btn) => btn.addEventListener('click', async () => {
+        const gasto = await obtenerGasto(btn.dataset.editar);
+        abrirFormularioGasto({ proyectoId, gastoExistente: gasto, onGuardado: pintar });
+      }));
+      contenedor.querySelectorAll('[data-eliminar]').forEach((btn) => btn.addEventListener('click', async () => {
+        const gasto = await obtenerGasto(btn.dataset.eliminar);
+        confirmarEliminacionGasto(gasto, formatoMoneda, formatoFecha, async () => {
+          await enviarAPapelera(gasto.id);
+          mostrarToast('Gasto enviado a la papelera.');
+          pintar();
+        });
+      }));
+    };
+
+    await pintar();
+  }
+
+  return { renderGastos };
+  })();
+
+  // ==== modules/proyeccion/proyeccion.repo ====
+  __modules__['modules/proyeccion/proyeccion.repo'] = (function(){
+  const { db } = __modules__['storage/db'];
+  const { crearProyeccionItem, totalProyeccionItem } = __modules__['core/models'];
+
+
+
+  async function listarProyeccion(proyectoId) {
+    const items = await db.getAllPorIndice('proyecciones', 'porProyecto', proyectoId);
+    return items.sort((a, b) => a.categoria.localeCompare(b.categoria));
+  }
+
+  async function crearItemProyeccion(proyectoId, datos) {
+    const item = crearProyeccionItem(proyectoId, datos);
+    await db.put('proyecciones', item);
+    return item;
+  }
+
+  async function editarItemProyeccion(item, cambios) {
+    const actualizado = {
+      ...item,
+      ...cambios,
+      id: item.id,
+      proyectoId: item.proyectoId,
+      cantidad: Number(cambios.cantidad ?? item.cantidad) || 0,
+      precioUnitario: Number(cambios.precioUnitario ?? item.precioUnitario) || 0,
+    };
+    await db.put('proyecciones', actualizado);
+    return actualizado;
+  }
+
+  async function eliminarItemProyeccion(id) {
+    return db.delete('proyecciones', id);
+  }
+
+  async function totalProyectado(proyectoId) {
+    const items = await listarProyeccion(proyectoId);
+    return Number(items.reduce((acc, i) => acc + totalProyeccionItem(i), 0).toFixed(2));
+  }
+
+  /** Agrupa el total proyectado por categoría (para comparar contra el real) */
+  async function proyectadoPorCategoria(proyectoId) {
+    const items = await listarProyeccion(proyectoId);
+    const mapa = {};
+    for (const item of items) {
+      mapa[item.categoria] = Number(((mapa[item.categoria] || 0) + totalProyeccionItem(item)).toFixed(2));
+    }
+    return mapa;
+  }
+
+  return { listarProyeccion, crearItemProyeccion, editarItemProyeccion, eliminarItemProyeccion, totalProyectado, proyectadoPorCategoria };
+  })();
+
+  // ==== modules/proyeccion/proyeccion.view ====
+  __modules__['modules/proyeccion/proyeccion.view'] = (function(){
+  const { listarProyeccion, crearItemProyeccion, editarItemProyeccion, eliminarItemProyeccion } = __modules__['modules/proyeccion/proyeccion.repo'];
+  const { gastosDeProyecto } = __modules__['core/repositorio'];
+  const { agruparGastosPorCategoria } = __modules__['core/finanzas'];
+  const { totalProyeccionItem, CATEGORIAS_DEFECTO } = __modules__['core/models'];
+  const { formatoMoneda } = __modules__['utils/format'];
+  const { abrirModal, cerrarModal } = __modules__['components/modal'];
+  const { mostrarToast } = __modules__['components/toast'];
+  const { icono } = __modules__['components/icons'];
+
+
+
+
+
+
+
+
+
+  function nombreCategoria(id) {
+    return CATEGORIAS_DEFECTO.find((c) => c.id === id)?.nombre || id;
+  }
+
+  function opcionesCategoria(seleccion) {
+    return CATEGORIAS_DEFECTO.map((c) => `<option value="${c.id}" ${c.id === seleccion ? 'selected' : ''}>${c.nombre}</option>`).join('');
+  }
+
+  function formularioItem(proyectoId, itemExistente, onGuardado) {
+    const d = itemExistente || {};
+    const editando = Boolean(itemExistente);
+    const modal = abrirModal({
+      titulo: editando ? 'Editar línea de proyección' : 'Agregar línea de proyección',
+      contenidoHtml: `
+        <form id="form-proy" style="display:flex; flex-direction:column; gap:var(--sp-4);">
+          <div class="field"><label>Categoría</label><select name="categoria">${opcionesCategoria(d.categoria || 'hospedaje')}</select></div>
+          <div class="field-row">
+            <div class="field"><label>Cantidad</label><input type="number" name="cantidad" min="0" step="1" value="${d.cantidad ?? 1}" /></div>
+            <div class="field"><label>Precio unitario (USD)</label><input type="number" name="precioUnitario" min="0" step="0.01" value="${d.precioUnitario ?? ''}" /></div>
+          </div>
+          <p style="font-size:var(--fs-xs); color:var(--text-500);">Ej. 5 noches × $40 = $200 de hospedaje proyectado.</p>
+        </form>
+      `,
+      botones: [
+        { texto: 'Cancelar', clase: 'btn-secondary' },
+        {
+          texto: editando ? 'Guardar cambios' : 'Agregar', clase: 'btn-primary', cerrar: false,
+          onClick: async () => {
+            const form = modal.querySelector('#form-proy');
+            const datos = Object.fromEntries(new FormData(form).entries());
+            if (!(Number(datos.cantidad) > 0) || !(Number(datos.precioUnitario) >= 0)) {
+              mostrarToast('Revisa la cantidad y el precio unitario.');
+              return;
+            }
+            if (editando) await editarItemProyeccion(itemExistente, datos);
+            else await crearItemProyeccion(proyectoId, datos);
+            mostrarToast(editando ? 'Línea actualizada.' : 'Línea agregada a la proyección.');
+            cerrarModal();
+            onGuardado();
+          },
+        },
+      ],
+    });
+  }
+
+  async function renderProyeccion(contenedor, proyectoId) {
+    const pintar = async () => {
+      const [items, gastos] = await Promise.all([listarProyeccion(proyectoId), gastosDeProyecto(proyectoId)]);
+      const realPorCategoria = agruparGastosPorCategoria(gastos);
+      const totalProyectado = items.reduce((a, i) => a + totalProyeccionItem(i), 0);
+      const totalReal = Object.values(realPorCategoria).reduce((a, v) => a + v, 0);
+
+      // Unir categorías que tienen proyección y/o gasto real, para la tabla comparativa
+      const categoriasUnicas = Array.from(new Set([
+        ...items.map((i) => i.categoria),
+        ...Object.keys(realPorCategoria),
+      ]));
+
+      contenedor.innerHTML = `
+        <div class="toolbar">
+          <div class="section-title" style="margin-bottom:0;">Proyección de gastos</div>
+          <button class="btn btn-primary" id="btn-nueva-linea">${icono('mas')} Agregar línea</button>
+        </div>
+
+        <div class="card card-elevated" style="margin-bottom:var(--sp-5);">
+          ${items.length ? items.map((i) => `
+            <div class="proj-row">
+              <div>
+                <div class="proj-name">${nombreCategoria(i.categoria)}</div>
+                <div class="proj-meta">${i.cantidad} × ${formatoMoneda(i.precioUnitario)}</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:var(--sp-4);">
+                <span class="tabular" style="font-weight:600;">${formatoMoneda(totalProyeccionItem(i))}</span>
+                <div style="display:flex; gap:4px;">
+                  <button class="btn btn-ghost btn-sm" data-editar="${i.id}">Editar</button>
+                  <button class="btn btn-ghost btn-sm" data-eliminar="${i.id}" style="color:var(--danger);">Eliminar</button>
+                </div>
+              </div>
+            </div>
+          `).join('') : `<div class="empty-state"><p class="lead">Aún no hay proyección</p><p>Agrega líneas por categoría para estimar el viático antes de iniciar el viaje.</p></div>`}
+          ${items.length ? `
+            <div class="proj-row" style="border-top:1px solid var(--line-strong); margin-top:4px;">
+              <div class="proj-name">Total proyectado</div>
+              <span class="tabular" style="font-weight:700; font-size:var(--fs-md);">${formatoMoneda(totalProyectado)}</span>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="section-title">Proyectado vs. real</div>
+        <div class="card card-elevated">
+          ${categoriasUnicas.length ? `
+            <div class="gasto-row" style="grid-template-columns: 1.2fr 1fr 1fr 1fr; font-weight:700; color:var(--text-500); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:0.04em;">
+              <div>Categoría</div><div>Proyectado</div><div>Real</div><div>Diferencia</div>
+            </div>
+            ${categoriasUnicas.map((cat) => {
+              const proy = items.filter((i) => i.categoria === cat).reduce((a, i) => a + totalProyeccionItem(i), 0);
+              const real = realPorCategoria[cat] || 0;
+              const diferencia = Number((proy - real).toFixed(2));
+              const colorDif = diferencia < 0 ? 'var(--danger)' : 'var(--state-ok)';
+              return `
+                <div class="gasto-row" style="grid-template-columns: 1.2fr 1fr 1fr 1fr;">
+                  <div class="desc">${nombreCategoria(cat)}</div>
+                  <div class="tabular">${formatoMoneda(proy)}</div>
+                  <div class="tabular">${formatoMoneda(real)}</div>
+                  <div class="tabular" style="color:${colorDif}; font-weight:600;">${diferencia >= 0 ? '+' : ''}${formatoMoneda(diferencia)}</div>
+                </div>
+              `;
+            }).join('')}
+            <div class="gasto-row" style="grid-template-columns: 1.2fr 1fr 1fr 1fr; border-top:1px solid var(--line-strong); font-weight:700;">
+              <div>Total</div>
+              <div class="tabular">${formatoMoneda(totalProyectado)}</div>
+              <div class="tabular">${formatoMoneda(totalReal)}</div>
+              <div class="tabular" style="color:${(totalProyectado - totalReal) < 0 ? 'var(--danger)' : 'var(--state-ok)'};">${(totalProyectado - totalReal) >= 0 ? '+' : ''}${formatoMoneda(totalProyectado - totalReal)}</div>
+            </div>
+          ` : `<div class="empty-state"><p class="lead">Sin datos aún</p><p>La comparación aparecerá cuando exista proyección y/o gastos registrados.</p></div>`}
+        </div>
+
+        <div class="empty-state" style="margin-top:var(--sp-5);">
+          <p class="lead">Historial de proyectos anteriores — integración pendiente</p>
+          <p>Usar promedios de proyectos previos (ej. hospedaje en Manta) para sugerir la proyección automáticamente se implementará más adelante. Hoy no existe ninguna función simulada de esto.</p>
+        </div>
+      `;
+
+      contenedor.querySelector('#btn-nueva-linea').addEventListener('click', () => formularioItem(proyectoId, null, pintar));
+      contenedor.querySelectorAll('[data-editar]').forEach((btn) => btn.addEventListener('click', () => {
+        const item = items.find((i) => i.id === btn.dataset.editar);
+        formularioItem(proyectoId, item, pintar);
+      }));
+      contenedor.querySelectorAll('[data-eliminar]').forEach((btn) => btn.addEventListener('click', () => {
+        abrirModal({
+          titulo: '¿Eliminar esta línea de proyección?',
+          contenidoHtml: `<p>Esto no afecta los gastos reales ya registrados, solo la estimación.</p>`,
+          botones: [
+            { texto: 'Cancelar', clase: 'btn-secondary' },
+            { texto: 'Sí, eliminar', clase: 'btn-danger', onClick: async () => { await eliminarItemProyeccion(btn.dataset.eliminar); mostrarToast('Línea eliminada.'); pintar(); } },
+          ],
+        });
+      }));
+    };
+
+    await pintar();
+  }
+
+  return { renderProyeccion };
+  })();
+
+  // ==== modules/proyectos/proyectos.detail ====
+  __modules__['modules/proyectos/proyectos.detail'] = (function(){
+  const { obtenerProyecto, resumenFinancieroProyecto, cambiarEstadoProyecto } = __modules__['core/repositorio'];
+  const { formatoMoneda, formatoFechaLarga, ETIQUETAS_ESTADO_PROYECTO } = __modules__['utils/format'];
+  const { abrirModal } = __modules__['components/modal'];
+  const { mostrarToast } = __modules__['components/toast'];
+  const { icono } = __modules__['components/icons'];
+  const { renderIngresos } = __modules__['modules/ingresos/ingresos.view'];
+  const { renderGastos } = __modules__['modules/gastos/gastos.view'];
+  const { renderProyeccion } = __modules__['modules/proyeccion/proyeccion.view'];
+
+
+
+
+
+
+
+
+
+  const TABS = [
+    { id: 'resumen', label: 'Resumen' },
+    { id: 'ingresos', label: 'Ingresos' },
+    { id: 'gastos', label: 'Gastos' },
+    { id: 'proyeccion', label: 'Proyección' },
+  ];
+
+  function botonesDeEstado(proyecto) {
+    const botones = [];
+    if (proyecto.estado === 'planificado' || proyecto.estado === 'activo') {
+      botones.push({ label: 'Cerrar viático', accion: 'finalizado', clase: 'btn-success' });
+    }
+    if (proyecto.estado === 'finalizado') {
+      botones.push({ label: 'Reabrir proyecto', accion: 'activo', clase: 'btn-secondary' });
+      botones.push({ label: 'Archivar', accion: 'archivado', clase: 'btn-secondary' });
+    }
+    if (proyecto.estado === 'archivado') {
+      botones.push({ label: 'Reabrir proyecto', accion: 'activo', clase: 'btn-secondary' });
+    }
+    return botones;
+  }
+
+  function pestanaResumen(resumen) {
+    return `
+      <div class="kpi-grid">
+        <div class="kpi-card accent-ledger"><span class="kpi-label">Total recibido</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalRecibido)}</span></div>
+        <div class="kpi-card"><span class="kpi-label">Total gastado</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalGastado)}</span></div>
+        <div class="kpi-card ${resumen.saldo < 0 ? 'accent-danger' : 'accent-success'}">
+          <span class="kpi-label">Saldo disponible</span><span class="kpi-value small tabular">${formatoMoneda(resumen.saldo)}</span>
+          ${resumen.reembolsoPendiente > 0 ? `<span class="kpi-sub" style="color:var(--danger);">Reembolso pendiente: ${formatoMoneda(resumen.reembolsoPendiente)}</span>` : ''}
+        </div>
+        <div class="kpi-card"><span class="kpi-label">N.º de gastos</span><span class="kpi-value small tabular">${resumen.cantidadGastos}</span></div>
+        <div class="kpi-card"><span class="kpi-label">Con comprobante</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalConComprobante)}</span></div>
+        <div class="kpi-card"><span class="kpi-label">Pendiente</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalPendiente)}</span></div>
+        <div class="kpi-card"><span class="kpi-label">Sin comprobante</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalSinComprobante)}</span></div>
+      </div>
+    `;
+  }
+
+  async function renderProyectoDetail(contenedor, params, tabInicial = 'resumen') {
+    const proyecto = await obtenerProyecto(params.id);
+    if (!proyecto) {
+      contenedor.innerHTML = `<div class="empty-state"><p class="lead">Proyecto no encontrado</p></div>`;
+      return;
+    }
+
+    contenedor.innerHTML = `
+      <a href="#proyectos" class="btn btn-ghost btn-sm" style="margin-bottom:var(--sp-3);">${icono('flechaAtras')} Volver a proyectos</a>
+      <div class="detail-header">
+        <div>
+          <div style="display:flex; align-items:center; gap:var(--sp-3);">
+            <h1 class="detail-title">${proyecto.nombre}</h1>
+            <span class="state-tag state-${proyecto.estado}">${ETIQUETAS_ESTADO_PROYECTO[proyecto.estado]}</span>
+          </div>
+          <div class="detail-meta">
+            <span>${proyecto.cliente || 'Sin cliente'}</span>
+            <span>${proyecto.ciudad || 'Sin ciudad'}${proyecto.provincia ? ', ' + proyecto.provincia : ''}</span>
+            <span>Responsable: ${proyecto.responsable || '—'}</span>
+            <span>Inicio: ${formatoFechaLarga(proyecto.fechaInicio)}</span>
+          </div>
+        </div>
+        <div class="detail-actions">
+          <a href="#proyectos/${proyecto.id}/editar" class="btn btn-secondary">Editar</a>
+          ${botonesDeEstado(proyecto).map((b) => `<button class="btn ${b.clase}" data-accion="${b.accion}">${b.label}</button>`).join('')}
+        </div>
+      </div>
+
+      <div class="tabs">
+        ${TABS.map((t) => `<button class="tab-btn ${t.id === tabInicial ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>`).join('')}
+      </div>
+      <div id="tab-contenido"></div>
+    `;
+
+    const contenido = contenedor.querySelector('#tab-contenido');
+    const pintarTab = async (tabId) => {
+      contenedor.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tabId));
+      if (tabId === 'resumen') {
+        const resumenActual = await resumenFinancieroProyecto(proyecto.id);
+        contenido.innerHTML = pestanaResumen(resumenActual);
+      } else if (tabId === 'ingresos') {
+        contenido.innerHTML = '';
+        await renderIngresos(contenido, proyecto.id);
+      } else if (tabId === 'gastos') {
+        contenido.innerHTML = '';
+        await renderGastos(contenido, proyecto.id);
+      } else if (tabId === 'proyeccion') {
+        contenido.innerHTML = '';
+        await renderProyeccion(contenido, proyecto.id);
+      }
+    };
+    pintarTab(tabInicial);
+
+    contenedor.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => pintarTab(btn.dataset.tab));
+    });
+
+    contenedor.querySelectorAll('[data-accion]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const nuevoEstado = btn.dataset.accion;
+        const etiquetasAccion = {
+          finalizado: { titulo: '¿Cerrar este viático?', texto: 'El proyecto pasará a estado Finalizado. Podrás reabrirlo después si es necesario.' },
+          activo: { titulo: '¿Reabrir este proyecto?', texto: 'El proyecto volverá a estado Activo.' },
+          archivado: { titulo: '¿Archivar este proyecto?', texto: 'El proyecto pasará a estado Archivado.' },
+        };
+        const info = etiquetasAccion[nuevoEstado];
+        abrirModal({
+          titulo: info.titulo,
+          contenidoHtml: `<p>${info.texto}</p>`,
+          botones: [
+            { texto: 'Cancelar', clase: 'btn-secondary' },
+            {
+              texto: 'Confirmar', clase: 'btn-primary', onClick: async () => {
+                await cambiarEstadoProyecto(proyecto.id, nuevoEstado);
+                mostrarToast('Estado del proyecto actualizado.');
+                renderProyectoDetail(contenedor, params, 'resumen');
+              },
+            },
+          ],
+        });
+      });
+    });
+  }
+
+  return { renderProyectoDetail };
+  })();
+
+  // ==== modules/proyectos/index ====
+  __modules__['modules/proyectos/index'] = (function(){
+  const { registrarRuta } = __modules__['core/router'];
+  const { renderProyectosLista } = __modules__['modules/proyectos/proyectos.list'];
+  const { renderProyectoForm } = __modules__['modules/proyectos/proyectos.form'];
+  const { renderProyectoDetail } = __modules__['modules/proyectos/proyectos.detail'];
+
+
+
+
+
+  function registrarRutasProyectos() {
+    registrarRuta('proyectos', renderProyectosLista);
+    registrarRuta('proyectos/nuevo', renderProyectoForm);
+    registrarRuta('proyectos/:id', renderProyectoDetail);
+    registrarRuta('proyectos/:id/editar', renderProyectoForm);
+  }
+
+  return { registrarRutasProyectos };
+  })();
+
+  // ==== modules/configuracion/configuracion.view ====
+  __modules__['modules/configuracion/configuracion.view'] = (function(){
+  const { db } = __modules__['storage/db'];
+  const { mostrarToast } = __modules__['components/toast'];
+
+
+
+  const CLAVE = 'general';
+
+  async function obtenerConfig() {
+    const existente = await db.get('configuracion', CLAVE);
+    return existente || {
+      clave: CLAVE,
+      nombreEmpresa: '',
+      nombreResponsable: '',
+      cargo: '',
+      moneda: 'USD',
+    };
+  }
+
+  async function renderConfiguracion(contenedor) {
+    const config = await obtenerConfig();
+    contenedor.innerHTML = `
+      <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600; margin-bottom:var(--sp-2);">Configuración</h1>
+      <p style="color:var(--ink-500); font-size:var(--fs-sm); margin-bottom:var(--sp-5);">Datos generales usados en los informes y PDF.</p>
+
+      <form id="form-config" class="card card-elevated" style="max-width:560px; display:flex; flex-direction:column; gap:var(--sp-4);">
+        <div class="field">
+          <label for="c-empresa">Nombre de la empresa</label>
+          <input id="c-empresa" name="nombreEmpresa" value="${config.nombreEmpresa}" />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="c-resp">Nombre del responsable</label>
+            <input id="c-resp" name="nombreResponsable" value="${config.nombreResponsable}" />
+          </div>
+          <div class="field">
+            <label for="c-cargo">Cargo</label>
+            <input id="c-cargo" name="cargo" value="${config.cargo}" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="c-moneda">Moneda</label>
+          <select id="c-moneda" name="moneda">
+            <option value="USD" ${config.moneda === 'USD' ? 'selected' : ''}>USD — Dólar</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="c-clave-api">Clave de API de Anthropic (para interpretar fotos de comprobantes)</label>
+          <input id="c-clave-api" name="claveApiAnthropic" type="password" value="${config.claveApiAnthropic || ''}" placeholder="sk-ant-…" autocomplete="off" />
+        </div>
+        <p style="font-size:var(--fs-xs); color:var(--text-500); margin-top:-8px;">
+          Se guarda únicamente en este dispositivo (IndexedDB local), nunca se envía a ningún servidor de Anthropic salvo para interpretar la foto que tú tomes. Sin esta clave, los gastos por foto se registran igual, pero deberás llenar los datos manualmente.
+        </p>
+        <div class="modal-actions" style="justify-content:flex-start;">
+          <button type="submit" class="btn btn-primary">Guardar configuración</button>
+        </div>
+      </form>
+
+      <div class="empty-state" style="margin-top:var(--sp-5);">
+        <p class="lead">Logo, categorías y plantillas de informe — integración pendiente</p>
+        <p>Estas opciones se incorporan junto con el generador de informes (Etapa 5).</p>
+      </div>
+    `;
+
+    contenedor.querySelector('#form-config').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const datos = Object.fromEntries(new FormData(e.target).entries());
+      await db.put('configuracion', { ...config, ...datos, clave: CLAVE });
+      mostrarToast('Configuración guardada.');
+    });
+  }
+
+  return { renderConfiguracion };
+  })();
+
+  // ==== modules/informes/informes.data ====
+  __modules__['modules/informes/informes.data'] = (function(){
+  const { obtenerProyecto, ingresosDeProyecto, gastosDeProyecto, resumenFinancieroProyecto } = __modules__['core/repositorio'];
+  const { listarProyeccion, proyectadoPorCategoria } = __modules__['modules/proyeccion/proyeccion.repo'];
+  const { agruparGastosPorCategoria } = __modules__['core/finanzas'];
+  const { db } = __modules__['storage/db'];
+
+
+
+
+
+  /** Reúne todo lo que un informe podría necesitar mostrar sobre un proyecto. */
+  async function reunirDatosInforme(proyectoId) {
+    const [proyecto, ingresos, gastos, resumen, proyeccionItems, proyectadoCat] = await Promise.all([
+      obtenerProyecto(proyectoId),
+      ingresosDeProyecto(proyectoId),
+      gastosDeProyecto(proyectoId),
+      resumenFinancieroProyecto(proyectoId),
+      listarProyeccion(proyectoId),
+      proyectadoPorCategoria(proyectoId),
+    ]);
+
+    const gastosOrdenados = gastos.slice().sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    const numerados = gastosOrdenados.map((g, i) => ({ ...g, numero: i + 1 }));
+    const realPorCategoria = agruparGastosPorCategoria(gastos);
+    const config = (await db.get('configuracion', 'general')) || {};
+
+    return {
+      proyecto,
+      ingresos,
+      gastos: numerados,
+      resumen,
+      proyeccionItems,
+      proyectadoCat,
+      realPorCategoria,
+      empresa: {
+        nombre: config.nombreEmpresa || '',
+        responsable: config.nombreResponsable || '',
+        cargo: config.cargo || '',
+        moneda: config.moneda || 'USD',
+      },
+    };
+  }
+
+  return { reunirDatosInforme };
+  })();
+
+  // ==== modules/informes/plantillas.repo ====
+  __modules__['modules/informes/plantillas.repo'] = (function(){
+  const { db, generarId } = __modules__['storage/db'];
+
+
+  async function listarPlantillas() {
+    const items = await db.getAll('plantillas');
+    return items.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }
+
+  /**
+   * Guarda la configuración actual del informe como plantilla reutilizable.
+   * No guarda la selección de gastos (es específica de cada proyecto),
+   * solo la estructura: tipo, campos, filtros y firmas.
+   */
+  async function guardarPlantilla(nombre, config) {
+    const plantilla = {
+      id: generarId('plt'),
+      nombre,
+      tipo: config.tipo,
+      datosGenerales: config.datosGenerales,
+      financiero: config.financiero,
+      columnas: config.columnas,
+      filtroEstados: config.filtroEstados,
+      categoriasIncluidas: Array.from(config.categoriasIncluidas),
+      incluirProyeccionVsReal: config.incluirProyeccionVsReal,
+      firmas: config.firmas,
+      creadoEn: new Date().toISOString(),
+    };
+    await db.put('plantillas', plantilla);
+    return plantilla;
+  }
+
+  async function eliminarPlantilla(id) {
+    return db.delete('plantillas', id);
+  }
+
+  /** Aplica una plantilla guardada sobre un config base (mantiene la selección de gastos del config actual) */
+  function aplicarPlantilla(configBase, plantilla) {
+    return {
+      ...configBase,
+      tipo: plantilla.tipo,
+      datosGenerales: { ...plantilla.datosGenerales },
+      financiero: { ...plantilla.financiero },
+      columnas: { ...plantilla.columnas },
+      filtroEstados: { ...plantilla.filtroEstados },
+      categoriasIncluidas: new Set(plantilla.categoriasIncluidas),
+      incluirProyeccionVsReal: plantilla.incluirProyeccionVsReal,
+      firmas: { ...plantilla.firmas },
+    };
+  }
+
+  return { listarPlantillas, guardarPlantilla, eliminarPlantilla, aplicarPlantilla };
+  })();
+
+  // ==== modules/informes/informes.config ====
+  __modules__['modules/informes/informes.config'] = (function(){
+  const { CATEGORIAS_DEFECTO } = __modules__['core/models'];
+  const { ETIQUETAS_ESTADO_COMPROBANTE, formatoMoneda, formatoFecha } = __modules__['utils/format'];
+  const { listarPlantillas, guardarPlantilla, eliminarPlantilla, aplicarPlantilla } = __modules__['modules/informes/plantillas.repo'];
+  const { abrirModal, cerrarModal } = __modules__['components/modal'];
+  const { mostrarToast } = __modules__['components/toast'];
+
+
+
+
+
+
+  function configPorDefecto(tipo, gastos) {
+    const base = {
+      tipo,
+      datosGenerales: {
+        nombre: true, cliente: true, ciudad: true, responsable: true,
+        fechaInicio: true, fechaFin: tipo !== 'resumido', numeroPersonas: false,
+        motivoViaje: tipo === 'personalizado' ? false : true, observaciones: false,
+      },
+      financiero: {
+        totalRecibido: true, totalGastado: true, saldo: true, reembolsoPendiente: true,
+        totalConComprobante: true, totalSinComprobante: true, totalPendiente: true,
+      },
+      columnas: {
+        numero: true, fecha: true, categoria: true, descripcion: true, valor: true,
+        estadoComprobante: true, numeroFactura: false, establecimiento: false, observaciones: false,
+      },
+      gastosSeleccionados: new Set(gastos.map((g) => g.id)),
+      filtroEstados: { con_comprobante: true, pendiente_comprobante: true, sin_comprobante: true },
+      categoriasIncluidas: new Set(CATEGORIAS_DEFECTO.map((c) => c.id)),
+      incluirProyeccionVsReal: false,
+      firmas: {
+        responsable: { incluir: false, nombre: '', cargo: '' },
+        revision: { incluir: false, nombre: '', cargo: '' },
+        aprobacion: { incluir: false, nombre: '', cargo: '' },
+      },
+    };
+    return base;
+  }
+
+  function grupoCheckbox(titulo, campos, valores, prefijo) {
+    return `
+      <div class="card" style="margin-bottom:var(--sp-4);">
+        <h3 style="font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold-400); margin-bottom:var(--sp-3);">${titulo}</h3>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px;">
+          ${Object.entries(campos).map(([clave, etiqueta]) => `
+            <label style="display:flex; align-items:center; gap:8px; font-size:var(--fs-sm);">
+              <input type="checkbox" data-grupo="${prefijo}" data-campo="${clave}" ${valores[clave] ? 'checked' : ''} />
+              ${etiqueta}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  const ETIQUETAS_DATOS_GENERALES = {
+    nombre: 'Nombre del proyecto', cliente: 'Cliente', ciudad: 'Ciudad', responsable: 'Responsable',
+    fechaInicio: 'Fecha inicial', fechaFin: 'Fecha final', numeroPersonas: 'Número de personas',
+    motivoViaje: 'Motivo del viaje', observaciones: 'Observaciones',
+  };
+  const ETIQUETAS_FINANCIERO = {
+    totalRecibido: 'Total recibido', totalGastado: 'Total gastado', saldo: 'Saldo',
+    reembolsoPendiente: 'Reembolso pendiente', totalConComprobante: 'Total con comprobante',
+    totalSinComprobante: 'Total sin comprobante', totalPendiente: 'Total pendiente',
+  };
+  const ETIQUETAS_COLUMNAS = {
+    numero: 'Número', fecha: 'Fecha', categoria: 'Categoría', descripcion: 'Descripción',
+    valor: 'Valor', estadoComprobante: 'Estado del comprobante', numeroFactura: 'Número de factura',
+    establecimiento: 'Establecimiento/proveedor', observaciones: 'Observaciones',
+  };
+  const ETIQUETAS_FIRMAS = {
+    responsable: 'Firma del responsable',
+    revision: 'Firma de revisión',
+    aprobacion: 'Firma de aprobación',
+  };
+
+  async function renderPasoConfiguracion(contenedor, { config, gastos, onVolver, onVerVistaPrevia }) {
+    const esPersonalizado = config.tipo === 'personalizado';
+    const plantillas = await listarPlantillas();
+
+    contenedor.innerHTML = `
+      <div class="toolbar">
+        <div class="section-title" style="margin-bottom:0;">Configurar informe — ${config.tipo === 'resumido' ? 'Resumido' : config.tipo === 'detallado' ? 'Detallado' : 'Personalizado'}</div>
+        <button class="btn btn-ghost btn-sm" id="btn-volver-tipo">Cambiar tipo de informe</button>
+      </div>
+
+      <div class="card" style="margin-bottom:var(--sp-4); display:flex; justify-content:space-between; align-items:center; gap:var(--sp-3); flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <label style="font-size:var(--fs-sm); color:var(--text-500);">Plantilla</label>
+          <select id="sel-plantilla" style="padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--surface-600); color:var(--text-100);">
+            <option value="">Sin plantilla</option>
+            ${plantillas.map((p) => `<option value="${p.id}">${p.nombre}</option>`).join('')}
+          </select>
+          ${plantillas.length ? `<button class="btn btn-ghost btn-sm" id="btn-borrar-plantilla" style="color:var(--danger);">Eliminar</button>` : ''}
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-guardar-plantilla">Guardar configuración actual como plantilla</button>
+      </div>
+
+      ${esPersonalizado ? `
+        ${grupoCheckbox('Datos generales', ETIQUETAS_DATOS_GENERALES, config.datosGenerales, 'datosGenerales')}
+        ${grupoCheckbox('Información financiera', ETIQUETAS_FINANCIERO, config.financiero, 'financiero')}
+        ${grupoCheckbox('Columnas del detalle', ETIQUETAS_COLUMNAS, config.columnas, 'columnas')}
+      ` : ''}
+
+      <div class="card" style="margin-bottom:var(--sp-4);">
+        <h3 style="font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold-400); margin-bottom:var(--sp-3);">Filtrar por estado del comprobante</h3>
+        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+          ${Object.entries(ETIQUETAS_ESTADO_COMPROBANTE).map(([valor, info]) => `
+            <label style="display:flex; align-items:center; gap:8px; font-size:var(--fs-sm);">
+              <input type="checkbox" data-estado="${valor}" ${config.filtroEstados[valor] ? 'checked' : ''} /> ${info.texto}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:var(--sp-4);">
+        <h3 style="font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold-400); margin-bottom:var(--sp-3);">Categorías incluidas</h3>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px;">
+          ${CATEGORIAS_DEFECTO.map((c) => `
+            <label style="display:flex; align-items:center; gap:8px; font-size:var(--fs-sm);">
+              <input type="checkbox" data-categoria="${c.id}" ${config.categoriasIncluidas.has(c.id) ? 'checked' : ''} /> ${c.nombre}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:var(--sp-4);">
+        <label style="display:flex; align-items:center; gap:8px; font-size:var(--fs-sm); font-weight:600;">
+          <input type="checkbox" id="chk-proy-vs-real" ${config.incluirProyeccionVsReal ? 'checked' : ''} />
+          Incluir proyectado vs. real
+        </label>
+      </div>
+
+      <div class="card" style="margin-bottom:var(--sp-4);">
+        <h3 style="font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold-400); margin-bottom:var(--sp-3);">Firmas</h3>
+        <div style="display:flex; flex-direction:column; gap:var(--sp-3);">
+          ${Object.entries(ETIQUETAS_FIRMAS).map(([clave, etiqueta]) => `
+            <div>
+              <label style="display:flex; align-items:center; gap:8px; font-size:var(--fs-sm); margin-bottom:6px;">
+                <input type="checkbox" data-firma="${clave}" ${config.firmas[clave].incluir ? 'checked' : ''} /> ${etiqueta}
+              </label>
+              <div class="field-row" style="${config.firmas[clave].incluir ? '' : 'display:none;'}" data-firma-campos="${clave}">
+                <div class="field"><input type="text" placeholder="Nombre" data-firma-nombre="${clave}" value="${config.firmas[clave].nombre}" /></div>
+                <div class="field"><input type="text" placeholder="Cargo" data-firma-cargo="${clave}" value="${config.firmas[clave].cargo}" /></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="card card-elevated" style="margin-bottom:var(--sp-5);">
+        <div class="section-title">
+          <span>Gastos a incluir en el informe (${config.gastosSeleccionados.size} de ${gastos.length})</span>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-ghost btn-sm" id="btn-marcar-todos">Marcar todos</button>
+            <button class="btn btn-ghost btn-sm" id="btn-desmarcar-todos">Desmarcar todos</button>
+          </div>
+        </div>
+        <div style="max-height:300px; overflow:auto;">
+          ${gastos.map((g) => `
+            <label style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:var(--fs-sm);">
+              <input type="checkbox" data-gasto="${g.id}" ${config.gastosSeleccionados.has(g.id) ? 'checked' : ''} />
+              <span style="color:var(--text-500); width:80px;">${formatoFecha(g.fecha)}</span>
+              <span style="flex:1;">${g.descripcion || '(sin descripción)'}</span>
+              <span class="tabular" style="font-weight:600;">${formatoMoneda(g.valor)}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+
+      <div style="display:flex; gap:var(--sp-3);">
+        <button class="btn btn-secondary" id="btn-atras">Atrás</button>
+        <button class="btn btn-primary" id="btn-vista-previa">Ver vista previa</button>
+      </div>
+    `;
+
+    contenedor.querySelector('#btn-volver-tipo').addEventListener('click', onVolver);
+    contenedor.querySelector('#btn-atras').addEventListener('click', onVolver);
+
+    contenedor.querySelectorAll('[data-grupo]').forEach((chk) => {
+      chk.addEventListener('change', () => { config[chk.dataset.grupo][chk.dataset.campo] = chk.checked; });
+    });
+    contenedor.querySelectorAll('[data-estado]').forEach((chk) => {
+      chk.addEventListener('change', () => { config.filtroEstados[chk.dataset.estado] = chk.checked; });
+    });
+    contenedor.querySelectorAll('[data-categoria]').forEach((chk) => {
+      chk.addEventListener('change', () => {
+        if (chk.checked) config.categoriasIncluidas.add(chk.dataset.categoria);
+        else config.categoriasIncluidas.delete(chk.dataset.categoria);
+      });
+    });
+    contenedor.querySelector('#chk-proy-vs-real').addEventListener('change', (e) => { config.incluirProyeccionVsReal = e.target.checked; });
+
+    contenedor.querySelectorAll('[data-firma]').forEach((chk) => {
+      chk.addEventListener('change', () => {
+        config.firmas[chk.dataset.firma].incluir = chk.checked;
+        const campos = contenedor.querySelector(`[data-firma-campos="${chk.dataset.firma}"]`);
+        campos.style.display = chk.checked ? '' : 'none';
+      });
+    });
+    contenedor.querySelectorAll('[data-firma-nombre]').forEach((inp) => {
+      inp.addEventListener('input', () => { config.firmas[inp.dataset.firmaNombre].nombre = inp.value; });
+    });
+    contenedor.querySelectorAll('[data-firma-cargo]').forEach((inp) => {
+      inp.addEventListener('input', () => { config.firmas[inp.dataset.firmaCargo].cargo = inp.value; });
+    });
+
+    contenedor.querySelector('#sel-plantilla').addEventListener('change', async (e) => {
+      if (!e.target.value) return;
+      const plantilla = plantillas.find((p) => p.id === e.target.value);
+      if (!plantilla) return;
+      const nuevoConfig = aplicarPlantilla(config, plantilla);
+      mostrarToast(`Plantilla "${plantilla.nombre}" aplicada.`);
+      await renderPasoConfiguracion(contenedor, { config: nuevoConfig, gastos, onVolver, onVerVistaPrevia });
+    });
+    contenedor.querySelector('#btn-guardar-plantilla')?.addEventListener('click', () => {
+      const modal = abrirModal({
+        titulo: 'Guardar como plantilla',
+        contenidoHtml: `<div class="field"><label>Nombre de la plantilla</label><input type="text" id="input-nombre-plantilla" placeholder="Ej. Liquidación completa" /></div>`,
+        botones: [
+          { texto: 'Cancelar', clase: 'btn-secondary' },
+          {
+            texto: 'Guardar', clase: 'btn-primary', cerrar: false,
+            onClick: async () => {
+              const nombre = modal.querySelector('#input-nombre-plantilla').value.trim();
+              if (!nombre) { mostrarToast('Escribe un nombre para la plantilla.'); return; }
+              await guardarPlantilla(nombre, config);
+              mostrarToast('Plantilla guardada.');
+              cerrarModal();
+              await renderPasoConfiguracion(contenedor, { config, gastos, onVolver, onVerVistaPrevia });
+            },
+          },
+        ],
+      });
+    });
+    contenedor.querySelector('#btn-borrar-plantilla')?.addEventListener('click', () => {
+      const sel = contenedor.querySelector('#sel-plantilla');
+      if (!sel.value) { mostrarToast('Elige una plantilla para eliminar.'); return; }
+      abrirModal({
+        titulo: '¿Eliminar esta plantilla?',
+        contenidoHtml: `<p>Esta acción no se puede deshacer.</p>`,
+        botones: [
+          { texto: 'Cancelar', clase: 'btn-secondary' },
+          { texto: 'Eliminar', clase: 'btn-danger', onClick: async () => {
+            await eliminarPlantilla(sel.value);
+            mostrarToast('Plantilla eliminada.');
+            await renderPasoConfiguracion(contenedor, { config, gastos, onVolver, onVerVistaPrevia });
+          } },
+        ],
+      });
+    });
+
+    contenedor.querySelectorAll('[data-gasto]').forEach((chk) => {
+      chk.addEventListener('change', () => {
+        if (chk.checked) config.gastosSeleccionados.add(chk.dataset.gasto);
+        else config.gastosSeleccionados.delete(chk.dataset.gasto);
+        contenedor.querySelector('.section-title span').textContent = `Gastos a incluir en el informe (${config.gastosSeleccionados.size} de ${gastos.length})`;
+      });
+    });
+    contenedor.querySelector('#btn-marcar-todos').addEventListener('click', async () => {
+      gastos.forEach((g) => config.gastosSeleccionados.add(g.id));
+      await renderPasoConfiguracion(contenedor, { config, gastos, onVolver, onVerVistaPrevia });
+    });
+    contenedor.querySelector('#btn-desmarcar-todos').addEventListener('click', async () => {
+      config.gastosSeleccionados.clear();
+      await renderPasoConfiguracion(contenedor, { config, gastos, onVolver, onVerVistaPrevia });
+    });
+
+    contenedor.querySelector('#btn-vista-previa').addEventListener('click', () => onVerVistaPrevia(config));
+  }
+
+  return { configPorDefecto, renderPasoConfiguracion };
+  })();
+
+  // ==== modules/informes/informes.preview ====
+  __modules__['modules/informes/informes.preview'] = (function(){
+  const { formatoMoneda, formatoFecha, ETIQUETAS_ESTADO_COMPROBANTE } = __modules__['utils/format'];
+  const { CATEGORIAS_DEFECTO, ESTADOS_COMPROBANTE, totalProyeccionItem } = __modules__['core/models'];
+
+
+
+  function nombreCategoria(id) {
+    return CATEGORIAS_DEFECTO.find((c) => c.id === id)?.nombre || id;
+  }
+
+  function claseEstadoMini(estado) {
+    if (estado === ESTADOS_COMPROBANTE.CON) return 'hoja-estado-con';
+    if (estado === ESTADOS_COMPROBANTE.PENDIENTE) return 'hoja-estado-pendiente';
+    return 'hoja-estado-sin';
+  }
+
+  function filtrarGastosInforme(gastos, config) {
+    return gastos.filter((g) =>
+      config.gastosSeleccionados.has(g.id) &&
+      config.filtroEstados[g.estadoComprobante] &&
+      config.categoriasIncluidas.has(g.categoria)
+    );
+  }
+
+  function seccionDatosGenerales(proyecto, dg) {
+    const filas = [
+      dg.nombre && ['Proyecto', proyecto.nombre],
+      dg.cliente && ['Cliente', proyecto.cliente || '—'],
+      dg.ciudad && ['Ciudad', `${proyecto.ciudad || '—'}${proyecto.provincia ? ', ' + proyecto.provincia : ''}`],
+      dg.responsable && ['Responsable', proyecto.responsable || '—'],
+      dg.fechaInicio && ['Fecha inicial', formatoFecha(proyecto.fechaInicio)],
+      dg.fechaFin && ['Fecha final', formatoFecha(proyecto.fechaFinReal || proyecto.fechaFinEstimada)],
+      dg.numeroPersonas && ['N.º de personas', proyecto.numeroPersonas],
+      dg.motivoViaje && ['Motivo del viaje', proyecto.motivoViaje || '—'],
+      dg.observaciones && ['Observaciones', proyecto.observaciones || '—'],
+    ].filter(Boolean);
+    if (!filas.length) return '';
+    return `
+      <div class="hoja-seccion">
+        <h3>Datos generales</h3>
+        <div class="hoja-datos-grid">
+          ${filas.map(([lbl, val]) => `<div><div class="lbl">${lbl}</div><div>${val}</div></div>`).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function seccionFinanciera(resumen, fin) {
+    const items = [
+      fin.totalRecibido && ['Total recibido', resumen.totalRecibido],
+      fin.totalGastado && ['Total gastado', resumen.totalGastado],
+      fin.saldo && ['Saldo', resumen.saldo],
+      fin.reembolsoPendiente && resumen.reembolsoPendiente > 0 && ['Reembolso pendiente', resumen.reembolsoPendiente],
+      fin.totalConComprobante && ['Con comprobante', resumen.totalConComprobante],
+      fin.totalPendiente && ['Pendiente', resumen.totalPendiente],
+      fin.totalSinComprobante && ['Sin comprobante', resumen.totalSinComprobante],
+    ].filter(Boolean);
+    if (!items.length) return '';
+    return `
+      <div class="hoja-seccion">
+        <h3>Resumen financiero</h3>
+        <div class="hoja-financiero">
+          ${items.map(([lbl, val]) => `<div class="hoja-fin-item"><div class="lbl">${lbl}</div><div class="val">${formatoMoneda(val)}</div></div>`).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function seccionResumenPorCategoria(gastosFiltrados) {
+    const mapa = {};
+    gastosFiltrados.forEach((g) => { mapa[g.categoria] = (mapa[g.categoria] || 0) + g.valor; });
+    const entradas = Object.entries(mapa);
+    if (!entradas.length) return '';
+    return `
+      <div class="hoja-seccion">
+        <h3>Gastos por categoría</h3>
+        <table class="hoja-tabla">
+          <thead><tr><th>Categoría</th><th style="text-align:right;">Total</th></tr></thead>
+          <tbody>
+            ${entradas.map(([cat, val]) => `<tr><td>${nombreCategoria(cat)}</td><td class="num">${formatoMoneda(val)}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function seccionDetalle(gastosFiltrados, columnas) {
+    const cols = [
+      columnas.numero && { k: 'numero', l: 'N.º' },
+      columnas.fecha && { k: 'fecha', l: 'Fecha' },
+      columnas.categoria && { k: 'categoria', l: 'Categoría' },
+      columnas.descripcion && { k: 'descripcion', l: 'Descripción' },
+      columnas.establecimiento && { k: 'establecimiento', l: 'Establecimiento' },
+      columnas.numeroFactura && { k: 'numeroFactura', l: 'N.º factura' },
+      columnas.estadoComprobante && { k: 'estadoComprobante', l: 'Comprobante' },
+      columnas.valor && { k: 'valor', l: 'Valor' },
+      columnas.observaciones && { k: 'observaciones', l: 'Observaciones' },
+    ].filter(Boolean);
+    if (!cols.length || !gastosFiltrados.length) return '';
+
+    const celda = (g, k) => {
+      if (k === 'fecha') return formatoFecha(g.fecha);
+      if (k === 'categoria') return nombreCategoria(g.categoria);
+      if (k === 'valor') return `<span class="num">${formatoMoneda(g.valor)}</span>`;
+      if (k === 'estadoComprobante') return `<span class="hoja-estado-mini ${claseEstadoMini(g.estadoComprobante)}">${ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante].texto}</span>`;
+      if (k === 'establecimiento' || k === 'numeroFactura') return '—'; // se completan al vincular anexos de comprobante en Etapa 6
+      return g[k] ?? '—';
+    };
+
+    const totalDetalle = gastosFiltrados.reduce((a, g) => a + g.valor, 0);
+
+    return `
+      <div class="hoja-seccion">
+        <h3>Detalle de movimientos</h3>
+        <table class="hoja-tabla">
+          <thead><tr>${cols.map((c) => `<th ${c.k === 'valor' ? 'style="text-align:right;"' : ''}>${c.l}</th>`).join('')}</tr></thead>
+          <tbody>
+            ${gastosFiltrados.map((g) => `<tr>${cols.map((c) => `<td>${celda(g, c.k)}</td>`).join('')}</tr>`).join('')}
+          </tbody>
+          <tfoot><tr style="font-weight:700;"><td colspan="${cols.length - 1}">Total</td><td class="num">${formatoMoneda(totalDetalle)}</td></tr></tfoot>
+        </table>
+      </div>
+    `;
+  }
+
+  function seccionProyectadoVsReal(proyeccionItems, realPorCategoria) {
+    const proyPorCat = {};
+    proyeccionItems.forEach((i) => { proyPorCat[i.categoria] = (proyPorCat[i.categoria] || 0) + totalProyeccionItem(i); });
+    const categorias = Array.from(new Set([...Object.keys(proyPorCat), ...Object.keys(realPorCategoria)]));
+    if (!categorias.length) return '';
+    return `
+      <div class="hoja-seccion">
+        <h3>Proyectado vs. real</h3>
+        <table class="hoja-tabla">
+          <thead><tr><th>Categoría</th><th style="text-align:right;">Proyectado</th><th style="text-align:right;">Real</th><th style="text-align:right;">Diferencia</th></tr></thead>
+          <tbody>
+            ${categorias.map((cat) => {
+              const proy = proyPorCat[cat] || 0;
+              const real = realPorCategoria[cat] || 0;
+              const dif = Number((proy - real).toFixed(2));
+              return `<tr><td>${nombreCategoria(cat)}</td><td class="num">${formatoMoneda(proy)}</td><td class="num">${formatoMoneda(real)}</td><td class="num">${dif >= 0 ? '+' : ''}${formatoMoneda(dif)}</td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const ETIQUETAS_FIRMAS = {
+    responsable: 'Firma del responsable',
+    revision: 'Firma de revisión',
+    aprobacion: 'Firma de aprobación',
+  };
+
+  function seccionFirmas(firmas) {
+    const activas = Object.entries(firmas || {}).filter(([, f]) => f.incluir);
+    if (!activas.length) return '';
+    return `
+      <div class="hoja-firmas">
+        ${activas.map(([clave, f]) => `
+          <div class="hoja-firma-linea">
+            ${f.nombre || '\u00A0'}<br>
+            <span style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">${ETIQUETAS_FIRMAS[clave]}${f.cargo ? ' · ' + f.cargo : ''}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderVistaPreviaHTML(datos, config) {
+    const { proyecto, resumen, gastos, proyeccionItems, realPorCategoria, empresa } = datos;
+    const gastosFiltrados = filtrarGastosInforme(gastos, config);
+    const fechaGeneracion = new Date().toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const tituloTipo = { resumido: 'Informe resumido de viáticos', detallado: 'Informe detallado de viáticos', personalizado: 'Informe de viáticos' }[config.tipo];
+
+    return `
+      <div class="hoja-informe" id="hoja-informe-render">
+        <div class="hoja-header">
+          <div class="empresa">${empresa.nombre || 'Empresa'}</div>
+          <div class="meta">Generado: ${fechaGeneracion}${empresa.responsable ? `<br>${empresa.responsable}${empresa.cargo ? ' · ' + empresa.cargo : ''}` : ''}</div>
+        </div>
+        <div class="hoja-titulo">${tituloTipo}</div>
+        <div class="hoja-subtitulo">${proyecto.nombre} · ${proyecto.ciudad || ''}</div>
+
+        ${seccionDatosGenerales(proyecto, config.datosGenerales)}
+        ${seccionFinanciera(resumen, config.financiero)}
+        ${config.tipo === 'resumido' ? seccionResumenPorCategoria(gastosFiltrados) : ''}
+        ${config.tipo !== 'resumido' ? seccionDetalle(gastosFiltrados, config.columnas) : ''}
+        ${config.incluirProyeccionVsReal ? seccionProyectadoVsReal(proyeccionItems, realPorCategoria) : ''}
+        ${seccionFirmas(config.firmas)}
+
+        <div class="hoja-footer">
+          <span>${empresa.nombre || 'Sistema de viáticos'}</span>
+          <span>Página 1</span>
+        </div>
+      </div>
+    `;
+  }
+
+  return { filtrarGastosInforme, renderVistaPreviaHTML };
+  })();
+
+  // ==== modules/informes/informes.anexos ====
+  __modules__['modules/informes/informes.anexos'] = (function(){
+  const { db } = __modules__['storage/db'];
+  const { blobAUrl } = __modules__['modules/comprobantes/imagen.util'];
+  const { formatoMoneda, formatoFecha } = __modules__['utils/format'];
+
+
+
+
+  /**
+   * @param {Array} gastosFiltrados - los mismos gastos que entran al informe (con .numero ya asignado)
+   * @returns {Promise<string>} HTML con una "hoja" por gasto, lista para imprimir
+   */
+  async function construirAnexoComprobantesHTML(gastosFiltrados) {
+    const paginas = await Promise.all(gastosFiltrados.map(async (g) => {
+      let imgHtml = `<p style="margin-top:24px; font-size:0.9rem; color:#8a2f2a; font-weight:600;">SIN COMPROBANTE</p>`;
+      if (g.comprobanteId) {
+        const comp = await db.get('comprobantes', g.comprobanteId);
+        if (comp?.imagenBlob) {
+          imgHtml = `<img src="${blobAUrl(comp.imagenBlob)}" style="max-width:100%; max-height:900px; margin-top:16px; border:1px solid #d8d2c4;" />`;
+        }
+      }
+      return `
+        <div class="hoja-informe" style="margin-bottom:24px; page-break-after:always;">
+          <div class="hoja-titulo" style="font-size:1.1rem;">Comprobante N.º ${String(g.numero).padStart(3, '0')}</div>
+          <div class="hoja-subtitulo">${g.descripcion || '(sin descripción)'} · ${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
+          ${imgHtml}
+        </div>
+      `;
+    }));
+    return paginas.join('\n');
+  }
+
+  return { construirAnexoComprobantesHTML };
+  })();
+
+  // ==== modules/informes/informes.view ====
+  __modules__['modules/informes/informes.view'] = (function(){
+  const { listarProyectos } = __modules__['core/repositorio'];
+  const { reunirDatosInforme } = __modules__['modules/informes/informes.data'];
+  const { configPorDefecto, renderPasoConfiguracion } = __modules__['modules/informes/informes.config'];
+  const { renderVistaPreviaHTML, filtrarGastosInforme } = __modules__['modules/informes/informes.preview'];
+  const { construirAnexoComprobantesHTML } = __modules__['modules/informes/informes.anexos'];
+  const { ETIQUETAS_ESTADO_PROYECTO } = __modules__['utils/format'];
+  const { abrirModal, cerrarModal } = __modules__['components/modal'];
+  const { mostrarToast } = __modules__['components/toast'];
+  const { icono } = __modules__['components/icons'];
+
+
+
+
+
+
+
+
+
+
+  const TIPOS = [
+    { id: 'resumido', titulo: 'Informe resumido', desc: 'Ejecutivo — totales y resumen por categoría, listo para imprimir.' },
+    { id: 'detallado', titulo: 'Informe detallado', desc: 'Todos los movimientos seleccionados con resumen financiero al final.' },
+    { id: 'personalizado', titulo: 'Informe personalizado', desc: 'Eliges exactamente qué datos, columnas y gastos incluir.' },
+  ];
+
+  async function renderListaProyectos(contenedor) {
+    const proyectos = await listarProyectos();
+    contenedor.innerHTML = `
+      <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600; margin-bottom:var(--sp-2);">Informes</h1>
+      <p style="color:var(--text-500); font-size:var(--fs-sm); margin-bottom:var(--sp-5);">Elige el proyecto para el que quieres generar un informe.</p>
+      ${proyectos.length ? `
+        <div class="proj-grid">
+          ${proyectos.map((p) => `
+            <a class="proj-card" href="#informes/${p.id}">
+              <div class="proj-card-head">
+                <div>
+                  <div class="proj-card-title">${p.nombre}</div>
+                  <div class="proj-card-client">${p.cliente || 'Sin cliente'} · ${p.ciudad || 'Sin ciudad'}</div>
+                </div>
+                <span class="state-tag state-${p.estado}">${ETIQUETAS_ESTADO_PROYECTO[p.estado]}</span>
+              </div>
+            </a>
+          `).join('')}
+        </div>
+      ` : `<div class="empty-state"><p class="lead">Aún no hay proyectos</p><p>Crea un proyecto y registra gastos antes de generar un informe.</p></div>`}
+    `;
+  }
+
+  function renderPasoTipo(contenedor, { proyecto, onElegir }) {
+    contenedor.innerHTML = `
+      <a href="#informes" class="btn btn-ghost btn-sm" style="margin-bottom:var(--sp-3);">${icono('flechaAtras')} Volver a proyectos</a>
+      <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600; margin-bottom:var(--sp-2);">Generar informe — ${proyecto.nombre}</h1>
+      <p style="color:var(--text-500); font-size:var(--fs-sm); margin-bottom:var(--sp-5);">Elige el tipo de informe que quieres generar.</p>
+      <div class="proj-grid">
+        ${TIPOS.map((t) => `
+          <button class="proj-card" style="text-align:left; width:100%; border:1px solid var(--line);" data-tipo="${t.id}">
+            <div class="proj-card-title">${t.titulo}</div>
+            <p style="font-size:var(--fs-sm); color:var(--text-500);">${t.desc}</p>
+          </button>
+        `).join('')}
+      </div>
+    `;
+    contenedor.querySelectorAll('[data-tipo]').forEach((btn) => {
+      btn.addEventListener('click', () => onElegir(btn.dataset.tipo));
+    });
+  }
+
+  /** Imprime (y por tanto permite "Guardar en PDF" / compartir) el contenido dado, usando la zona de impresión dedicada. */
+  function imprimirContenido(html) {
+    const zona = document.getElementById('zona-impresion');
+    zona.innerHTML = html;
+    // Pequeño respiro para que el navegador pinte las imágenes antes de abrir el diálogo de impresión
+    setTimeout(() => window.print(), 150);
+  }
+
+  function renderPasoVistaPrevia(contenedor, { datos, config, onVolverConfig }) {
+    contenedor.innerHTML = `
+      <div class="toolbar">
+        <div class="section-title" style="margin-bottom:0;">Vista previa del informe</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-secondary" id="btn-volver-config">Volver a configuración</button>
+          <button class="btn btn-primary" id="btn-generar-pdf">Generar PDF</button>
+        </div>
+      </div>
+      ${renderVistaPreviaHTML(datos, config)}
+    `;
+    contenedor.querySelector('#btn-volver-config').addEventListener('click', onVolverConfig);
+
+    contenedor.querySelector('#btn-generar-pdf').addEventListener('click', () => {
+      const modal = abrirModal({
+        titulo: '¿Cómo deseas manejar los comprobantes?',
+        contenidoHtml: `
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <label style="display:flex; gap:10px; align-items:flex-start; font-size:var(--fs-sm);">
+              <input type="radio" name="modo-comp" value="sin" checked style="margin-top:3px;" />
+              <span><strong>Sin comprobantes</strong><br><span style="color:var(--text-500);">Solo el informe, sin fotos anexas.</span></span>
+            </label>
+            <label style="display:flex; gap:10px; align-items:flex-start; font-size:var(--fs-sm);">
+              <input type="radio" name="modo-comp" value="mismo" style="margin-top:3px;" />
+              <span><strong>Informe + comprobantes en el mismo PDF</strong><br><span style="color:var(--text-500);">Cada foto se agrega al final, identificada con el número del gasto.</span></span>
+            </label>
+            <label style="display:flex; gap:10px; align-items:flex-start; font-size:var(--fs-sm);">
+              <input type="radio" name="modo-comp" value="separado" style="margin-top:3px;" />
+              <span><strong>Generar por separado</strong><br><span style="color:var(--text-500);">Primero guardas/imprimes el informe y, en un segundo paso, las fotos de los comprobantes.</span></span>
+            </label>
+          </div>
+          <p style="font-size:var(--fs-xs); color:var(--text-500); margin-top:var(--sp-3);">
+            Se abrirá el diálogo de impresión de tu navegador — desde ahí eliges "Guardar en PDF" o "Guardar en Archivos" para obtener el archivo en tu celular.
+          </p>
+        `,
+        botones: [
+          { texto: 'Cancelar', clase: 'btn-secondary' },
+          {
+            texto: 'Continuar', clase: 'btn-primary', cerrar: false,
+            onClick: async () => {
+              const modo = modal.querySelector('input[name="modo-comp"]:checked').value;
+              const gastosFiltrados = filtrarGastosInforme(datos.gastos, config);
+              cerrarModal();
+
+              if (modo === 'sin') {
+                imprimirContenido(renderVistaPreviaHTML(datos, config));
+              } else if (modo === 'mismo') {
+                mostrarToast('Preparando comprobantes…');
+                const anexo = await construirAnexoComprobantesHTML(gastosFiltrados);
+                imprimirContenido(renderVistaPreviaHTML(datos, config) + anexo);
+              } else {
+                // Por separado: primero el informe. Los comprobantes se ofrecen después, en un segundo botón.
+                imprimirContenido(renderVistaPreviaHTML(datos, config));
+                mostrarToast('Guarda/imprime el informe. Cuando termines, usa "Imprimir comprobantes" para el segundo archivo.');
+                const btnAnexo = contenedor.querySelector('#btn-generar-pdf');
+                if (btnAnexo && !contenedor.querySelector('#btn-imprimir-anexo')) {
+                  const nuevoBtn = document.createElement('button');
+                  nuevoBtn.className = 'btn btn-secondary';
+                  nuevoBtn.id = 'btn-imprimir-anexo';
+                  nuevoBtn.textContent = 'Imprimir comprobantes';
+                  nuevoBtn.addEventListener('click', async () => {
+                    mostrarToast('Preparando comprobantes…');
+                    const anexo = await construirAnexoComprobantesHTML(gastosFiltrados);
+                    imprimirContenido(anexo);
+                  });
+                  btnAnexo.insertAdjacentElement('afterend', nuevoBtn);
+                }
+              }
+            },
+          },
+        ],
+      });
+    });
+  }
+
+  async function renderInformes(contenedor, params) {
+    if (!params?.id) {
+      await renderListaProyectos(contenedor);
+      return;
+    }
+
+    const datos = await reunirDatosInforme(params.id);
+    if (!datos.proyecto) {
+      contenedor.innerHTML = `<div class="empty-state"><p class="lead">Proyecto no encontrado</p></div>`;
+      return;
+    }
+
+    const irAPasoTipo = () => renderPasoTipo(contenedor, { proyecto: datos.proyecto, onElegir: irAPasoConfig });
+
+    const irAPasoConfig = async (tipo) => {
+      const config = configPorDefecto(tipo, datos.gastos);
+      await renderPasoConfiguracion(contenedor, {
+        config,
+        gastos: datos.gastos,
+        onVolver: irAPasoTipo,
+        onVerVistaPrevia: (cfgFinal) => renderPasoVistaPrevia(contenedor, {
+          datos,
+          config: cfgFinal,
+          onVolverConfig: () => irAPasoConfig(cfgFinal.tipo),
+        }),
+      });
+    };
+
+    irAPasoTipo();
+  }
+
+  return { renderInformes };
+  })();
+
+  // ==== app ====
+  (function(){
+  const { registrarRuta, definirContenedor, alNavegar, iniciarRouter } = __modules__['core/router'];
+  const { renderSidebar, renderBottomNav, marcarRutaActiva } = __modules__['components/nav'];
+  const { renderDashboard } = __modules__['modules/dashboard/dashboard.view'];
+  const { registrarRutasProyectos } = __modules__['modules/proyectos/index'];
+  const { renderConfiguracion } = __modules__['modules/configuracion/configuracion.view'];
+  const { renderInformes } = __modules__['modules/informes/informes.view'];
+  const { iniciarEscuchaDeConexion } = __modules__['modules/comprobantes/cola.service'];
+
+
+
+
+
+
+
+
+  function iniciar() {
+    renderSidebar();
+    renderBottomNav();
+
+    definirContenedor(document.getElementById('vista'));
+    alNavegar((patron) => marcarRutaActiva(patron));
+
+    registrarRuta('dashboard', renderDashboard);
+    registrarRutasProyectos();
+    registrarRuta('configuracion', renderConfiguracion);
+    registrarRuta('informes', renderInformes);
+    registrarRuta('informes/:id', renderInformes);
+
+    iniciarRouter();
+    iniciarEscuchaDeConexion();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js').catch(() => {
+        // Si falla el registro (p.ej. entorno de vista previa sin HTTPS),
+        // la app sigue funcionando, solo sin capacidad offline.
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', iniciar);
+
+  })();
+
+})();
+
+  </script>
+</body>
+</html>
