@@ -2803,15 +2803,40 @@ a { color: inherit; text-decoration: none; }
 
     const datosIniciales = estadoInicial ? { ...gastoExistente, estadoComprobante: estadoInicial } : gastoExistente;
 
-    // Si se está editando un gasto que ya tiene una foto adjunta, mostrarla como referencia
+    // Si se está editando un gasto que ya tiene una foto adjunta, mostrarla como referencia junto con todos los datos leídos
     let comprobanteExistenteHtml = '';
     if (editando && gastoExistente.comprobanteId) {
       const compExistente = await db.get('comprobantes', gastoExistente.comprobanteId);
       if (compExistente?.imagenBlob) {
+        const d = compExistente.datosDetectados;
+        let fichaHtml = '';
+        if (d) {
+          const filas = [
+            d.itemPrincipal && ['Ítem comprado', d.itemPrincipal],
+            d.establecimiento && ['Establecimiento', d.establecimiento],
+            d.ciudad && ['Ciudad', d.ciudad],
+            d.ruc && ['RUC', d.ruc],
+            d.numeroFactura && ['N.º de factura', d.numeroFactura],
+            d.subtotal != null && ['Subtotal', formatoMoneda(d.subtotal)],
+            d.iva != null && ['IVA', formatoMoneda(d.iva)],
+            d.total != null && ['Total en el comprobante', formatoMoneda(d.total)],
+          ].filter(Boolean);
+          if (filas.length) {
+            fichaHtml = `
+              <div class="deteccion-card" style="margin-top:var(--sp-3);">
+                <h3>Datos leídos del comprobante ${d.metodo === 'ocr_local' ? '(lectura gratuita)' : d.metodo === 'ia' ? '(IA)' : ''}</h3>
+                <div class="deteccion-grid">
+                  ${filas.map(([lbl, val]) => `<div><div class="lbl" style="font-size:var(--fs-xs); color:var(--text-500); text-transform:uppercase; letter-spacing:0.03em;">${lbl}</div><div style="font-size:var(--fs-sm);">${val}</div></div>`).join('')}
+                </div>
+              </div>
+            `;
+          }
+        }
         comprobanteExistenteHtml = `
           <div class="field">
             <label>Comprobante adjunto</label>
             <img src="${blobAUrl(compExistente.imagenBlob)}" class="comprobante-preview" />
+            ${fichaHtml}
           </div>
         `;
       }
@@ -4150,7 +4175,7 @@ a { color: inherit; text-decoration: none; }
       },
       columnas: {
         numero: true, fecha: true, categoria: true, descripcion: true, valor: true,
-        estadoComprobante: true, numeroFactura: false, establecimiento: false, ruc: false, ciudad: false, observaciones: false,
+        estadoComprobante: true, numeroFactura: true, establecimiento: true, ruc: true, ciudad: true, observaciones: false,
       },
       gastosSeleccionados: new Set(gastos.map((g) => g.id)),
       filtroEstados: { con_comprobante: true, pendiente_comprobante: true, sin_comprobante: true },
