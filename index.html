@@ -695,14 +695,14 @@ a { color: inherit; text-decoration: none; }
   display: inline-block;
   vertical-align: top;
   width: 48%;
-  margin: 0 1% 14px 1%;
+  margin: 0 1% 8px 1%;
   font-size: 1rem; /* restaurar el tamaño de fuente normal dentro de la celda */
   page-break-inside: avoid;
   break-inside: avoid;
 }
-.hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.8rem; }
-.hoja-anexo-meta { font-size: 0.64rem; color: #5c6270; margin-bottom: 4px; }
-.hoja-anexo-img { display: block; width: auto; max-width: 100%; max-height: 400px; margin: 0 auto; object-fit: contain; background: #fff; }
+.hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.72rem; line-height: 1.2; }
+.hoja-anexo-meta { font-size: 0.6rem; color: #5c6270; margin-bottom: 3px; }
+.hoja-anexo-img { display: block; width: auto; max-width: 100%; max-height: 210px; margin: 0 auto; object-fit: contain; background: #fff; }
 
 .hoja-cat-banda {
   background: #dce6f0; color: #1b2f47; font-weight: 700; font-size: 0.72rem;
@@ -5776,8 +5776,8 @@ a { color: inherit; text-decoration: none; }
     for (let i = 0; i < conFoto.length; i += POR_PAGINA) {
       const grupo = conFoto.slice(i, i + POR_PAGINA);
       paginas.push(`
-        <div class="hoja-informe" style="margin-bottom:24px; padding:20px 24px; page-break-after:always;">
-          <div class="hoja-titulo" style="font-size:1.1rem; margin-bottom:12px;">Anexo de comprobantes</div>
+        <div class="hoja-informe" style="margin-bottom:24px; padding:14px 20px; page-break-after:always;">
+          <div class="hoja-titulo" style="font-size:1rem; margin-bottom:8px;">Anexo de comprobantes</div>
           <div class="hoja-anexo-grid">
             ${grupo.map(({ gasto: g, url, etiqueta }) => `
               <div class="hoja-anexo-celda">
