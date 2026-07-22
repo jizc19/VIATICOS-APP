@@ -1432,119 +1432,59 @@ a { color: inherit; text-decoration: none; }
   return { formatoMoneda, formatoFecha, formatoFechaLarga, ETIQUETAS_ESTADO_COMPROBANTE, ETIQUETAS_ESTADO_PROYECTO };
   })();
 
-  // ==== core/categorias.repo ====
-  __modules__['core/categorias.repo'] = (function(){
-  const { db, generarId } = __modules__['storage/db'];
-  const { CATEGORIAS_DEFECTO } = __modules__['core/models'];
-
-
-
-  /**
-   * categorias.repo.js — Categorías del sistema.
-   * Empieza con las categorías por defecto (fijas, no se pueden eliminar) y
-   * permite agregar categorías/subcategorías adicionales que el usuario cree,
-   * guardadas en IndexedDB.
-   */
-
-  async function listarCategorias() {
-    const personalizadas = await db.getAll('categorias');
-    return [...CATEGORIAS_DEFECTO, ...personalizadas.sort((a, b) => a.nombre.localeCompare(b.nombre))];
-  }
-
-  async function crearCategoria(nombre) {
-    const limpio = nombre.trim();
-    if (!limpio) return null;
-    const categoria = { id: generarId('cat'), nombre: limpio, personalizada: true };
-    await db.put('categorias', categoria);
-    return categoria;
-  }
-
-  async function eliminarCategoria(id) {
-    return db.delete('categorias', id);
-  }
-
-  function nombreDeCategoria(categorias, id) {
-    return categorias.find((c) => c.id === id)?.nombre || id;
-  }
-
-  function opcionesCategoriaHTML(categorias, seleccion) {
-    return categorias.map((c) => `<option value="${c.id}" ${c.id === seleccion ? 'selected' : ''}>${c.nombre}</option>`).join('');
-  }
-
-  return { listarCategorias, crearCategoria, eliminarCategoria, nombreDeCategoria, opcionesCategoriaHTML };
-  })();
-
   // ==== modules/dashboard/dashboard.view ====
   __modules__['modules/dashboard/dashboard.view'] = (function(){
-  const { resumenGlobal } = __modules__['core/repositorio'];
-  const { agruparGastosPorCategoria } = __modules__['core/finanzas'];
-  const { formatoMoneda, formatoFecha, ETIQUETAS_ESTADO_PROYECTO } = __modules__['utils/format'];
-  const { listarCategorias, nombreDeCategoria } = __modules__['core/categorias.repo'];
+  const { resumenGlobal, listarProyectos, resumenFinancieroProyecto } = __modules__['core/repositorio'];
+  const { formatoMoneda, ETIQUETAS_ESTADO_PROYECTO } = __modules__['utils/format'];
   const { icono } = __modules__['components/icons'];
 
 
 
 
-
-
-  function graficoBarrasCategoria(mapaCategoria, categorias) {
-    const entradas = Object.entries(mapaCategoria).sort((a, b) => b[1] - a[1]);
-    if (!entradas.length) {
-      return `<div class="empty-state"><p class="lead">Sin gastos aún</p><p>Los gastos por categoría aparecerán aquí.</p></div>`;
-    }
-    const max = Math.max(...entradas.map(([, v]) => v));
-
+  function tarjetaProyectoPropio(p, resumen) {
     return `
-      <div style="display:flex; flex-direction:column; gap:14px;">
-        ${entradas.map(([cat, valor]) => `
+      <a class="card card-elevated" href="#proyectos/${p.id}" style="display:block; margin-bottom:var(--sp-3); text-decoration:none; color:inherit;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
           <div>
-            <div style="display:flex; justify-content:space-between; font-size:var(--fs-xs); margin-bottom:4px;">
-              <span style="font-weight:600;">${nombreDeCategoria(categorias, cat)}</span>
-              <span class="mono tabular">${formatoMoneda(valor)}</span>
-            </div>
-            <div style="height:8px; background:var(--paper-0); border-radius:4px; overflow:hidden;">
-              <div style="height:100%; width:${(valor / max) * 100}%; background:var(--ledger-700);"></div>
-            </div>
+            <div class="proj-name">${p.nombre}</div>
+            <div class="proj-meta">${p.ciudad || 'Sin ciudad'} · ${ETIQUETAS_ESTADO_PROYECTO[p.estado]}</div>
           </div>
-        `).join('')}
-      </div>
-    `;
-  }
-
-  function filaProyectoReciente(p) {
-    return `
-      <div class="proj-row">
-        <div>
-          <div class="proj-name">${p.nombre}</div>
-          <div class="proj-meta">${p.ciudad || 'Sin ciudad'} · ${ETIQUETAS_ESTADO_PROYECTO[p.estado]}</div>
+          <span class="btn btn-ghost btn-sm">Ver →</span>
         </div>
-        <a class="btn btn-ghost btn-sm" href="#proyectos/${p.id}">Ver →</a>
-      </div>
+        <div style="display:flex; gap:20px; font-size:var(--fs-xs); color:var(--ink-500);">
+          <span>Recibido <strong class="tabular" style="color:var(--text-100); display:block; font-size:var(--fs-sm);">${formatoMoneda(resumen.totalRecibido)}</strong></span>
+          <span>Gastado <strong class="tabular" style="color:var(--text-100); display:block; font-size:var(--fs-sm);">${formatoMoneda(resumen.totalGastado)}</strong></span>
+          <span>Saldo <strong class="tabular" style="display:block; font-size:var(--fs-sm); color:${resumen.saldo < 0 ? 'var(--danger)' : 'var(--state-ok)'};">${formatoMoneda(resumen.saldo)}</strong></span>
+        </div>
+        ${resumen.reembolsoPendiente > 0 ? `<div style="margin-top:8px; font-size:var(--fs-xs); color:var(--danger);">Reembolso pendiente: ${formatoMoneda(resumen.reembolsoPendiente)}</div>` : ''}
+      </a>
     `;
   }
 
   async function renderDashboard(contenedor) {
     contenedor.innerHTML = `<div class="empty-state">Cargando…</div>`;
-    let resumen, categorias;
+    let resumen, proyectos;
     try {
-      [resumen, categorias] = await Promise.all([resumenGlobal(), listarCategorias()]);
+      [resumen, proyectos] = await Promise.all([resumenGlobal(), listarProyectos()]);
     } catch (err) {
       contenedor.innerHTML = `<div class="empty-state"><p class="lead">No se pudo cargar el panel</p><p>${err.message}. Intenta recargar la página; si persiste, es posible que necesites actualizar la app.</p></div>`;
       console.error(err);
       return;
     }
-    const porCategoria = agruparGastosPorCategoria(resumen.gastos);
+
+    const activos = proyectos.filter((p) => p.estado === 'activo');
+    const resumenesActivos = await Promise.all(activos.map((p) => resumenFinancieroProyecto(p.id)));
 
     contenedor.innerHTML = `
       <div class="topbar-inline" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--sp-5);">
         <div>
           <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600;">Dashboard</h1>
-          <p style="color:var(--ink-500); font-size:var(--fs-sm);">Resumen general de todos los proyectos</p>
+          <p style="color:var(--ink-500); font-size:var(--fs-sm);">Cada proyecto tiene su propio viático — no se mezclan entre sí</p>
         </div>
         <a href="#proyectos/nuevo" class="btn btn-primary">${icono('mas')} Nuevo proyecto</a>
       </div>
 
-      <div class="kpi-grid">
+      <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr); margin-bottom:var(--sp-5);">
         <div class="kpi-card">
           <span class="kpi-icon">${icono('carpetaCerrada')}</span>
           <span class="kpi-label">Proyectos activos</span>
@@ -1555,51 +1495,12 @@ a { color: inherit; text-decoration: none; }
           <span class="kpi-label">Proyectos cerrados</span>
           <span class="kpi-value">${resumen.proyectosCerrados}</span>
         </div>
-        <div class="kpi-card accent-ledger">
-          <span class="kpi-icon">${icono('moneda')}</span>
-          <span class="kpi-label">Total recibido</span>
-          <span class="kpi-value small tabular">${formatoMoneda(resumen.totalRecibido)}</span>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-icon">${icono('gastos')}</span>
-          <span class="kpi-label">Total gastado</span>
-          <span class="kpi-value small tabular">${formatoMoneda(resumen.totalGastado)}</span>
-        </div>
-        <div class="kpi-card ${resumen.saldo < 0 ? 'accent-danger' : 'accent-success'}">
-          <span class="kpi-icon">${icono(resumen.saldo < 0 ? 'alerta' : 'check')}</span>
-          <span class="kpi-label">Saldo disponible</span>
-          <span class="kpi-value small tabular">${formatoMoneda(resumen.saldo)}</span>
-          ${resumen.reembolsoPendiente > 0 ? `<span class="kpi-sub" style="color:var(--danger);">Reembolso pendiente: ${formatoMoneda(resumen.reembolsoPendiente)}</span>` : ''}
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-icon">${icono('check')}</span>
-          <span class="kpi-label">Con comprobante</span>
-          <span class="kpi-value small tabular">${formatoMoneda(resumen.totalConComprobante)}</span>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-icon">${icono('alerta')}</span>
-          <span class="kpi-label">Pendiente de comprobante</span>
-          <span class="kpi-value small tabular">${formatoMoneda(resumen.totalPendiente)}</span>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-icon">${icono('alerta')}</span>
-          <span class="kpi-label">Sin comprobante</span>
-          <span class="kpi-value small tabular">${formatoMoneda(resumen.totalSinComprobante)}</span>
-        </div>
       </div>
 
-      <div class="dash-grid">
-        <div class="card card-elevated">
-          <div class="section-title">Proyectos recientes</div>
-          ${resumen.proyectosRecientes.length
-            ? resumen.proyectosRecientes.map(filaProyectoReciente).join('')
-            : `<div class="empty-state"><p class="lead">Aún no hay proyectos</p><p>Crea tu primer proyecto para comenzar a registrar viáticos.</p><a href="#proyectos/nuevo" class="btn btn-primary" style="margin-top:16px; display:inline-flex;">${icono('mas')} Crear proyecto</a></div>`}
-        </div>
-        <div class="card card-elevated">
-          <div class="section-title">Gastos por categoría</div>
-          ${graficoBarrasCategoria(porCategoria, categorias)}
-        </div>
-      </div>
+      <div class="section-title">Tus proyectos activos</div>
+      ${activos.length
+        ? activos.map((p, i) => tarjetaProyectoPropio(p, resumenesActivos[i])).join('')
+        : `<div class="card card-elevated"><div class="empty-state"><p class="lead">No tienes proyectos activos</p><p>Crea un proyecto para empezar a registrar su viático.</p><a href="#proyectos/nuevo" class="btn btn-primary" style="margin-top:16px; display:inline-flex;">${icono('mas')} Crear proyecto</a></div></div>`}
     `;
   }
 
@@ -2242,6 +2143,48 @@ a { color: inherit; text-decoration: none; }
   }
 
   return { listarGastosActivos, listarGastosEnPapelera, obtenerGasto, crearNuevoGasto, editarGasto, enviarAPapelera, restaurarDePapelera, eliminarDefinitivamente, vincularComprobante };
+  })();
+
+  // ==== core/categorias.repo ====
+  __modules__['core/categorias.repo'] = (function(){
+  const { db, generarId } = __modules__['storage/db'];
+  const { CATEGORIAS_DEFECTO } = __modules__['core/models'];
+
+
+
+  /**
+   * categorias.repo.js — Categorías del sistema.
+   * Empieza con las categorías por defecto (fijas, no se pueden eliminar) y
+   * permite agregar categorías/subcategorías adicionales que el usuario cree,
+   * guardadas en IndexedDB.
+   */
+
+  async function listarCategorias() {
+    const personalizadas = await db.getAll('categorias');
+    return [...CATEGORIAS_DEFECTO, ...personalizadas.sort((a, b) => a.nombre.localeCompare(b.nombre))];
+  }
+
+  async function crearCategoria(nombre) {
+    const limpio = nombre.trim();
+    if (!limpio) return null;
+    const categoria = { id: generarId('cat'), nombre: limpio, personalizada: true };
+    await db.put('categorias', categoria);
+    return categoria;
+  }
+
+  async function eliminarCategoria(id) {
+    return db.delete('categorias', id);
+  }
+
+  function nombreDeCategoria(categorias, id) {
+    return categorias.find((c) => c.id === id)?.nombre || id;
+  }
+
+  function opcionesCategoriaHTML(categorias, seleccion) {
+    return categorias.map((c) => `<option value="${c.id}" ${c.id === seleccion ? 'selected' : ''}>${c.nombre}</option>`).join('');
+  }
+
+  return { listarCategorias, crearCategoria, eliminarCategoria, nombreDeCategoria, opcionesCategoriaHTML };
   })();
 
   // ==== modules/gastos/gastos.parser ====
