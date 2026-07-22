@@ -606,57 +606,81 @@ a { color: inherit; text-decoration: none; }
   background: #fdfcf9;
   color: #1b1f27;
   max-width: 820px;
+  width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
-  padding: 48px 56px;
+  padding: 48px 52px;
   border-radius: 3px;
   box-shadow: 0 30px 70px rgba(0,0,0,0.45);
   font-family: var(--font-body);
+  line-height: 1.45;
 }
-.hoja-informe * { color: inherit; }
+.hoja-informe * { color: inherit; box-sizing: border-box; }
+.hoja-informe table { max-width: 100%; }
+
 .hoja-header {
   display: flex; justify-content: space-between; align-items: flex-start;
-  border-bottom: 2px solid #1b1f27; padding-bottom: 16px; margin-bottom: 24px;
+  border-bottom: 2.5px solid #1b1f27; padding-bottom: 18px; margin-bottom: 28px;
 }
-.hoja-header .empresa { font-family: var(--font-display); font-weight: 600; font-size: 1.25rem; }
-.hoja-header .meta { text-align: right; font-size: 0.75rem; color: #5c6270; }
-.hoja-titulo { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; }
-.hoja-subtitulo { font-size: 0.85rem; color: #5c6270; margin-bottom: 24px; }
+.hoja-header .empresa { font-family: var(--font-display); font-weight: 600; font-size: 1.3rem; letter-spacing: -0.01em; }
+.hoja-header .meta { text-align: right; font-size: 0.72rem; color: #5c6270; line-height: 1.5; }
 
-.hoja-seccion { margin-bottom: 28px; }
+.hoja-titulo { font-family: var(--font-display); font-size: 1.55rem; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.01em; }
+.hoja-subtitulo { font-size: 0.85rem; color: #5c6270; margin-bottom: 30px; }
+
+.hoja-seccion { margin-bottom: 30px; }
 .hoja-seccion h3 {
-  font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
-  color: #8a6a2a; border-bottom: 1px solid #d8d2c4; padding-bottom: 6px; margin-bottom: 12px;
+  font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: #96762f; border-bottom: 1px solid #d8d2c4; padding-bottom: 7px; margin-bottom: 14px;
 }
-.hoja-datos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 24px; font-size: 0.85rem; }
-.hoja-datos-grid .lbl { color: #5c6270; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+.hoja-datos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 28px; font-size: 0.85rem; }
+.hoja-datos-grid .lbl { color: #5c6270; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1px; }
 
 .hoja-financiero { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.hoja-fin-item { border: 1px solid #d8d2c4; border-radius: 4px; padding: 10px 14px; }
-.hoja-fin-item .lbl { font-size: 0.65rem; text-transform: uppercase; color: #5c6270; letter-spacing: 0.04em; }
+.hoja-fin-item { background: #f7f4ec; border: 1px solid #e2dcc9; border-radius: 5px; padding: 11px 14px; }
+.hoja-fin-item .lbl { font-size: 0.63rem; text-transform: uppercase; color: #7a6a45; letter-spacing: 0.05em; margin-bottom: 2px; }
 .hoja-fin-item .val { font-family: var(--font-mono); font-weight: 600; font-size: 1.05rem; }
 
-.hoja-tabla { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.hoja-tabla th {
-  text-align: left; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em;
-  color: #5c6270; border-bottom: 1.5px solid #1b1f27; padding: 6px 8px;
+.hoja-tabla {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.78rem;
 }
-.hoja-tabla td { padding: 7px 8px; border-bottom: 1px solid #e8e4da; }
+.hoja-tabla.hoja-tabla-compacta { font-size: 0.68rem; }
+.hoja-tabla th, .hoja-tabla td {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+}
+.hoja-tabla th {
+  text-align: left; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #5c6270; border-bottom: 1.5px solid #1b1f27; padding: 7px 6px;
+}
+.hoja-tabla td { padding: 7px 6px; border-bottom: 1px solid #e8e4da; vertical-align: top; }
 .hoja-tabla tr:last-child td { border-bottom: none; }
-.hoja-tabla .num { font-family: var(--font-mono); text-align: right; }
+.hoja-tabla tr.hoja-fila-par td { background: #f7f5f0; }
+.hoja-tabla .num { font-family: var(--font-mono); text-align: right; white-space: nowrap; }
+.hoja-tabla tfoot td { border-top: 1.5px solid #1b1f27; border-bottom: none; padding-top: 9px; }
 
 .hoja-estado-mini {
-  font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase;
-  padding: 2px 7px; border-radius: 2px; border: 1px solid currentColor;
+  font-family: var(--font-mono); font-size: 0.66rem; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 2px; border: 1px solid currentColor;
   display: inline-block; white-space: nowrap; font-weight: 600;
 }
 .hoja-estado-con { color: #1f5e4d; }
 .hoja-estado-pendiente { color: #9a6a1f; }
 .hoja-estado-sin { color: #8a2f2a; }
 
-.hoja-firma-linea { border-top: 1px solid #1b1f27; margin-top: 48px; padding-top: 6px; font-size: 0.75rem; text-align: center; }
-.hoja-firmas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; margin-top: 24px; }
+.hoja-firma-linea { border-top: 1px solid #1b1f27; margin-top: 52px; padding-top: 7px; font-size: 0.78rem; text-align: center; }
+.hoja-firmas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; margin-top: 28px; }
 
-.hoja-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #d8d2c4; font-size: 0.68rem; color: #8a8f9a; display: flex; justify-content: space-between; }
+.hoja-footer {
+  margin-top: 36px; padding-top: 13px; border-top: 1px solid #d8d2c4;
+  font-size: 0.66rem; color: #8a8f9a; display: flex; justify-content: space-between; letter-spacing: 0.02em;
+}
 
 #zona-impresion { display: none; }
 
@@ -669,8 +693,8 @@ a { color: inherit; text-decoration: none; }
     position: absolute; top: 0; left: 0; width: 100%;
     background: #fff;
   }
-  #zona-impresion .hoja-informe { box-shadow: none; margin: 0 auto; }
-  @page { size: A4; margin: 16mm; }
+  #zona-impresion .hoja-informe { box-shadow: none; margin: 0 auto; max-width: 100%; }
+  @page { size: A4; margin: 14mm; }
 }
 
 </style>
@@ -4520,6 +4544,23 @@ a { color: inherit; text-decoration: none; }
     `;
   }
 
+  const ANCHOS_COLUMNA = {
+    numero: 5, fecha: 9, categoria: 10, ruc: 11, numeroFactura: 10,
+    estadoComprobante: 9, valor: 9, ciudad: 9, establecimiento: 14,
+  };
+
+  function construirColgroup(cols) {
+    const flexibles = cols.filter((c) => c.k === 'descripcion' || c.k === 'observaciones');
+    const fijos = cols.filter((c) => c.k !== 'descripcion' && c.k !== 'observaciones');
+    const sumaFija = fijos.reduce((a, c) => a + (ANCHOS_COLUMNA[c.k] || 9), 0);
+    const restante = Math.max(100 - sumaFija, 18);
+    const anchoFlexible = flexibles.length ? restante / flexibles.length : 0;
+    return `<colgroup>${cols.map((c) => {
+      const ancho = (c.k === 'descripcion' || c.k === 'observaciones') ? anchoFlexible : (ANCHOS_COLUMNA[c.k] || 9);
+      return `<col style="width:${ancho}%;">`;
+    }).join('')}</colgroup>`;
+  }
+
   function seccionDetalle(gastosFiltrados, columnas, catalogoCategorias) {
     const cols = [
       columnas.numero && { k: 'numero', l: 'N.º' },
@@ -4549,14 +4590,16 @@ a { color: inherit; text-decoration: none; }
     };
 
     const totalDetalle = gastosFiltrados.reduce((a, g) => a + g.valor, 0);
+    const claseCompacta = cols.length > 6 ? 'hoja-tabla-compacta' : '';
 
     return `
       <div class="hoja-seccion">
         <h3>Detalle de movimientos</h3>
-        <table class="hoja-tabla">
+        <table class="hoja-tabla ${claseCompacta}">
+          ${construirColgroup(cols)}
           <thead><tr>${cols.map((c) => `<th ${c.k === 'valor' ? 'style="text-align:right;"' : ''}>${c.l}</th>`).join('')}</tr></thead>
           <tbody>
-            ${gastosFiltrados.map((g) => `<tr>${cols.map((c) => `<td>${celda(g, c.k)}</td>`).join('')}</tr>`).join('')}
+            ${gastosFiltrados.map((g, i) => `<tr class="${i % 2 === 1 ? 'hoja-fila-par' : ''}">${cols.map((c) => `<td>${celda(g, c.k)}</td>`).join('')}</tr>`).join('')}
           </tbody>
           <tfoot><tr style="font-weight:700;"><td colspan="${cols.length - 1}">Total</td><td class="num">${formatoMoneda(totalDetalle)}</td></tr></tfoot>
         </table>
