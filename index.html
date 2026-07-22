@@ -691,20 +691,18 @@ a { color: inherit; text-decoration: none; }
 .hoja-anexo-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  gap: 10px;
 }
 .hoja-anexo-celda {
-  border: 1px solid #d8d2c4;
-  border-radius: 4px;
-  padding: 10px;
+  padding: 4px;
   display: flex;
   flex-direction: column;
   page-break-inside: avoid;
   break-inside: avoid;
 }
-.hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; }
-.hoja-anexo-meta { font-size: 0.68rem; color: #5c6270; margin-bottom: 8px; }
-.hoja-anexo-img { width: 100%; max-height: 260px; object-fit: contain; background: #fff; }
+.hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.8rem; }
+.hoja-anexo-meta { font-size: 0.64rem; color: #5c6270; margin-bottom: 4px; }
+.hoja-anexo-img { display: block; width: auto; max-width: 100%; max-height: 400px; align-self: center; object-fit: contain; background: #fff; }
 
 .hoja-cat-banda {
   background: #dce6f0; color: #1b2f47; font-weight: 700; font-size: 0.72rem;
@@ -1504,12 +1502,12 @@ a { color: inherit; text-decoration: none; }
     const resumenesActivos = await Promise.all(activos.map((p) => resumenFinancieroProyecto(p.id)));
 
     contenedor.innerHTML = `
-      <div class="topbar-inline" style="display:flex; flex-wrap:wrap; gap:var(--sp-3); justify-content:space-between; align-items:center; margin-bottom:var(--sp-5);">
-        <div style="flex:1; min-width:200px;">
+      <div class="topbar-inline" style="display:flex; flex-direction:column; gap:var(--sp-3); margin-bottom:var(--sp-5);">
+        <div>
           <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600;">Dashboard</h1>
           <p style="color:var(--ink-500); font-size:var(--fs-sm);">Cada proyecto tiene su propio viático — no se mezclan entre sí</p>
         </div>
-        <a href="#proyectos/nuevo" class="btn btn-primary" style="flex-shrink:0;">${icono('mas')} Nuevo proyecto</a>
+        <a href="#proyectos/nuevo" class="btn btn-primary" style="align-self:flex-start;">${icono('mas')} Nuevo proyecto</a>
       </div>
 
       <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr); margin-bottom:var(--sp-5);">
@@ -5778,8 +5776,8 @@ a { color: inherit; text-decoration: none; }
     for (let i = 0; i < conFoto.length; i += POR_PAGINA) {
       const grupo = conFoto.slice(i, i + POR_PAGINA);
       paginas.push(`
-        <div class="hoja-informe" style="margin-bottom:24px; page-break-after:always;">
-          <div class="hoja-titulo" style="font-size:1.1rem; margin-bottom:16px;">Anexo de comprobantes</div>
+        <div class="hoja-informe" style="margin-bottom:24px; padding:20px 24px; page-break-after:always;">
+          <div class="hoja-titulo" style="font-size:1.1rem; margin-bottom:12px;">Anexo de comprobantes</div>
           <div class="hoja-anexo-grid">
             ${grupo.map(({ gasto: g, url, etiqueta }) => `
               <div class="hoja-anexo-celda">
