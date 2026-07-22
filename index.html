@@ -1246,6 +1246,29 @@ a { color: inherit; text-decoration: none; }
     return actualizado;
   }
 
+  /**
+   * Elimina un proyecto por completo, junto con todos sus datos asociados
+   * (ingresos, gastos activos y en papelera, comprobantes, proyección).
+   * Acción irreversible — debe confirmarse con una advertencia clara en la UI.
+   */
+  async function eliminarProyectoCompleto(proyectoId) {
+    const [ingresos, ingresosPapelera, gastos, proyeccion] = await Promise.all([
+      db.getAllPorIndice('ingresos', 'porProyecto', proyectoId),
+      db.getAll('papeleraIngresos').then((todos) => todos.filter((i) => i.proyectoId === proyectoId)),
+      db.getAllPorIndice('gastos', 'porProyecto', proyectoId),
+      db.getAllPorIndice('proyecciones', 'porProyecto', proyectoId),
+    ]);
+
+    for (const ingreso of ingresos) await db.delete('ingresos', ingreso.id);
+    for (const ingreso of ingresosPapelera) await db.delete('papeleraIngresos', ingreso.id);
+    for (const item of proyeccion) await db.delete('proyecciones', item.id);
+    for (const gasto of gastos) {
+      if (gasto.comprobanteId) await db.delete('comprobantes', gasto.comprobanteId);
+      await db.delete('gastos', gasto.id);
+    }
+    await db.delete('proyectos', proyectoId);
+  }
+
   async function ingresosDeProyecto(proyectoId) {
     return db.getAllPorIndice('ingresos', 'porProyecto', proyectoId);
   }
@@ -1293,7 +1316,7 @@ a { color: inherit; text-decoration: none; }
     return generarId(prefijo);
   }
 
-  return { listarProyectos, obtenerProyecto, guardarProyectoNuevo, guardarProyectoEditado, cambiarEstadoProyecto, ingresosDeProyecto, gastosDeProyecto, gastosEnPapeleraDeProyecto, resumenFinancieroProyecto, resumenGlobal, nuevoId };
+  return { listarProyectos, obtenerProyecto, guardarProyectoNuevo, guardarProyectoEditado, cambiarEstadoProyecto, eliminarProyectoCompleto, ingresosDeProyecto, gastosDeProyecto, gastosEnPapeleraDeProyecto, resumenFinancieroProyecto, resumenGlobal, nuevoId };
   })();
 
   // ==== utils/format ====
@@ -1521,6 +1544,13 @@ a { color: inherit; text-decoration: none; }
 
 
   const FILTROS = ['todos', 'planificado', 'activo', 'finalizado', 'archivado'];
+  const ORDEN_SECCIONES = ['activo', 'planificado', 'finalizado', 'archivado'];
+  const TITULOS_SECCION = {
+    activo: 'Activos',
+    planificado: 'Planificados',
+    finalizado: 'Finalizados',
+    archivado: 'Archivados',
+  };
   let filtroActual = 'todos';
   let busquedaActual = '';
 
@@ -1563,6 +1593,26 @@ a { color: inherit; text-decoration: none; }
     });
 
     const resumenes = await Promise.all(proyectosFiltrados.map((p) => resumenFinancieroProyecto(p.id)));
+    const resumenPorId = {};
+    proyectosFiltrados.forEach((p, i) => { resumenPorId[p.id] = resumenes[i]; });
+
+    let contenidoGrid;
+    if (!proyectosFiltrados.length) {
+      contenidoGrid = `<div class="empty-state"><p class="lead">No se encontraron proyectos</p><p>Ajusta los filtros o crea un nuevo proyecto.</p></div>`;
+    } else if (filtroActual !== 'todos') {
+      // Un solo estado ya filtrado: mostrar directo, sin repetir el encabezado de sección
+      contenidoGrid = `<div class="proj-grid">${proyectosFiltrados.map((p) => tarjetaProyecto(p, resumenPorId[p.id])).join('')}</div>`;
+    } else {
+      // Vista "Todos": agrupar visualmente por estado, para que cada sección (incluida "Finalizados") sea clara
+      contenidoGrid = ORDEN_SECCIONES.map((estado) => {
+        const grupo = proyectosFiltrados.filter((p) => p.estado === estado);
+        if (!grupo.length) return '';
+        return `
+          <div class="section-title">${TITULOS_SECCION[estado]} <span style="font-weight:400; font-size:var(--fs-sm); color:var(--text-500);">(${grupo.length})</span></div>
+          <div class="proj-grid" style="margin-bottom:var(--sp-6);">${grupo.map((p) => tarjetaProyecto(p, resumenPorId[p.id])).join('')}</div>
+        `;
+      }).join('');
+    }
 
     contenedor.innerHTML = `
       <div class="toolbar">
@@ -1581,11 +1631,7 @@ a { color: inherit; text-decoration: none; }
           style="padding:8px 12px; border:1px solid var(--line); border-radius:6px; min-width:220px; background:var(--paper-100);" />
       </div>
 
-      <div id="proyectos-grid">
-        ${proyectosFiltrados.length
-          ? `<div class="proj-grid">${proyectosFiltrados.map((p, i) => tarjetaProyecto(p, resumenes[i])).join('')}</div>`
-          : `<div class="empty-state"><p class="lead">No se encontraron proyectos</p><p>Ajusta los filtros o crea un nuevo proyecto.</p></div>`}
-      </div>
+      <div id="proyectos-grid">${contenidoGrid}</div>
     `;
 
     contenedor.querySelectorAll('[data-filtro]').forEach((btn) => {
@@ -3358,14 +3404,16 @@ a { color: inherit; text-decoration: none; }
 
   // ==== modules/proyectos/proyectos.detail ====
   __modules__['modules/proyectos/proyectos.detail'] = (function(){
-  const { obtenerProyecto, resumenFinancieroProyecto, cambiarEstadoProyecto } = __modules__['core/repositorio'];
+  const { obtenerProyecto, resumenFinancieroProyecto, cambiarEstadoProyecto, eliminarProyectoCompleto } = __modules__['core/repositorio'];
   const { formatoMoneda, formatoFechaLarga, ETIQUETAS_ESTADO_PROYECTO } = __modules__['utils/format'];
-  const { abrirModal } = __modules__['components/modal'];
+  const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
   const { icono } = __modules__['components/icons'];
+  const { irA } = __modules__['core/router'];
   const { renderIngresos } = __modules__['modules/ingresos/ingresos.view'];
   const { renderGastos } = __modules__['modules/gastos/gastos.view'];
   const { renderProyeccion } = __modules__['modules/proyeccion/proyeccion.view'];
+
 
 
 
@@ -3440,6 +3488,7 @@ a { color: inherit; text-decoration: none; }
         <div class="detail-actions">
           <a href="#proyectos/${proyecto.id}/editar" class="btn btn-secondary">Editar</a>
           ${botonesDeEstado(proyecto).map((b) => `<button class="btn ${b.clase}" data-accion="${b.accion}">${b.label}</button>`).join('')}
+          <button class="btn btn-danger" id="btn-eliminar-proyecto">Eliminar proyecto</button>
         </div>
       </div>
 
@@ -3476,7 +3525,7 @@ a { color: inherit; text-decoration: none; }
       btn.addEventListener('click', () => {
         const nuevoEstado = btn.dataset.accion;
         const etiquetasAccion = {
-          finalizado: { titulo: '¿Cerrar este viático?', texto: 'El proyecto pasará a estado Finalizado. Podrás reabrirlo después si es necesario.' },
+          finalizado: { titulo: '¿Cerrar este viático?', texto: 'El proyecto pasará a estado Finalizado. Podrás reabrirlo después si es necesario. Lo verás en la sección "Finalizados" al volver a Proyectos.' },
           activo: { titulo: '¿Reabrir este proyecto?', texto: 'El proyecto volverá a estado Activo.' },
           archivado: { titulo: '¿Archivar este proyecto?', texto: 'El proyecto pasará a estado Archivado.' },
         };
@@ -3489,12 +3538,46 @@ a { color: inherit; text-decoration: none; }
             {
               texto: 'Confirmar', clase: 'btn-primary', onClick: async () => {
                 await cambiarEstadoProyecto(proyecto.id, nuevoEstado);
-                mostrarToast('Estado del proyecto actualizado.');
+                mostrarToast(`Proyecto marcado como "${ETIQUETAS_ESTADO_PROYECTO[nuevoEstado]}".`);
                 renderProyectoDetail(contenedor, params, 'resumen');
               },
             },
           ],
         });
+      });
+    });
+
+    contenedor.querySelector('#btn-eliminar-proyecto').addEventListener('click', () => {
+      abrirModal({
+        titulo: '¿Eliminar este proyecto?',
+        contenidoHtml: `
+          <p style="margin-bottom:8px;"><strong>${proyecto.nombre}</strong></p>
+          <p style="color:var(--danger); font-size:var(--fs-sm);">
+            Esta acción elimina el proyecto completo junto con TODOS sus ingresos, gastos, comprobantes y proyección — de forma permanente, sin poder recuperarlos. No hay papelera para esto.
+          </p>
+        `,
+        botones: [
+          { texto: 'Cancelar', clase: 'btn-secondary' },
+          {
+            texto: 'Continuar', clase: 'btn-danger', cerrar: false, onClick: () => {
+              cerrarModal();
+              abrirModal({
+                titulo: 'Última confirmación',
+                contenidoHtml: `<p style="color:var(--danger);">Escribe eliminar los datos de "${proyecto.nombre}" no se podrán recuperar. ¿Seguro que deseas continuar?</p>`,
+                botones: [
+                  { texto: 'Cancelar', clase: 'btn-secondary' },
+                  {
+                    texto: 'Sí, eliminar definitivamente', clase: 'btn-danger', onClick: async () => {
+                      await eliminarProyectoCompleto(proyecto.id);
+                      mostrarToast('Proyecto eliminado.');
+                      irA('proyectos');
+                    },
+                  },
+                ],
+              });
+            },
+          },
+        ],
       });
     });
   }
