@@ -642,18 +642,25 @@ a { color: inherit; text-decoration: none; }
 .hoja-fin-item .lbl { font-size: 0.63rem; text-transform: uppercase; color: #7a6a45; letter-spacing: 0.05em; margin-bottom: 2px; }
 .hoja-fin-item .val { font-family: var(--font-mono); font-weight: 600; font-size: 1.05rem; }
 
+.hoja-tabla-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
 .hoja-tabla {
   width: 100%;
-  max-width: 100%;
+  min-width: 640px;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.78rem;
+  line-height: 1.3;
 }
-.hoja-tabla.hoja-tabla-compacta { font-size: 0.68rem; }
+.hoja-tabla.hoja-tabla-compacta { font-size: 0.7rem; min-width: 720px; }
 .hoja-tabla th, .hoja-tabla td {
   overflow-wrap: break-word;
-  word-break: break-word;
-  hyphens: auto;
+  word-break: normal;
 }
 .hoja-tabla th {
   text-align: left; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em;
@@ -682,6 +689,13 @@ a { color: inherit; text-decoration: none; }
   font-size: 0.66rem; color: #8a8f9a; display: flex; justify-content: space-between; letter-spacing: 0.02em;
 }
 
+@media screen and (max-width: 520px) {
+  .hoja-informe { padding: 24px 18px; }
+  .hoja-header { flex-direction: column; gap: 10px; }
+  .hoja-header .meta { text-align: left; }
+  .hoja-financiero { grid-template-columns: repeat(2, 1fr); }
+}
+
 #zona-impresion { display: none; }
 
 @media print {
@@ -694,6 +708,8 @@ a { color: inherit; text-decoration: none; }
     background: #fff;
   }
   #zona-impresion .hoja-informe { box-shadow: none; margin: 0 auto; max-width: 100%; }
+  #zona-impresion .hoja-tabla-scroll { overflow-x: visible; margin: 0; padding: 0; }
+  #zona-impresion .hoja-tabla { min-width: 0; }
   @page { size: A4; margin: 14mm; }
 }
 
@@ -4545,18 +4561,18 @@ a { color: inherit; text-decoration: none; }
   }
 
   const ANCHOS_COLUMNA = {
-    numero: 5, fecha: 9, categoria: 10, ruc: 11, numeroFactura: 10,
-    estadoComprobante: 9, valor: 9, ciudad: 9, establecimiento: 14,
+    numero: 4, fecha: 8, categoria: 8, ruc: 10, numeroFactura: 9,
+    estadoComprobante: 7, valor: 8, ciudad: 7, establecimiento: 11,
   };
 
   function construirColgroup(cols) {
     const flexibles = cols.filter((c) => c.k === 'descripcion' || c.k === 'observaciones');
     const fijos = cols.filter((c) => c.k !== 'descripcion' && c.k !== 'observaciones');
-    const sumaFija = fijos.reduce((a, c) => a + (ANCHOS_COLUMNA[c.k] || 9), 0);
-    const restante = Math.max(100 - sumaFija, 18);
+    const sumaFija = fijos.reduce((a, c) => a + (ANCHOS_COLUMNA[c.k] || 8), 0);
+    const restante = Math.max(100 - sumaFija, 24);
     const anchoFlexible = flexibles.length ? restante / flexibles.length : 0;
     return `<colgroup>${cols.map((c) => {
-      const ancho = (c.k === 'descripcion' || c.k === 'observaciones') ? anchoFlexible : (ANCHOS_COLUMNA[c.k] || 9);
+      const ancho = (c.k === 'descripcion' || c.k === 'observaciones') ? anchoFlexible : (ANCHOS_COLUMNA[c.k] || 8);
       return `<col style="width:${ancho}%;">`;
     }).join('')}</colgroup>`;
   }
@@ -4595,14 +4611,16 @@ a { color: inherit; text-decoration: none; }
     return `
       <div class="hoja-seccion">
         <h3>Detalle de movimientos</h3>
-        <table class="hoja-tabla ${claseCompacta}">
-          ${construirColgroup(cols)}
-          <thead><tr>${cols.map((c) => `<th ${c.k === 'valor' ? 'style="text-align:right;"' : ''}>${c.l}</th>`).join('')}</tr></thead>
-          <tbody>
-            ${gastosFiltrados.map((g, i) => `<tr class="${i % 2 === 1 ? 'hoja-fila-par' : ''}">${cols.map((c) => `<td>${celda(g, c.k)}</td>`).join('')}</tr>`).join('')}
-          </tbody>
-          <tfoot><tr style="font-weight:700;"><td colspan="${cols.length - 1}">Total</td><td class="num">${formatoMoneda(totalDetalle)}</td></tr></tfoot>
-        </table>
+        <div class="hoja-tabla-scroll">
+          <table class="hoja-tabla ${claseCompacta}">
+            ${construirColgroup(cols)}
+            <thead><tr>${cols.map((c) => `<th ${c.k === 'valor' ? 'style="text-align:right;"' : ''}>${c.l}</th>`).join('')}</tr></thead>
+            <tbody>
+              ${gastosFiltrados.map((g, i) => `<tr class="${i % 2 === 1 ? 'hoja-fila-par' : ''}">${cols.map((c) => `<td>${celda(g, c.k)}</td>`).join('')}</tr>`).join('')}
+            </tbody>
+            <tfoot><tr style="font-weight:700;"><td colspan="${cols.length - 1}">Total</td><td class="num">${formatoMoneda(totalDetalle)}</td></tr></tfoot>
+          </table>
+        </div>
         ${columnas.estadoComprobante ? `<p style="font-size:0.68rem; color:#8a8f9a; margin-top:6px;">CF: Con comprobante · PF: Pendiente de comprobante · SF: Sin comprobante</p>` : ''}
       </div>
     `;
