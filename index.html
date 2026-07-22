@@ -5128,7 +5128,9 @@ a { color: inherit; text-decoration: none; }
       filtroEstados: { ...plantilla.filtroEstados },
       categoriasIncluidas: new Set(plantilla.categoriasIncluidas),
       incluirProyeccionVsReal: plantilla.incluirProyeccionVsReal,
-      firmas: { ...plantilla.firmas },
+      // Se combina con lo que ya había (no se sobrescribe entero), para que una plantilla
+      // guardada antes de renombrar los roles de firma no deje claves faltantes.
+      firmas: { ...configBase.firmas, ...plantilla.firmas },
     };
   }
 
@@ -5224,6 +5226,16 @@ a { color: inherit; text-decoration: none; }
   async function renderPasoConfiguracion(contenedor, { config, gastos, categorias, onVolver, onVerVistaPrevia }) {
     const esPersonalizado = config.tipo === 'personalizado';
     const plantillas = await listarPlantillas();
+
+    // Red de seguridad: si config.firmas viene de una plantilla vieja (guardada antes
+    // de que se renombraran los roles de firma) o le falta alguna clave, se completa
+    // con valores por defecto para que nunca falte una clave al leerla más abajo.
+    config.firmas = config.firmas || {};
+    Object.keys(ETIQUETAS_FIRMAS).forEach((clave) => {
+      if (!config.firmas[clave]) {
+        config.firmas[clave] = { incluir: false, nombre: '', cargo: '' };
+      }
+    });
 
     contenedor.innerHTML = `
       <div class="toolbar">
