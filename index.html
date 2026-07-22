@@ -667,6 +667,8 @@ a { color: inherit; text-decoration: none; }
   color: #5c6270; border-bottom: 1.5px solid #1b1f27; padding: 8px 8px;
 }
 .hoja-tabla td { padding: 8px 8px; border-bottom: 1px solid #e8e4da; vertical-align: top; }
+.hoja-tabla tr { page-break-inside: avoid; break-inside: avoid; }
+.hoja-cat-banda { page-break-inside: avoid; break-inside: avoid; page-break-after: avoid; break-after: avoid; }
 .hoja-tabla tr:last-child td { border-bottom: none; }
 .hoja-tabla tr.hoja-fila-par td { background: #f7f5f0; }
 .hoja-tabla .num { font-family: var(--font-mono); text-align: right; white-space: nowrap; }
@@ -684,6 +686,8 @@ a { color: inherit; text-decoration: none; }
   padding: 10px;
   display: flex;
   flex-direction: column;
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
 .hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; }
 .hoja-anexo-meta { font-size: 0.68rem; color: #5c6270; margin-bottom: 8px; }
@@ -946,7 +950,7 @@ a { color: inherit; text-decoration: none; }
    */
 
   const DB_NAME = 'viaticos-db';
-  const DB_VERSION = 3;
+  const DB_VERSION = 4;
 
   const STORES = {
     proyectos: 'id',
@@ -962,6 +966,7 @@ a { color: inherit; text-decoration: none; }
     configuracion: 'clave',
     colaSincronizacion: 'id',
     solicitudesViaticos: 'id',
+    historialDocumentos: 'id',
   };
 
   let dbInstance = null;
@@ -993,6 +998,9 @@ a { color: inherit; text-decoration: none; }
               store.createIndex('porProyecto', 'proyectoId', { unique: false });
             }
             if (nombre === 'solicitudesViaticos') {
+              store.createIndex('porProyecto', 'proyectoId', { unique: false });
+            }
+            if (nombre === 'historialDocumentos') {
               store.createIndex('porProyecto', 'proyectoId', { unique: false });
             }
           }
@@ -3513,6 +3521,46 @@ a { color: inherit; text-decoration: none; }
   return { obtenerSolicitud, guardarSolicitud };
   })();
 
+  // ==== core/historial.repo ====
+  __modules__['core/historial.repo'] = (function(){
+  const { db, generarId } = __modules__['storage/db'];
+
+
+  /**
+   * historial.repo.js — Respaldo permanente de TODO documento generado
+   * (solicitudes de viáticos e informes). Cada vez que se genera un PDF,
+   * se guarda una copia inmutable del HTML exacto tal como se entregó,
+   * junto con la fecha y un resumen. Vive mientras exista el proyecto —
+   * se conserva aunque el proyecto se finalice o archive, y solo se borra
+   * si el proyecto se elimina por completo.
+   */
+
+  async function guardarEnHistorial(proyectoId, { tipo, titulo, htmlSnapshot, resumen }) {
+    const registro = {
+      id: generarId('hist'),
+      proyectoId,
+      tipo, // 'solicitud_jefe' | 'solicitud_personal' | 'solicitud_formal' | 'solicitud_presupuesto' | 'informe'
+      titulo,
+      htmlSnapshot,
+      resumen: resumen || null,
+      fechaGeneracion: new Date().toISOString(),
+    };
+    await db.put('historialDocumentos', registro);
+    return registro;
+  }
+
+  async function listarHistorial(proyectoId) {
+    const todos = await db.getAllPorIndice('historialDocumentos', 'porProyecto', proyectoId);
+    return todos.sort((a, b) => new Date(b.fechaGeneracion) - new Date(a.fechaGeneracion));
+  }
+
+  async function eliminarDelHistorial(id) {
+    return db.delete('historialDocumentos', id);
+  }
+
+  return { guardarEnHistorial, listarHistorial, eliminarDelHistorial };
+  })();
+
   // ==== modules/proyeccion/proyeccion.solicitudes.view ====
   __modules__['modules/proyeccion/proyeccion.solicitudes.view'] = (function(){
   const { db } = __modules__['storage/db'];
@@ -3520,7 +3568,9 @@ a { color: inherit; text-decoration: none; }
   const { mostrarToast } = __modules__['components/toast'];
   const { formatoMoneda, formatoFecha } = __modules__['utils/format'];
   const { obtenerSolicitud, guardarSolicitud } = __modules__['modules/proyeccion/solicitudes.repo'];
+  const { guardarEnHistorial } = __modules__['core/historial.repo'];
   const { generarId } = __modules__['storage/db'];
+
 
 
 
@@ -3606,8 +3656,13 @@ a { color: inherit; text-decoration: none; }
           texto: 'Guardar y generar PDF', clase: 'btn-primary', cerrar: false,
           onClick: async () => {
             const guardado = await guardarDatos1();
+            const html = construirHTMLJefe(proyecto, guardado, config);
+            const dias = diasEntre(guardado.fechaInicio, guardado.fechaFin);
+            const totalAlim = guardado.tarifaAlimentacionDia * dias;
+            const total = totalAlim + guardado.movilizacion + guardado.gastosInstalacion + guardado.gastosMateriales + guardado.cajaChica;
+            await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_jefe', titulo: 'Solicitud de viáticos — Jefe de instalación', htmlSnapshot: html, resumen: { total } });
             cerrarModal();
-            imprimirEnZona(construirHTMLJefe(proyecto, guardado, config));
+            imprimirEnZona(html);
           },
         },
       ],
@@ -3740,8 +3795,12 @@ a { color: inherit; text-decoration: none; }
           texto: 'Guardar y generar PDF', clase: 'btn-primary', cerrar: false,
           onClick: async () => {
             const guardado = await guardarDatos2();
+            const html = construirHTMLPersonal(proyecto, guardado, config);
+            const totalEquipo = guardado.equipo.reduce((a, p) => a + (p.tarifaAlimentacionDia * diasEntre(p.fechaInicio, p.fechaFin)) + p.moviViaje + p.moviInterna, 0);
+            const totalExterno = guardado.externos.reduce((a, p) => a + (p.diasNecesarios * p.costoPorDia), 0);
+            await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_personal', titulo: 'Solicitud de viáticos — Personal de campo', htmlSnapshot: html, resumen: { total: totalEquipo + totalExterno } });
             cerrarModal();
-            imprimirEnZona(construirHTMLPersonal(proyecto, guardado, config));
+            imprimirEnZona(html);
           },
         },
       ],
@@ -4013,8 +4072,10 @@ a { color: inherit; text-decoration: none; }
           texto: 'Guardar y generar PDF', clase: 'btn-primary', cerrar: false,
           onClick: async () => {
             const guardado = await guardarDatos3();
+            const html = construirHTMLFormal(proyecto, guardado, config);
+            await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_formal', titulo: 'Solicitud formal de viáticos', htmlSnapshot: html, resumen: { total: guardado.gastoSolicitado } });
             cerrarModal();
-            imprimirEnZona(construirHTMLFormal(proyecto, guardado, config));
+            imprimirEnZona(html);
           },
         },
       ],
@@ -4118,6 +4179,8 @@ a { color: inherit; text-decoration: none; }
   const { icono } = __modules__['components/icons'];
   const { db } = __modules__['storage/db'];
   const { abrirSolicitudJefe, abrirSolicitudPersonal, abrirSolicitudFormal } = __modules__['modules/proyeccion/proyeccion.solicitudes.view'];
+  const { guardarEnHistorial, listarHistorial, eliminarDelHistorial } = __modules__['core/historial.repo'];
+
 
 
 
@@ -4236,12 +4299,13 @@ a { color: inherit; text-decoration: none; }
 
   async function renderProyeccion(contenedor, proyectoId) {
     const pintar = async () => {
-      const [items, gastos, categorias, proyecto, config] = await Promise.all([
+      const [items, gastos, categorias, proyecto, config, historial] = await Promise.all([
         listarProyeccion(proyectoId),
         gastosDeProyecto(proyectoId),
         listarCategorias(),
         obtenerProyecto(proyectoId),
         db.get('configuracion', 'general'),
+        listarHistorial(proyectoId),
       ]);
       const realPorCategoria = agruparGastosPorCategoria(gastos);
       const totalProyectado = items.reduce((a, i) => a + totalProyeccionItem(i), 0);
@@ -4335,18 +4399,57 @@ a { color: inherit; text-decoration: none; }
           ` : `<div class="empty-state"><p class="lead">Sin datos aún</p><p>La comparación aparecerá cuando exista proyección y/o gastos registrados.</p></div>`}
         </div>
 
+        <div class="toolbar" style="margin-top:var(--sp-5);">
+          <div class="section-title" style="margin-bottom:0;">Historial de solicitudes e informes</div>
+        </div>
+        <div class="card card-elevated" style="margin-bottom:var(--sp-5);">
+          <p style="font-size:var(--fs-sm); color:var(--ink-500); margin-bottom:var(--sp-3);">
+            Queda un respaldo permanente de todo lo generado — se conserva aunque cierres o archives el proyecto.
+          </p>
+          ${historial.length ? historial.map((h) => `
+            <div class="proj-row">
+              <div>
+                <div class="proj-name">${h.titulo}</div>
+                <div class="proj-meta">${new Date(h.fechaGeneracion).toLocaleString('es-EC', { dateStyle: 'medium', timeStyle: 'short' })}${h.resumen?.total != null ? ` · ${formatoMoneda(h.resumen.total)}` : ''}</div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-secondary btn-sm" data-ver-historial="${h.id}">Ver / Reimprimir</button>
+                <button class="btn btn-ghost btn-sm" data-eliminar-historial="${h.id}" style="color:var(--danger);">Eliminar</button>
+              </div>
+            </div>
+          `).join('') : `<div class="empty-state"><p class="lead">Aún no has generado nada</p><p>Cuando generes una solicitud o un informe, va a quedar guardado aquí.</p></div>`}
+        </div>
+
         <div class="empty-state" style="margin-top:var(--sp-5);">
           <p class="lead">Historial de proyectos anteriores — integración pendiente</p>
           <p>Usar promedios de proyectos previos (ej. hospedaje en Manta) para sugerir la proyección automáticamente se implementará más adelante. Hoy no existe ninguna función simulada de esto.</p>
         </div>
       `;
 
+      contenedor.querySelectorAll('[data-ver-historial]').forEach((btn) => btn.addEventListener('click', async () => {
+        const registro = historial.find((h) => h.id === btn.dataset.verHistorial);
+        if (registro) imprimirEnZona(registro.htmlSnapshot);
+      }));
+      contenedor.querySelectorAll('[data-eliminar-historial]').forEach((btn) => btn.addEventListener('click', async () => {
+        abrirModal({
+          titulo: '¿Eliminar este documento del historial?',
+          contenidoHtml: `<p>Esta acción no se puede deshacer.</p>`,
+          botones: [
+            { texto: 'Cancelar', clase: 'btn-secondary' },
+            { texto: 'Eliminar', clase: 'btn-danger', onClick: async () => { await eliminarDelHistorial(btn.dataset.eliminarHistorial); mostrarToast('Eliminado del historial.'); pintar(); } },
+          ],
+        });
+      }));
+
       contenedor.querySelector('#btn-sol-jefe').addEventListener('click', () => abrirSolicitudJefe({ proyecto, onGuardado: pintar }));
       contenedor.querySelector('#btn-sol-personal').addEventListener('click', () => abrirSolicitudPersonal({ proyecto, onGuardado: pintar }));
       contenedor.querySelector('#btn-sol-formal').addEventListener('click', () => abrirSolicitudFormal({ proyecto, onGuardado: pintar }));
       contenedor.querySelector('#btn-nueva-linea').addEventListener('click', () => formularioItem(categorias, proyectoId, null, pintar));
-      contenedor.querySelector('#btn-solicitud-pdf')?.addEventListener('click', () => {
-        imprimirEnZona(construirSolicitudHTML(proyecto, items, categorias, empresa));
+      contenedor.querySelector('#btn-solicitud-pdf')?.addEventListener('click', async () => {
+        const html = construirSolicitudHTML(proyecto, items, categorias, empresa);
+        const total = items.reduce((a, i) => a + totalProyeccionItem(i), 0);
+        await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_presupuesto', titulo: 'Solicitud de viáticos (proyección por categoría)', htmlSnapshot: html, resumen: { total } });
+        imprimirEnZona(html);
       });
       contenedor.querySelectorAll('[data-editar]').forEach((btn) => btn.addEventListener('click', () => {
         const item = items.find((i) => i.id === btn.dataset.editar);
@@ -5689,10 +5792,14 @@ a { color: inherit; text-decoration: none; }
   const { configPorDefecto, renderPasoConfiguracion } = __modules__['modules/informes/informes.config'];
   const { renderVistaPreviaHTML, filtrarGastosInforme } = __modules__['modules/informes/informes.preview'];
   const { construirAnexoComprobantesHTML } = __modules__['modules/informes/informes.anexos'];
+  const { guardarEnHistorial, listarHistorial, eliminarDelHistorial } = __modules__['core/historial.repo'];
+  const { formatoMoneda } = __modules__['utils/format'];
   const { ETIQUETAS_ESTADO_PROYECTO } = __modules__['utils/format'];
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
   const { icono } = __modules__['components/icons'];
+
+
 
 
 
@@ -5732,7 +5839,9 @@ a { color: inherit; text-decoration: none; }
     `;
   }
 
-  function renderPasoTipo(contenedor, { proyecto, onElegir }) {
+  async function renderPasoTipo(contenedor, { proyecto, onElegir }) {
+    const historial = (await listarHistorial(proyecto.id)).filter((h) => h.tipo === 'informe');
+
     contenedor.innerHTML = `
       <a href="#informes" class="btn btn-ghost btn-sm" style="margin-bottom:var(--sp-3);">${icono('flechaAtras')} Volver a proyectos</a>
       <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600; margin-bottom:var(--sp-2);">Generar informe — ${proyecto.nombre}</h1>
@@ -5745,10 +5854,40 @@ a { color: inherit; text-decoration: none; }
           </button>
         `).join('')}
       </div>
+
+      <div class="section-title" style="margin-top:var(--sp-6);">Informes ya generados (respaldo permanente)</div>
+      <div class="card card-elevated">
+        ${historial.length ? historial.map((h) => `
+          <div class="proj-row">
+            <div>
+              <div class="proj-name">${h.titulo}</div>
+              <div class="proj-meta">${new Date(h.fechaGeneracion).toLocaleString('es-EC', { dateStyle: 'medium', timeStyle: 'short' })}${h.resumen ? ` · Recibido ${formatoMoneda(h.resumen.totalRecibido)} · Gastado ${formatoMoneda(h.resumen.totalGastado)}` : ''}</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-secondary btn-sm" data-ver-informe="${h.id}">Ver / Reimprimir</button>
+              <button class="btn btn-ghost btn-sm" data-eliminar-informe="${h.id}" style="color:var(--danger);">Eliminar</button>
+            </div>
+          </div>
+        `).join('') : `<div class="empty-state"><p class="lead">Aún no has generado ningún informe de este proyecto</p></div>`}
+      </div>
     `;
     contenedor.querySelectorAll('[data-tipo]').forEach((btn) => {
       btn.addEventListener('click', () => onElegir(btn.dataset.tipo));
     });
+    contenedor.querySelectorAll('[data-ver-informe]').forEach((btn) => btn.addEventListener('click', () => {
+      const registro = historial.find((h) => h.id === btn.dataset.verInforme);
+      if (registro) imprimirContenido(registro.htmlSnapshot);
+    }));
+    contenedor.querySelectorAll('[data-eliminar-informe]').forEach((btn) => btn.addEventListener('click', () => {
+      abrirModal({
+        titulo: '¿Eliminar este informe del historial?',
+        contenidoHtml: `<p>Esta acción no se puede deshacer.</p>`,
+        botones: [
+          { texto: 'Cancelar', clase: 'btn-secondary' },
+          { texto: 'Eliminar', clase: 'btn-danger', onClick: async () => { await eliminarDelHistorial(btn.dataset.eliminarInforme); mostrarToast('Eliminado del historial.'); renderPasoTipo(contenedor, { proyecto, onElegir }); } },
+        ],
+      });
+    }));
   }
 
   /** Imprime (y por tanto permite "Guardar en PDF" / compartir) el contenido dado, usando la zona de impresión dedicada. */
@@ -5803,15 +5942,23 @@ a { color: inherit; text-decoration: none; }
               const gastosFiltrados = filtrarGastosInforme(datos.gastos, config);
               cerrarModal();
 
+              const htmlInforme = renderVistaPreviaHTML(datos, config);
+              await guardarEnHistorial(datos.proyecto.id, {
+                tipo: 'informe',
+                titulo: `Informe ${config.tipo} de viáticos`,
+                htmlSnapshot: htmlInforme,
+                resumen: { totalRecibido: datos.resumen.totalRecibido, totalGastado: datos.resumen.totalGastado, saldo: datos.resumen.saldo },
+              });
+
               if (modo === 'sin') {
-                imprimirContenido(renderVistaPreviaHTML(datos, config));
+                imprimirContenido(htmlInforme);
               } else if (modo === 'mismo') {
                 mostrarToast('Preparando comprobantes…');
                 const anexo = await construirAnexoComprobantesHTML(gastosFiltrados);
-                imprimirContenido(renderVistaPreviaHTML(datos, config) + anexo);
+                imprimirContenido(htmlInforme + anexo);
               } else {
                 // Por separado: primero el informe. Los comprobantes se ofrecen después, en un segundo botón.
-                imprimirContenido(renderVistaPreviaHTML(datos, config));
+                imprimirContenido(htmlInforme);
                 mostrarToast('Guarda/imprime el informe. Cuando termines, usa "Imprimir comprobantes" para el segundo archivo.');
                 const btnAnexo = contenedor.querySelector('#btn-generar-pdf');
                 if (btnAnexo && !contenedor.querySelector('#btn-imprimir-anexo')) {
