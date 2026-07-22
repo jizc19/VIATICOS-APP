@@ -4175,7 +4175,7 @@ a { color: inherit; text-decoration: none; }
       },
       columnas: {
         numero: true, fecha: true, categoria: true, descripcion: true, valor: true,
-        estadoComprobante: true, numeroFactura: true, establecimiento: true, ruc: true, ciudad: true, observaciones: false,
+        estadoComprobante: true, numeroFactura: true, establecimiento: false, ruc: true, ciudad: false, observaciones: false,
       },
       gastosSeleccionados: new Set(gastos.map((g) => g.id)),
       filtroEstados: { con_comprobante: true, pendiente_comprobante: true, sin_comprobante: true },
@@ -4526,12 +4526,12 @@ a { color: inherit; text-decoration: none; }
       columnas.fecha && { k: 'fecha', l: 'Fecha' },
       columnas.categoria && { k: 'categoria', l: 'Categoría' },
       columnas.descripcion && { k: 'descripcion', l: 'Descripción' },
-      columnas.establecimiento && { k: 'establecimiento', l: 'Establecimiento' },
-      columnas.ciudad && { k: 'ciudad', l: 'Ciudad' },
       columnas.ruc && { k: 'ruc', l: 'RUC' },
       columnas.numeroFactura && { k: 'numeroFactura', l: 'N.º factura' },
       columnas.estadoComprobante && { k: 'estadoComprobante', l: 'Comprobante' },
       columnas.valor && { k: 'valor', l: 'Valor' },
+      columnas.establecimiento && { k: 'establecimiento', l: 'Establecimiento' },
+      columnas.ciudad && { k: 'ciudad', l: 'Ciudad' },
       columnas.observaciones && { k: 'observaciones', l: 'Observaciones' },
     ].filter(Boolean);
     if (!cols.length || !gastosFiltrados.length) return '';
@@ -4668,23 +4668,11 @@ a { color: inherit; text-decoration: none; }
       if (!comp?.imagenBlob) return null; // sin foto real adjunta: tampoco se genera página
 
       const imgHtml = `<img src="${blobAUrl(comp.imagenBlob)}" style="max-width:100%; max-height:900px; margin-top:16px; border:1px solid #d8d2c4;" />`;
-      let datosDetectadosHtml = '';
-      const d = comp?.datosDetectados;
-      if (d && (d.ruc || d.numeroFactura || d.establecimiento)) {
-        datosDetectadosHtml = `
-          <p style="font-size:0.8rem; color:#5c6270; margin-top:8px;">
-            ${d.establecimiento ? `${d.establecimiento} · ` : ''}
-            ${d.ruc ? `RUC: ${d.ruc} · ` : ''}
-            ${d.numeroFactura ? `N.º factura: ${d.numeroFactura}` : ''}
-          </p>
-        `;
-      }
 
       return `
         <div class="hoja-informe" style="margin-bottom:24px; page-break-after:always;">
           <div class="hoja-titulo" style="font-size:1.1rem;">Comprobante N.º ${String(g.numero).padStart(3, '0')}</div>
           <div class="hoja-subtitulo">${g.descripcion || '(sin descripción)'} · ${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
-          ${datosDetectadosHtml}
           ${imgHtml}
         </div>
       `;
