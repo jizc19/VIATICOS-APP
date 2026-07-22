@@ -100,6 +100,8 @@ html, body {
   font-family: var(--font-body);
   font-size: var(--fs-base);
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%; /* evita que Safari agrande el texto automáticamente en bloques anchos */
+  text-size-adjust: 100%;
 }
 
 body {
@@ -700,9 +702,9 @@ a { color: inherit; text-decoration: none; }
   page-break-inside: avoid;
   break-inside: avoid;
 }
-.hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.72rem; line-height: 1.2; }
-.hoja-anexo-meta { font-size: 0.6rem; color: #5c6270; margin-bottom: 3px; }
-.hoja-anexo-img { display: block; width: auto; max-width: 100%; max-height: 210px; margin: 0 auto; object-fit: contain; background: #fff; }
+.hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.9rem; line-height: 1.2; }
+.hoja-anexo-meta { font-size: 0.7rem; color: #5c6270; margin-bottom: 6px; }
+.hoja-anexo-img { display: block; width: auto; max-width: 100%; max-height: 520px; margin: 0 auto; object-fit: contain; background: #fff; }
 
 .hoja-cat-banda {
   background: #dce6f0; color: #1b2f47; font-weight: 700; font-size: 0.72rem;
@@ -5746,7 +5748,7 @@ a { color: inherit; text-decoration: none; }
 
 
 
-  const POR_PAGINA = 4; // 2x2 — aprovecha el ancho extra de A4 horizontal
+  const POR_PAGINA = 2; // una sola fila por hoja — deja mucho más alto disponible por foto, garantizando que no se corten
 
   /**
    * @param {Array} gastosFiltrados - los mismos gastos que entran al informe (con .numero ya asignado)
@@ -5776,8 +5778,8 @@ a { color: inherit; text-decoration: none; }
     for (let i = 0; i < conFoto.length; i += POR_PAGINA) {
       const grupo = conFoto.slice(i, i + POR_PAGINA);
       paginas.push(`
-        <div class="hoja-informe" style="margin-bottom:24px; padding:14px 20px; page-break-after:always;">
-          <div class="hoja-titulo" style="font-size:1rem; margin-bottom:8px;">Anexo de comprobantes</div>
+        <div class="hoja-informe" style="margin-bottom:24px; padding:24px 30px; page-break-after:always;">
+          <div class="hoja-titulo" style="font-size:1.1rem; margin-bottom:14px;">Anexo de comprobantes</div>
           <div class="hoja-anexo-grid">
             ${grupo.map(({ gasto: g, url, etiqueta }) => `
               <div class="hoja-anexo-celda">
