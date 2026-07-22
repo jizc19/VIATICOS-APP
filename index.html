@@ -5235,8 +5235,8 @@ a { color: inherit; text-decoration: none; }
         <div style="display:flex; align-items:center; gap:8px;">
           <label style="font-size:var(--fs-sm); color:var(--text-500);">Plantilla</label>
           <select id="sel-plantilla" style="padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--surface-600); color:var(--text-100);">
-            <option value="">Sin plantilla</option>
-            ${plantillas.map((p) => `<option value="${p.id}">${p.nombre}</option>`).join('')}
+            <option value="" ${!config.plantillaSeleccionadaId ? 'selected' : ''}>Sin plantilla</option>
+            ${plantillas.map((p) => `<option value="${p.id}" ${p.id === config.plantillaSeleccionadaId ? 'selected' : ''}>${p.nombre}</option>`).join('')}
           </select>
           ${plantillas.length ? `<button class="btn btn-ghost btn-sm" id="btn-borrar-plantilla" style="color:var(--danger);">Eliminar</button>` : ''}
         </div>
@@ -5353,10 +5353,15 @@ a { color: inherit; text-decoration: none; }
     });
 
     contenedor.querySelector('#sel-plantilla').addEventListener('change', async (e) => {
-      if (!e.target.value) return;
+      if (!e.target.value) {
+        config.plantillaSeleccionadaId = null;
+        await renderPasoConfiguracion(contenedor, { config, gastos, categorias, onVolver, onVerVistaPrevia });
+        return;
+      }
       const plantilla = plantillas.find((p) => p.id === e.target.value);
       if (!plantilla) return;
       const nuevoConfig = aplicarPlantilla(config, plantilla);
+      nuevoConfig.plantillaSeleccionadaId = plantilla.id;
       mostrarToast(`Plantilla "${plantilla.nombre}" aplicada.`);
       await renderPasoConfiguracion(contenedor, { config: nuevoConfig, gastos, categorias, onVolver, onVerVistaPrevia });
     });
@@ -5383,13 +5388,15 @@ a { color: inherit; text-decoration: none; }
     contenedor.querySelector('#btn-borrar-plantilla')?.addEventListener('click', () => {
       const sel = contenedor.querySelector('#sel-plantilla');
       if (!sel.value) { mostrarToast('Elige una plantilla para eliminar.'); return; }
+      const nombrePlantilla = plantillas.find((p) => p.id === sel.value)?.nombre || 'esta plantilla';
       abrirModal({
         titulo: '¿Eliminar esta plantilla?',
-        contenidoHtml: `<p>Esta acción no se puede deshacer.</p>`,
+        contenidoHtml: `<p><strong>${nombrePlantilla}</strong></p><p style="color:var(--danger); font-size:var(--fs-sm); margin-top:8px;">Esta acción no se puede deshacer.</p>`,
         botones: [
           { texto: 'Cancelar', clase: 'btn-secondary' },
           { texto: 'Eliminar', clase: 'btn-danger', onClick: async () => {
             await eliminarPlantilla(sel.value);
+            config.plantillaSeleccionadaId = null;
             mostrarToast('Plantilla eliminada.');
             await renderPasoConfiguracion(contenedor, { config, gastos, categorias, onVolver, onVerVistaPrevia });
           } },
