@@ -867,7 +867,7 @@ a { color: inherit; text-decoration: none; }
    */
 
   const DB_NAME = 'viaticos-db';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
 
   const STORES = {
     proyectos: 'id',
@@ -1417,7 +1417,14 @@ a { color: inherit; text-decoration: none; }
 
   async function renderDashboard(contenedor) {
     contenedor.innerHTML = `<div class="empty-state">Cargando…</div>`;
-    const [resumen, categorias] = await Promise.all([resumenGlobal(), listarCategorias()]);
+    let resumen, categorias;
+    try {
+      [resumen, categorias] = await Promise.all([resumenGlobal(), listarCategorias()]);
+    } catch (err) {
+      contenedor.innerHTML = `<div class="empty-state"><p class="lead">No se pudo cargar el panel</p><p>${err.message}. Intenta recargar la página; si persiste, es posible que necesites actualizar la app.</p></div>`;
+      console.error(err);
+      return;
+    }
     const porCategoria = agruparGastosPorCategoria(resumen.gastos);
 
     contenedor.innerHTML = `
