@@ -308,12 +308,11 @@ a { color: inherit; text-decoration: none; }
   padding: 3px 9px;
   border-radius: 3px;
   border: 1.5px solid currentColor;
-  transform: rotate(-1deg);
 }
 .stamp::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
 .stamp-ok { color: var(--state-ok); background: var(--state-ok-bg); }
-.stamp-pending { color: var(--state-pending); background: var(--state-pending-bg); transform: rotate(1deg); }
-.stamp-missing { color: var(--state-missing); background: var(--state-missing-bg); transform: rotate(-0.6deg); }
+.stamp-pending { color: var(--state-pending); background: var(--state-pending-bg); }
+.stamp-missing { color: var(--state-missing); background: var(--state-missing-bg); }
 
 /* ---------- Formularios ---------- */
 .field { display: flex; flex-direction: column; gap: 6px; }
@@ -2340,11 +2339,29 @@ a { color: inherit; text-decoration: none; }
     }
   }
 
+  const MESES_ABREV = {
+    ENE: '01', FEB: '02', MAR: '03', ABR: '04', MAY: '05', JUN: '06',
+    JUL: '07', AGO: '08', SEP: '09', OCT: '10', NOV: '11', DIC: '12',
+  };
+
   function aFechaISO(dia, mes, anio) {
     let a = anio.length === 2 ? `20${anio}` : anio;
     const d = dia.padStart(2, '0');
     const m = mes.padStart(2, '0');
     return `${a}-${m}-${d}`;
+  }
+
+  function buscarFecha(texto) {
+    // Formato con mes en letras: 15/JUL/26 (común en recibos ecuatorianos)
+    const conMesTexto = texto.match(/(\d{1,2})[\/\-]([A-ZÑ]{3})[\/\-](\d{2,4})/i);
+    if (conMesTexto) {
+      const mes = MESES_ABREV[conMesTexto[2].toUpperCase()];
+      if (mes) return aFechaISO(conMesTexto[1], mes, conMesTexto[3]);
+    }
+    // Formato numérico: 15/07/2026
+    const numerico = texto.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (numerico) return aFechaISO(numerico[1], numerico[2], numerico[3]);
+    return null;
   }
 
   function buscarNumeroMonetario(regex, texto) {
@@ -2360,19 +2377,24 @@ a { color: inherit; text-decoration: none; }
     const lineas = limpio.split('\n').map((l) => l.trim()).filter(Boolean);
 
     const matchRuc = limpio.match(/R\.?\s?U\.?\s?C\.?\s*[:\.]?\s*(\d{10,13})/i);
-    const matchFecha = limpio.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
     const matchFactura = limpio.match(/(\d{3}-\d{3}-\d{9})/) || limpio.match(/(?:FACTURA|N[UÚ]MERO|No\.?)\s*[:\.]?\s*([\d\-]{6,})/i);
-    const total = buscarNumeroMonetario(/TOTAL(?:\s*A\s*PAGAR)?\s*[:\$]?\s*\$?\s*(\d[\d.,]*\d|\d)/gi, limpio);
+    // (?<!SUB) evita que "SUBTOTAL" se confunda con "TOTAL" (la palabra "TOTAL" está contenida dentro de "SUBTOTAL")
+    const total = buscarNumeroMonetario(/(?<!SUB)TOTAL(?:\s*A\s*PAGAR)?\s*[:\$]?\s*\$?\s*(\d[\d.,]*\d|\d)/gi, limpio);
     const subtotal = buscarNumeroMonetario(/SUBTOTAL\s*[:\$]?\s*\$?\s*(\d[\d.,]*\d|\d)/gi, limpio);
     const iva = buscarNumeroMonetario(/I\.?V\.?A\.?\s*(?:\d{1,2}\s*%)?\s*[:\$]?\s*\$?\s*(\d[\d.,]*\d|\d)/gi, limpio);
 
-    // Heurística simple: el establecimiento suele ser una de las primeras líneas legibles del ticket
-    const establecimiento = lineas.find((l) => l.length > 3 && !/^\d+$/.test(l)) || null;
+    // Heurística simple: el establecimiento suele ser una de las primeras líneas legibles del ticket,
+    // evitando líneas que sean mayormente ruido del OCR (pocas letras reales).
+    const pareceTexto = (l) => {
+      const letras = (l.match(/[a-zA-ZñÑáéíóúÁÉÍÓÚ]/g) || []).length;
+      return letras >= Math.ceil(l.length * 0.5);
+    };
+    const establecimiento = lineas.find((l) => l.length > 3 && !/^\d+$/.test(l) && pareceTexto(l)) || null;
 
     return {
       establecimiento,
       ruc: matchRuc ? matchRuc[1] : null,
-      fecha: matchFecha ? aFechaISO(matchFecha[1], matchFecha[2], matchFecha[3]) : null,
+      fecha: buscarFecha(limpio),
       numeroFactura: matchFactura ? matchFactura[1] : null,
       itemPrincipal: null, // el OCR de patrones no distingue de forma confiable la línea de producto/servicio
       subtotal,
@@ -2421,8 +2443,9 @@ a { color: inherit; text-decoration: none; }
   const MODELO = 'claude-sonnet-4-6';
 
   const PROMPT_SISTEMA = `Analiza esta imagen de un comprobante de gasto (factura, recibo, ticket o nota de venta) y responde ÚNICAMENTE con un objeto JSON, sin texto adicional, sin markdown, con esta forma exacta:
-  {"establecimiento": string|null, "ruc": string|null, "fecha": "YYYY-MM-DD"|null, "numeroFactura": string|null, "itemPrincipal": string|null, "subtotal": number|null, "iva": number|null, "total": number|null, "categoriaProbable": "alimentacion"|"hospedaje"|"transporte"|"peajes"|"materiales"|"imprevistos"|"otros"}
+  {"establecimiento": string|null, "ruc": string|null, "ciudad": string|null, "fecha": "YYYY-MM-DD"|null, "numeroFactura": string|null, "itemPrincipal": string|null, "subtotal": number|null, "iva": number|null, "total": number|null, "categoriaProbable": "alimentacion"|"hospedaje"|"transporte"|"peajes"|"materiales"|"imprevistos"|"otros"}
   El campo "ruc" es el RUC o cédula del establecimiento emisor (Ecuador), suele aparecer cerca del nombre del negocio.
+  El campo "ciudad" es la ciudad donde está ubicado el establecimiento (suele aparecer en la dirección impresa en el encabezado).
   El campo "itemPrincipal" es una descripción breve (2-6 palabras) de qué se compró — el producto o servicio principal del ticket (ej. "Almuerzo 2 personas", "Combustible diésel", "Repuestos de freno"), no el nombre del negocio.
   Si no puedes leer algún dato con confianza, usa null en ese campo. No inventes valores.`;
 
@@ -2859,9 +2882,12 @@ a { color: inherit; text-decoration: none; }
                 <p style="font-size:var(--fs-sm);">
                   ${d.itemPrincipal ? `<strong>${d.itemPrincipal}</strong><br>` : ''}
                   ${d.establecimiento ? `${d.establecimiento}<br>` : ''}
+                  ${d.ciudad ? `${d.ciudad}<br>` : ''}
                   ${d.ruc ? `RUC: ${d.ruc}<br>` : ''}
                   ${d.fecha ? `Fecha: ${d.fecha}<br>` : ''}
                   ${d.numeroFactura ? `N.º factura: ${d.numeroFactura}<br>` : ''}
+                  ${d.subtotal != null ? `Subtotal: ${formatoMoneda(d.subtotal)}<br>` : ''}
+                  ${d.iva != null ? `IVA: ${formatoMoneda(d.iva)}<br>` : ''}
                   ${d.total != null ? `Total: ${formatoMoneda(d.total)}` : ''}
                 </p>
               </div>
@@ -2967,6 +2993,7 @@ a { color: inherit; text-decoration: none; }
         const filas = [
           d.itemPrincipal && ['Ítem comprado', d.itemPrincipal],
           d.establecimiento && ['Establecimiento', d.establecimiento],
+          d.ciudad && ['Ciudad', d.ciudad],
           d.ruc && ['RUC', d.ruc],
           d.numeroFactura && ['N.º de factura', d.numeroFactura],
           d.fecha && ['Fecha en el comprobante', formatoFecha(d.fecha)],
@@ -3830,6 +3857,7 @@ a { color: inherit; text-decoration: none; }
       return {
         ...g,
         establecimiento: d.establecimiento || null,
+        ciudad: d.ciudad || null,
         ruc: d.ruc || null,
         numeroFactura: d.numeroFactura || null,
         subtotalComprobante: d.subtotal ?? null,
@@ -3946,7 +3974,7 @@ a { color: inherit; text-decoration: none; }
       },
       columnas: {
         numero: true, fecha: true, categoria: true, descripcion: true, valor: true,
-        estadoComprobante: true, numeroFactura: false, establecimiento: false, ruc: false, observaciones: false,
+        estadoComprobante: true, numeroFactura: false, establecimiento: false, ruc: false, ciudad: false, observaciones: false,
       },
       gastosSeleccionados: new Set(gastos.map((g) => g.id)),
       filtroEstados: { con_comprobante: true, pendiente_comprobante: true, sin_comprobante: true },
@@ -3994,7 +4022,7 @@ a { color: inherit; text-decoration: none; }
   const ETIQUETAS_COLUMNAS = {
     numero: 'Número', fecha: 'Fecha', categoria: 'Categoría', descripcion: 'Descripción',
     valor: 'Valor', estadoComprobante: 'Estado del comprobante', numeroFactura: 'Número de factura',
-    establecimiento: 'Establecimiento/proveedor', ruc: 'RUC del establecimiento', observaciones: 'Observaciones',
+    establecimiento: 'Establecimiento/proveedor', ruc: 'RUC del establecimiento', ciudad: 'Ciudad', observaciones: 'Observaciones',
   };
   const ETIQUETAS_FIRMAS = {
     responsable: 'Firma del responsable',
@@ -4292,6 +4320,7 @@ a { color: inherit; text-decoration: none; }
       columnas.categoria && { k: 'categoria', l: 'Categoría' },
       columnas.descripcion && { k: 'descripcion', l: 'Descripción' },
       columnas.establecimiento && { k: 'establecimiento', l: 'Establecimiento' },
+      columnas.ciudad && { k: 'ciudad', l: 'Ciudad' },
       columnas.ruc && { k: 'ruc', l: 'RUC' },
       columnas.numeroFactura && { k: 'numeroFactura', l: 'N.º factura' },
       columnas.estadoComprobante && { k: 'estadoComprobante', l: 'Comprobante' },
@@ -4306,6 +4335,7 @@ a { color: inherit; text-decoration: none; }
       if (k === 'valor') return `<span class="num">${formatoMoneda(g.valor)}</span>`;
       if (k === 'estadoComprobante') return `<span class="hoja-estado-mini ${claseEstadoMini(g.estadoComprobante)}">${ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante].texto}</span>`;
       if (k === 'establecimiento') return g.establecimiento || '—';
+      if (k === 'ciudad') return g.ciudad || '—';
       if (k === 'ruc') return g.ruc || '—';
       if (k === 'numeroFactura') return g.numeroFactura || '—';
       return g[k] ?? '—';
