@@ -2166,7 +2166,7 @@ a { color: inherit; text-decoration: none; }
     };
   }
 
-  return { interpretarEntradaRapida };
+  return { detectarCategoria, interpretarEntradaRapida };
   })();
 
   // ==== modules/comprobantes/imagen.util ====
@@ -2249,10 +2249,108 @@ a { color: inherit; text-decoration: none; }
   return { comprimirComprobante, blobAUrl, blobABase64 };
   })();
 
+  // ==== modules/comprobantes/ocr-local.service ====
+  __modules__['modules/comprobantes/ocr-local.service'] = (function(){
+  const { detectarCategoria } = __modules__['modules/gastos/gastos.parser'];
+
+
+  /**
+   * ocr-local.service.js — Lectura automática GRATUITA de comprobantes.
+   * Usa Tesseract.js (OCR de código abierto que corre en el navegador) en vez
+   * de una API de pago. Es menos preciso que un modelo de IA con visión —
+   * funciona mejor con fotos derechas, bien iluminadas y sin dobleces — pero
+   * no tiene ningún costo por uso.
+   */
+
+  const CDN_TESSERACT = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js';
+  let cargaEnCurso = null;
+
+  function cargarTesseract() {
+    if (window.Tesseract) return Promise.resolve();
+    if (cargaEnCurso) return cargaEnCurso;
+    cargaEnCurso = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = CDN_TESSERACT;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('No se pudo cargar el lector de texto gratuito (revisa tu conexión a internet).'));
+      document.head.appendChild(script);
+    });
+    return cargaEnCurso;
+  }
+
+  async function extraerTextoDeImagen(blob) {
+    await cargarTesseract();
+    const worker = await window.Tesseract.createWorker('spa');
+    try {
+      const { data } = await worker.recognize(blob);
+      return data.text || '';
+    } finally {
+      await worker.terminate();
+    }
+  }
+
+  function aFechaISO(dia, mes, anio) {
+    let a = anio.length === 2 ? `20${anio}` : anio;
+    const d = dia.padStart(2, '0');
+    const m = mes.padStart(2, '0');
+    return `${a}-${m}-${d}`;
+  }
+
+  function buscarNumeroMonetario(regex, texto) {
+    const coincidencias = [...texto.matchAll(regex)];
+    if (!coincidencias.length) return null;
+    const ultima = coincidencias[coincidencias.length - 1];
+    return Number(ultima[1].replace(/\./g, '').replace(',', '.'));
+  }
+
+  /** Analiza el texto crudo del OCR y extrae los campos que pueda reconocer con patrones típicos de facturas ecuatorianas. */
+  function interpretarTextoFactura(texto) {
+    const limpio = texto.replace(/[ \t]+/g, ' ');
+    const lineas = limpio.split('\n').map((l) => l.trim()).filter(Boolean);
+
+    const matchRuc = limpio.match(/R\.?\s?U\.?\s?C\.?\s*[:\.]?\s*(\d{10,13})/i);
+    const matchFecha = limpio.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    const matchFactura = limpio.match(/(\d{3}-\d{3}-\d{9})/) || limpio.match(/(?:FACTURA|N[UÚ]MERO|No\.?)\s*[:\.]?\s*([\d\-]{6,})/i);
+    const total = buscarNumeroMonetario(/TOTAL(?:\s*A\s*PAGAR)?\s*[:\$]?\s*\$?\s*(\d[\d.,]*\d|\d)/gi, limpio);
+    const subtotal = buscarNumeroMonetario(/SUBTOTAL\s*[:\$]?\s*\$?\s*(\d[\d.,]*\d|\d)/gi, limpio);
+    const iva = buscarNumeroMonetario(/I\.?V\.?A\.?\s*(?:\d{1,2}\s*%)?\s*[:\$]?\s*\$?\s*(\d[\d.,]*\d|\d)/gi, limpio);
+
+    // Heurística simple: el establecimiento suele ser una de las primeras líneas legibles del ticket
+    const establecimiento = lineas.find((l) => l.length > 3 && !/^\d+$/.test(l)) || null;
+
+    return {
+      establecimiento,
+      ruc: matchRuc ? matchRuc[1] : null,
+      fecha: matchFecha ? aFechaISO(matchFecha[1], matchFecha[2], matchFecha[3]) : null,
+      numeroFactura: matchFactura ? matchFactura[1] : null,
+      itemPrincipal: null, // el OCR de patrones no distingue de forma confiable la línea de producto/servicio
+      subtotal,
+      iva,
+      total,
+      categoriaProbable: detectarCategoria(limpio.toLowerCase()),
+      metodo: 'ocr_local',
+    };
+  }
+
+  /** @returns {Promise<{ok: true, datos: object} | {ok: false, motivo: string, detalle?: string}>} */
+  async function interpretarComprobanteGratis(imagenBlob) {
+    try {
+      const texto = await extraerTextoDeImagen(imagenBlob);
+      if (!texto.trim()) return { ok: false, motivo: 'sin_texto' };
+      return { ok: true, datos: interpretarTextoFactura(texto) };
+    } catch (err) {
+      return { ok: false, motivo: 'error', detalle: err.message };
+    }
+  }
+
+  return { interpretarTextoFactura, interpretarComprobanteGratis };
+  })();
+
   // ==== modules/comprobantes/interpretacion.service ====
   __modules__['modules/comprobantes/interpretacion.service'] = (function(){
   const { db } = __modules__['storage/db'];
   const { blobABase64 } = __modules__['modules/comprobantes/imagen.util'];
+  const { interpretarComprobanteGratis } = __modules__['modules/comprobantes/ocr-local.service'];
   /**
    * interpretacion.service.js — Interpretación real de comprobantes por foto.
    *
@@ -2268,11 +2366,14 @@ a { color: inherit; text-decoration: none; }
 
 
 
+
   const MODELO = 'claude-sonnet-4-6';
 
   const PROMPT_SISTEMA = `Analiza esta imagen de un comprobante de gasto (factura, recibo, ticket o nota de venta) y responde ÚNICAMENTE con un objeto JSON, sin texto adicional, sin markdown, con esta forma exacta:
-  {"establecimiento": string|null, "ruc": string|null, "fecha": "YYYY-MM-DD"|null, "numeroFactura": string|null, "subtotal": number|null, "iva": number|null, "total": number|null, "categoriaProbable": "alimentacion"|"hospedaje"|"transporte"|"peajes"|"materiales"|"imprevistos"|"otros"}
-  El campo "ruc" es el RUC o cédula del establecimiento emisor (Ecuador), suele aparecer cerca del nombre del negocio. Si no puedes leer algún dato con confianza, usa null en ese campo. No inventes valores.`;
+  {"establecimiento": string|null, "ruc": string|null, "fecha": "YYYY-MM-DD"|null, "numeroFactura": string|null, "itemPrincipal": string|null, "subtotal": number|null, "iva": number|null, "total": number|null, "categoriaProbable": "alimentacion"|"hospedaje"|"transporte"|"peajes"|"materiales"|"imprevistos"|"otros"}
+  El campo "ruc" es el RUC o cédula del establecimiento emisor (Ecuador), suele aparecer cerca del nombre del negocio.
+  El campo "itemPrincipal" es una descripción breve (2-6 palabras) de qué se compró — el producto o servicio principal del ticket (ej. "Almuerzo 2 personas", "Combustible diésel", "Repuestos de freno"), no el nombre del negocio.
+  Si no puedes leer algún dato con confianza, usa null en ese campo. No inventes valores.`;
 
   async function obtenerClaveApi() {
     const config = await db.get('configuracion', 'general');
@@ -2280,56 +2381,60 @@ a { color: inherit; text-decoration: none; }
   }
 
   async function haySesionParaInterpretar() {
-    const clave = await obtenerClaveApi();
-    return Boolean(clave) && navigator.onLine;
+    return navigator.onLine;
   }
 
   /**
    * @param {Blob} imagenBlob
-   * @returns {Promise<{ok: true, datos: object} | {ok: false, motivo: 'sin_clave'|'sin_conexion'|'error', detalle?: string}>}
+   * @returns {Promise<{ok: true, datos: object} | {ok: false, motivo: 'sin_conexion'|'error', detalle?: string}>}
    */
   async function interpretarComprobante(imagenBlob) {
     if (!navigator.onLine) return { ok: false, motivo: 'sin_conexion' };
 
     const clave = await obtenerClaveApi();
-    if (!clave) return { ok: false, motivo: 'sin_clave' };
 
-    try {
-      const base64 = await blobABase64(imagenBlob);
-      const respuesta = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': clave,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: MODELO,
-          max_tokens: 500,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
-              { type: 'text', text: PROMPT_SISTEMA },
-            ],
-          }],
-        }),
-      });
+    // Si hay clave de API configurada, usar el modelo con visión de Anthropic (más preciso, tiene costo).
+    if (clave) {
+      try {
+        const base64 = await blobABase64(imagenBlob);
+        const respuesta = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': clave,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: MODELO,
+            max_tokens: 500,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+                { type: 'text', text: PROMPT_SISTEMA },
+              ],
+            }],
+          }),
+        });
 
-      if (!respuesta.ok) {
-        const detalle = await respuesta.text().catch(() => '');
-        return { ok: false, motivo: 'error', detalle: `HTTP ${respuesta.status}: ${detalle.slice(0, 200)}` };
+        if (!respuesta.ok) {
+          const detalle = await respuesta.text().catch(() => '');
+          return { ok: false, motivo: 'error', detalle: `HTTP ${respuesta.status}: ${detalle.slice(0, 200)}` };
+        }
+
+        const data = await respuesta.json();
+        const texto = (data.content || []).map((b) => b.text || '').join('').trim();
+        const limpio = texto.replace(/```json|```/g, '').trim();
+        const datos = JSON.parse(limpio);
+        return { ok: true, datos: { ...datos, metodo: 'ia' } };
+      } catch (err) {
+        return { ok: false, motivo: 'error', detalle: err.message };
       }
-
-      const data = await respuesta.json();
-      const texto = (data.content || []).map((b) => b.text || '').join('').trim();
-      const limpio = texto.replace(/```json|```/g, '').trim();
-      const datos = JSON.parse(limpio);
-      return { ok: true, datos };
-    } catch (err) {
-      return { ok: false, motivo: 'error', detalle: err.message };
     }
+
+    // Sin clave configurada: usar lectura local gratuita (Tesseract OCR), sin ningún costo.
+    return interpretarComprobanteGratis(imagenBlob);
   }
 
   return { obtenerClaveApi, haySesionParaInterpretar, interpretarComprobante };
@@ -2391,7 +2496,7 @@ a { color: inherit; text-decoration: none; }
         await db.delete('colaSincronizacion', item.id);
         mostrarToast(`Se detectó información nueva para un gasto. Revísala en el detalle.`);
         alHaberSugerencia?.(item.gastoId, resultado.datos);
-      } else if (resultado.motivo === 'sin_conexion' || resultado.motivo === 'sin_clave') {
+      } else if (resultado.motivo === 'sin_conexion') {
         // se reintentará en la próxima reconexión / cuando configure la clave
         break;
       } else {
@@ -2477,16 +2582,16 @@ a { color: inherit; text-decoration: none; }
 
         const enLinea = navigator.onLine;
         if (enLinea) {
-          estadoEl.textContent = 'Interpretando comprobante…';
+          estadoEl.textContent = 'Leyendo comprobante… (la primera vez puede tardar unos segundos)';
           const resultado = await interpretarComprobante(imagenBlob);
           if (resultado.ok) {
             comprobante = { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.LISTO, datosDetectados: resultado.datos };
-          } else if (resultado.motivo === 'sin_clave') {
-            comprobante = { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.NO_APLICA };
-            mostrarToast('No hay clave de API configurada — registra el gasto manualmente.');
-          } else {
+          } else if (resultado.motivo === 'sin_conexion') {
             comprobante = { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.PENDIENTE_CONEXION };
             await agregarAColaSincronizacion(comprobante.id, null);
+          } else {
+            comprobante = { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.NO_APLICA };
+            mostrarToast('No se pudo leer automáticamente esta foto — completa los datos manualmente.');
           }
         } else {
           comprobante = { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.PENDIENTE_CONEXION };
@@ -2674,12 +2779,15 @@ a { color: inherit; text-decoration: none; }
 
           if (comprobante.estadoInterpretacion === ESTADO_INTERPRETACION.LISTO && comprobante.datosDetectados) {
             const d = comprobante.datosDetectados;
+            const esGratis = d.metodo === 'ocr_local';
             zonaDeteccion.innerHTML = `
               <img src="${url}" class="comprobante-preview" style="margin-top:var(--sp-3);" />
               <div class="deteccion-card">
-                <h3>Información detectada — edita si es necesario</h3>
+                <h3>${esGratis ? 'Información detectada (lectura gratuita)' : 'Información detectada'} — edita abajo si algo no coincide</h3>
+                ${esGratis ? `<p style="font-size:var(--fs-xs); color:var(--text-500); margin-bottom:6px;">Lectura automática gratuita, menos precisa que la IA de pago — revisa bien cada dato, en especial el ítem comprado.</p>` : ''}
                 <p style="font-size:var(--fs-sm);">
-                  ${d.establecimiento ? `<strong>${d.establecimiento}</strong><br>` : ''}
+                  ${d.itemPrincipal ? `<strong>${d.itemPrincipal}</strong><br>` : ''}
+                  ${d.establecimiento ? `${d.establecimiento}<br>` : ''}
                   ${d.ruc ? `RUC: ${d.ruc}<br>` : ''}
                   ${d.fecha ? `Fecha: ${d.fecha}<br>` : ''}
                   ${d.numeroFactura ? `N.º factura: ${d.numeroFactura}<br>` : ''}
@@ -2688,7 +2796,8 @@ a { color: inherit; text-decoration: none; }
               </div>
             `;
             // Prellenar el formulario manual con lo detectado — el usuario debe confirmar/editar y luego dar clic en "Confirmar y guardar"
-            if (d.establecimiento) formEl.querySelector('[name="descripcion"]').value = d.establecimiento;
+            const descripcionSugerida = d.itemPrincipal || d.establecimiento;
+            if (descripcionSugerida) formEl.querySelector('[name="descripcion"]').value = descripcionSugerida;
             if (d.total != null) formEl.querySelector('[name="valor"]').value = d.total;
             if (d.fecha) formEl.querySelector('[name="fecha"]').value = d.fecha;
             if (d.categoriaProbable) formEl.querySelector('[name="categoria"]').value = d.categoriaProbable;
@@ -2704,8 +2813,8 @@ a { color: inherit; text-decoration: none; }
             zonaDeteccion.innerHTML = `
               <img src="${url}" class="comprobante-preview" style="margin-top:var(--sp-3);" />
               <div class="deteccion-card">
-                <h3>Foto guardada</h3>
-                <p style="font-size:var(--fs-sm);">Completa los datos manualmente abajo. El estado del comprobante se marcará como "Con comprobante".</p>
+                <h3>No se pudo leer automáticamente — completa manualmente</h3>
+                <p style="font-size:var(--fs-sm);">Puede pasar si la foto está borrosa, torcida, o el lector gratuito no reconoció el texto. El estado del comprobante se marcará como "Con comprobante".</p>
               </div>
             `;
           }
@@ -3480,11 +3589,12 @@ a { color: inherit; text-decoration: none; }
             </select>
           </div>
           <div class="field">
-            <label for="c-clave-api">Clave de API de Anthropic (para interpretar fotos de comprobantes)</label>
+            <label for="c-clave-api">Clave de API de Anthropic (opcional — lectura de fotos más precisa, con costo)</label>
             <input id="c-clave-api" name="claveApiAnthropic" type="password" value="${config.claveApiAnthropic || ''}" placeholder="sk-ant-…" autocomplete="off" />
           </div>
           <p style="font-size:var(--fs-xs); color:var(--text-500); margin-top:-8px;">
-            Se guarda únicamente en este dispositivo, nunca se envía a ningún servidor salvo para interpretar la foto que tú tomes.
+            Sin esta clave, la app ya lee tus comprobantes automáticamente de forma <strong>gratuita</strong> (lectura de texto local, menos precisa).
+            Si la agregas, usa un modelo de IA con visión más exacto — tiene un costo pequeño por foto, se paga directo en tu cuenta de Anthropic y la clave se guarda solo en este dispositivo.
           </p>
           <div class="modal-actions" style="justify-content:flex-start;">
             <button type="submit" class="btn btn-primary">Guardar configuración</button>
