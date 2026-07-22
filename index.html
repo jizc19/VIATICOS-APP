@@ -251,6 +251,18 @@ a { color: inherit; text-decoration: none; }
 }
 .btn:active { transform: translateY(1px); }
 
+/* Red de seguridad: cualquier ícono SVG dentro de un botón o enlace-botón que no
+   tenga ya un tamaño explícito (nav, kpi, etc.) recibe un tamaño razonable por
+   defecto. Sin esto, un <svg> sin width/height se renderiza a 300x150px por
+   defecto del navegador — enorme e invisible/roto en botones pequeños. */
+.btn svg, button svg, a.btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.gasto-row .acciones button svg { width: 18px; height: 18px; }
+
 /* Primaria — dorado sello, para crear / guardar / avanzar */
 .btn-primary {
   background: linear-gradient(180deg, var(--gold-400), var(--gold-500));
@@ -591,8 +603,8 @@ a { color: inherit; text-decoration: none; }
 .gasto-row:last-child { border-bottom: none; }
 .gasto-row .desc { font-weight: 500; }
 .gasto-row .cat { font-size: var(--fs-xs); color: var(--text-500); }
-.gasto-row .acciones { display: flex; gap: var(--sp-2); justify-content: flex-end; }
-.gasto-row .acciones button { background: transparent; border: none; color: var(--text-500); padding: 4px; }
+.gasto-row .acciones { display: flex; gap: var(--sp-3); justify-content: flex-end; flex-wrap: wrap; }
+.gasto-row .acciones button { display: inline-flex; align-items: center; gap: 4px; background: transparent; border: none; color: var(--text-500); padding: 4px; font-size: var(--fs-xs); white-space: nowrap; }
 .gasto-row .acciones button:hover { color: var(--text-100); }
 
 @media (max-width: 700px) {
@@ -3234,9 +3246,9 @@ a { color: inherit; text-decoration: none; }
         <div><span class="stamp ${estado.clase}">${estado.texto}</span></div>
         <div class="mono tabular" style="font-weight:600;">${formatoMoneda(g.valor)}</div>
         <div class="acciones">
-          <button data-ver="${g.id}" title="Ver">${icono('informes')}</button>
-          <button data-editar="${g.id}" title="Editar">✎</button>
-          <button data-eliminar="${g.id}" title="Eliminar" style="color:var(--danger);">${icono('papelera')}</button>
+          <button data-ver="${g.id}" title="Ver">${icono('informes')} Ver</button>
+          <button data-editar="${g.id}" title="Editar">✎ Editar</button>
+          <button data-eliminar="${g.id}" title="Eliminar" style="color:var(--danger);">${icono('papelera')} Eliminar</button>
         </div>
       </div>
     `;
