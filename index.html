@@ -605,11 +605,11 @@ a { color: inherit; text-decoration: none; }
 .hoja-informe {
   background: #fdfcf9;
   color: #1b1f27;
-  max-width: 820px;
+  max-width: 1050px;
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 48px 52px;
+  padding: 40px 48px;
   border-radius: 3px;
   box-shadow: 0 30px 70px rgba(0,0,0,0.45);
   font-family: var(--font-body);
@@ -651,26 +651,50 @@ a { color: inherit; text-decoration: none; }
 
 .hoja-tabla {
   width: 100%;
-  min-width: 640px;
+  min-width: 820px;
   table-layout: fixed;
   border-collapse: collapse;
-  font-size: 0.78rem;
-  line-height: 1.3;
+  font-size: 0.85rem;
+  line-height: 1.35;
 }
-.hoja-tabla.hoja-tabla-compacta { font-size: 0.7rem; min-width: 720px; }
+.hoja-tabla.hoja-tabla-compacta { font-size: 0.78rem; min-width: 900px; }
 .hoja-tabla th, .hoja-tabla td {
   overflow-wrap: break-word;
   word-break: normal;
 }
 .hoja-tabla th {
-  text-align: left; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em;
-  color: #5c6270; border-bottom: 1.5px solid #1b1f27; padding: 7px 6px;
+  text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: #5c6270; border-bottom: 1.5px solid #1b1f27; padding: 8px 8px;
 }
-.hoja-tabla td { padding: 7px 6px; border-bottom: 1px solid #e8e4da; vertical-align: top; }
+.hoja-tabla td { padding: 8px 8px; border-bottom: 1px solid #e8e4da; vertical-align: top; }
 .hoja-tabla tr:last-child td { border-bottom: none; }
 .hoja-tabla tr.hoja-fila-par td { background: #f7f5f0; }
 .hoja-tabla .num { font-family: var(--font-mono); text-align: right; white-space: nowrap; }
+.hoja-nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 .hoja-tabla tfoot td { border-top: 1.5px solid #1b1f27; border-bottom: none; padding-top: 9px; }
+
+.hoja-anexo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+.hoja-anexo-celda {
+  border: 1px solid #d8d2c4;
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+.hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; }
+.hoja-anexo-meta { font-size: 0.68rem; color: #5c6270; margin-bottom: 8px; }
+.hoja-anexo-img { width: 100%; max-height: 260px; object-fit: contain; background: #fff; }
+
+.hoja-cat-banda {
+  background: #dce6f0; color: #1b2f47; font-weight: 700; font-size: 0.72rem;
+  letter-spacing: 0.04em; text-transform: uppercase; padding: 6px 10px;
+  margin-top: 14px; border: 1px solid #b9cbdd;
+}
+.hoja-cat-banda:first-child { margin-top: 0; }
 
 .hoja-estado-mini {
   font-family: var(--font-mono); font-size: 0.66rem; text-transform: uppercase;
@@ -710,7 +734,7 @@ a { color: inherit; text-decoration: none; }
   #zona-impresion .hoja-informe { box-shadow: none; margin: 0 auto; max-width: 100%; }
   #zona-impresion .hoja-tabla-scroll { overflow-x: visible; margin: 0; padding: 0; }
   #zona-impresion .hoja-tabla { min-width: 0; }
-  @page { size: A4; margin: 14mm; }
+  @page { size: A4 landscape; margin: 12mm; }
 }
 
 </style>
@@ -3935,6 +3959,10 @@ a { color: inherit; text-decoration: none; }
             </div>
           </div>
           <div class="field">
+            <label for="c-cedula">Cédula del responsable</label>
+            <input id="c-cedula" name="cedulaResponsable" value="${config.cedulaResponsable || ''}" placeholder="Ej. 1103760250" />
+          </div>
+          <div class="field">
             <label for="c-moneda">Moneda</label>
             <select id="c-moneda" name="moneda">
               <option value="USD" ${config.moneda === 'USD' ? 'selected' : ''}>USD — Dólar</option>
@@ -4222,13 +4250,14 @@ a { color: inherit; text-decoration: none; }
       categoriasIncluidas: new Set(categorias.map((c) => c.id)),
       incluirProyeccionVsReal: false,
       firmas: {
-        responsable: {
+        empleado: {
           incluir: false,
           nombre: config.nombreResponsable || '',
           cargo: config.cargo || '',
         },
-        revision: { incluir: false, nombre: '', cargo: '' },
-        aprobacion: { incluir: false, nombre: '', cargo: '' },
+        jefeInmediato: { incluir: false, nombre: '', cargo: '' },
+        gerenciaAdministrativa: { incluir: false, nombre: '', cargo: '' },
+        contador: { incluir: false, nombre: '', cargo: '' },
       },
     };
     return base;
@@ -4266,9 +4295,10 @@ a { color: inherit; text-decoration: none; }
     establecimiento: 'Establecimiento/proveedor', ruc: 'RUC del establecimiento', ciudad: 'Ciudad', observaciones: 'Observaciones',
   };
   const ETIQUETAS_FIRMAS = {
-    responsable: 'Firma del responsable',
-    revision: 'Firma de revisión',
-    aprobacion: 'Firma de aprobación',
+    empleado: 'Firma del empleado (tuya)',
+    jefeInmediato: 'Firma del jefe inmediato',
+    gerenciaAdministrativa: 'Firma de gerencia administrativa',
+    contador: 'Firma del contador',
   };
 
   async function renderPasoConfiguracion(contenedor, { config, gastos, categorias, onVolver, onVerVistaPrevia }) {
@@ -4561,8 +4591,8 @@ a { color: inherit; text-decoration: none; }
   }
 
   const ANCHOS_COLUMNA = {
-    numero: 4, fecha: 8, categoria: 8, ruc: 10, numeroFactura: 9,
-    estadoComprobante: 7, valor: 8, ciudad: 7, establecimiento: 11,
+    numero: 4, fecha: 8, categoria: 9, ruc: 11, numeroFactura: 10,
+    estadoComprobante: 8, valor: 8, ciudad: 8, establecimiento: 12,
   };
 
   function construirColgroup(cols) {
@@ -4594,14 +4624,14 @@ a { color: inherit; text-decoration: none; }
     if (!cols.length || !gastosFiltrados.length) return '';
 
     const celda = (g, k) => {
-      if (k === 'fecha') return formatoFecha(g.fecha);
-      if (k === 'categoria') return nombreDeCategoria(catalogoCategorias, g.categoria);
+      if (k === 'fecha') return `<span class="hoja-nowrap">${formatoFecha(g.fecha)}</span>`;
+      if (k === 'categoria') return `<span class="hoja-nowrap">${nombreDeCategoria(catalogoCategorias, g.categoria)}</span>`;
       if (k === 'valor') return `<span class="num">${formatoMoneda(g.valor)}</span>`;
       if (k === 'estadoComprobante') return `<span class="hoja-estado-mini ${claseEstadoMini(g.estadoComprobante)}" title="${ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante].texto}">${abreviaturaEstado(g.estadoComprobante)}</span>`;
       if (k === 'establecimiento') return g.establecimiento || '—';
       if (k === 'ciudad') return g.ciudad || '—';
-      if (k === 'ruc') return g.ruc || '—';
-      if (k === 'numeroFactura') return g.numeroFactura || '—';
+      if (k === 'ruc') return `<span class="hoja-nowrap">${g.ruc || '—'}</span>`;
+      if (k === 'numeroFactura') return `<span class="hoja-nowrap">${g.numeroFactura || '—'}</span>`;
       return g[k] ?? '—';
     };
 
@@ -4622,6 +4652,83 @@ a { color: inherit; text-decoration: none; }
           </table>
         </div>
         ${columnas.estadoComprobante ? `<p style="font-size:0.68rem; color:#8a8f9a; margin-top:6px;">CF: Con comprobante · PF: Pendiente de comprobante · SF: Sin comprobante</p>` : ''}
+      </div>
+    `;
+  }
+
+  function seccionMovimientosPorCategoria(gastosFiltrados, catalogoCategorias) {
+    const conRespaldo = gastosFiltrados.filter((g) => g.estadoComprobante !== ESTADOS_COMPROBANTE.SIN);
+    if (!conRespaldo.length) return '';
+
+    const categoriasPresentes = catalogoCategorias.filter((c) => conRespaldo.some((g) => g.categoria === c.id));
+
+    const bloques = categoriasPresentes.map((cat) => {
+      const items = conRespaldo.filter((g) => g.categoria === cat.id);
+      const subtotal = items.reduce((a, g) => a + g.valor, 0);
+      return `
+        <div class="hoja-cat-banda">${cat.nombre.toUpperCase()}</div>
+        <table class="hoja-tabla">
+          <colgroup><col style="width:10%;"><col style="width:13%;"><col style="width:14%;"><col style="width:51%;"><col style="width:12%;"></colgroup>
+          <thead><tr><th>Fecha</th><th>N.º Doc.</th><th>RUC</th><th>Descripción / Proveedor</th><th style="text-align:right;">Valor</th></tr></thead>
+          <tbody>
+            ${items.map((g) => `
+              <tr>
+                <td><span class="hoja-nowrap">${formatoFecha(g.fecha)}</span></td>
+                <td><span class="hoja-nowrap">${g.numeroFactura || '—'}</span></td>
+                <td><span class="hoja-nowrap">${g.ruc || '—'}</span></td>
+                <td>${g.establecimiento ? `${g.descripcion || ''}${g.descripcion ? ' — ' : ''}${g.establecimiento}` : (g.descripcion || '—')}</td>
+                <td class="num">${formatoMoneda(g.valor)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot><tr style="font-weight:700;"><td colspan="4">Total ${cat.nombre}</td><td class="num">${formatoMoneda(subtotal)}</td></tr></tfoot>
+        </table>
+      `;
+    }).join('');
+
+    return `
+      <div class="hoja-seccion">
+        <h3>Detalle de movimientos con comprobante</h3>
+        <div class="hoja-tabla-scroll">${bloques}</div>
+      </div>
+    `;
+  }
+
+  function seccionSinComprobante(gastosFiltrados) {
+    const sinRespaldo = gastosFiltrados.filter((g) => g.estadoComprobante === ESTADOS_COMPROBANTE.SIN);
+    if (!sinRespaldo.length) return '';
+    const subtotal = sinRespaldo.reduce((a, g) => a + g.valor, 0);
+    return `
+      <div class="hoja-seccion">
+        <h3>Propinas, movilización y otros sin comprobante</h3>
+        <div class="hoja-tabla-scroll">
+          <table class="hoja-tabla">
+            <colgroup><col style="width:16%;"><col style="width:72%;"><col style="width:12%;"></colgroup>
+            <thead><tr><th>Fecha</th><th>Descripción</th><th style="text-align:right;">Valor</th></tr></thead>
+            <tbody>
+              ${sinRespaldo.map((g) => `<tr><td>${formatoFecha(g.fecha)}</td><td>${g.descripcion || '—'}</td><td class="num">${formatoMoneda(g.valor)}</td></tr>`).join('')}
+            </tbody>
+            <tfoot><tr style="font-weight:700;"><td colspan="2">Total sin comprobante</td><td class="num">${formatoMoneda(subtotal)}</td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function seccionTotalesLiquidacion(resumen) {
+    const saldoFinal = Number((resumen.totalGastado - resumen.totalRecibido).toFixed(2));
+    return `
+      <div class="hoja-seccion">
+        <table class="hoja-tabla" style="max-width:420px; margin-left:auto;">
+          <tbody>
+            <tr><td>Total gastos de viaje</td><td class="num">${formatoMoneda(resumen.totalGastado)}</td></tr>
+            <tr><td>Menos: anticipo entregado al empleado</td><td class="num">-${formatoMoneda(resumen.totalRecibido)}</td></tr>
+            <tr style="font-weight:700; border-top:1.5px solid #1b1f27;">
+              <td>${saldoFinal >= 0 ? 'Saldo a pagar al empleado' : 'Saldo a devolver por el empleado'}</td>
+              <td class="num">${formatoMoneda(Math.abs(saldoFinal))}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     `;
   }
@@ -4650,9 +4757,10 @@ a { color: inherit; text-decoration: none; }
   }
 
   const ETIQUETAS_FIRMAS = {
-    responsable: 'Firma del responsable',
-    revision: 'Firma de revisión',
-    aprobacion: 'Firma de aprobación',
+    empleado: 'Empleado',
+    jefeInmediato: 'Jefe inmediato',
+    gerenciaAdministrativa: 'Gerencia administrativa',
+    contador: 'Contador',
   };
 
   function seccionFirmas(firmas) {
@@ -4693,7 +4801,10 @@ a { color: inherit; text-decoration: none; }
         ${seccionDatosGenerales(proyecto, config.datosGenerales)}
         ${seccionFinanciera(resumen, config.financiero)}
         ${config.tipo === 'resumido' ? seccionResumenPorCategoria(gastosFiltrados, categorias) : ''}
-        ${config.tipo !== 'resumido' ? seccionDetalle(gastosFiltrados, config.columnas, categorias) : ''}
+        ${config.tipo === 'detallado' ? seccionMovimientosPorCategoria(gastosFiltrados, categorias) : ''}
+        ${config.tipo === 'detallado' ? seccionSinComprobante(gastosFiltrados) : ''}
+        ${config.tipo === 'detallado' ? seccionTotalesLiquidacion(resumen) : ''}
+        ${config.tipo === 'personalizado' ? seccionDetalle(gastosFiltrados, config.columnas, categorias) : ''}
         ${config.incluirProyeccionVsReal ? seccionProyectadoVsReal(proyeccionItems, realPorCategoria, categorias) : ''}
         ${seccionFirmas(config.firmas)}
 
@@ -4717,28 +4828,42 @@ a { color: inherit; text-decoration: none; }
 
 
 
+  const POR_PAGINA = 4; // 2x2 — aprovecha el ancho extra de A4 horizontal
+
   /**
    * @param {Array} gastosFiltrados - los mismos gastos que entran al informe (con .numero ya asignado)
-   * @returns {Promise<string>} HTML con una "hoja" por gasto, lista para imprimir
+   * @returns {Promise<string>} HTML con varias fotos por hoja, en orden, listo para imprimir
    */
   async function construirAnexoComprobantesHTML(gastosFiltrados) {
-    const paginas = await Promise.all(gastosFiltrados.map(async (g) => {
-      if (!g.comprobanteId) return null; // sin comprobante: no se genera página de anexo
-
+    const conFoto = [];
+    for (const g of gastosFiltrados) {
+      if (!g.comprobanteId) continue;
       const comp = await db.get('comprobantes', g.comprobanteId);
-      if (!comp?.imagenBlob) return null; // sin foto real adjunta: tampoco se genera página
+      if (!comp?.imagenBlob) continue;
+      conFoto.push({ gasto: g, url: blobAUrl(comp.imagenBlob) });
+    }
+    if (!conFoto.length) return '';
 
-      const imgHtml = `<img src="${blobAUrl(comp.imagenBlob)}" style="max-width:100%; max-height:900px; margin-top:16px; border:1px solid #d8d2c4;" />`;
-
-      return `
+    // Ya vienen ordenados por número (mismo orden del informe); se agrupan de a POR_PAGINA por hoja
+    const paginas = [];
+    for (let i = 0; i < conFoto.length; i += POR_PAGINA) {
+      const grupo = conFoto.slice(i, i + POR_PAGINA);
+      paginas.push(`
         <div class="hoja-informe" style="margin-bottom:24px; page-break-after:always;">
-          <div class="hoja-titulo" style="font-size:1.1rem;">Comprobante N.º ${String(g.numero).padStart(3, '0')}</div>
-          <div class="hoja-subtitulo">${g.descripcion || '(sin descripción)'} · ${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
-          ${imgHtml}
+          <div class="hoja-titulo" style="font-size:1.1rem; margin-bottom:16px;">Anexo de comprobantes</div>
+          <div class="hoja-anexo-grid">
+            ${grupo.map(({ gasto: g, url }) => `
+              <div class="hoja-anexo-celda">
+                <div class="hoja-anexo-titulo">Comprobante N.º ${String(g.numero).padStart(3, '0')}</div>
+                <div class="hoja-anexo-meta">${g.descripcion || '(sin descripción)'} · ${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
+                <img src="${url}" class="hoja-anexo-img" />
+              </div>
+            `).join('')}
+          </div>
         </div>
-      `;
-    }));
-    return paginas.filter(Boolean).join('\n');
+      `);
+    }
+    return paginas.join('\n');
   }
 
   return { construirAnexoComprobantesHTML };
