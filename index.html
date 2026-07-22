@@ -645,8 +645,9 @@ a { color: inherit; text-decoration: none; }
 .hoja-tabla .num { font-family: var(--font-mono); text-align: right; }
 
 .hoja-estado-mini {
-  font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase;
-  padding: 2px 6px; border-radius: 2px; border: 1px solid currentColor;
+  font-family: var(--font-mono); font-size: 0.68rem; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 2px; border: 1px solid currentColor;
+  display: inline-block; white-space: nowrap; font-weight: 600;
 }
 .hoja-estado-con { color: #1f5e4d; }
 .hoja-estado-pendiente { color: #9a6a1f; }
@@ -660,6 +661,7 @@ a { color: inherit; text-decoration: none; }
 #zona-impresion { display: none; }
 
 @media print {
+  html, body { background: #fff !important; }
   body * { visibility: hidden; }
   #zona-impresion, #zona-impresion * { visibility: visible; }
   #zona-impresion {
@@ -2820,8 +2822,8 @@ a { color: inherit; text-decoration: none; }
       contenidoHtml: `
         <div class="tabs-modo">
           <button type="button" class="chip active" data-modo="manual">Manual</button>
-          ${editando ? '' : '<button type="button" class="chip" data-modo="rapida">Entrada rápida</button>'}
-          ${editando ? '' : '<button type="button" class="chip" data-modo="foto">Tomar foto / Galería</button>'}
+          ${editando || estadoInicial ? '' : '<button type="button" class="chip" data-modo="rapida">Entrada rápida</button>'}
+          ${editando || estadoInicial ? '' : '<button type="button" class="chip" data-modo="foto">Tomar foto / Galería</button>'}
         </div>
         ${comprobanteExistenteHtml}
         <form id="form-gasto">${campoManual(categorias, datosIniciales)}</form>
@@ -2894,6 +2896,10 @@ a { color: inherit; text-decoration: none; }
         `;
         zonaEspecial.querySelector('#btn-interpretar').addEventListener('click', () => {
           const texto = zonaEspecial.querySelector('#input-rapida').value;
+          if (!texto.trim()) {
+            mostrarToast('Escribe primero una frase, ej. "Parqueadero obra $3".');
+            return;
+          }
           const interpretado = interpretarEntradaRapida(texto);
           zonaEspecial.querySelector('#resultado-rapida').innerHTML = `
             <div class="deteccion-card">
@@ -3246,14 +3252,15 @@ a { color: inherit; text-decoration: none; }
   // ==== modules/proyeccion/proyeccion.view ====
   __modules__['modules/proyeccion/proyeccion.view'] = (function(){
   const { listarProyeccion, crearItemProyeccion, editarItemProyeccion, eliminarItemProyeccion } = __modules__['modules/proyeccion/proyeccion.repo'];
-  const { gastosDeProyecto } = __modules__['core/repositorio'];
+  const { gastosDeProyecto, obtenerProyecto } = __modules__['core/repositorio'];
   const { agruparGastosPorCategoria } = __modules__['core/finanzas'];
   const { totalProyeccionItem } = __modules__['core/models'];
   const { listarCategorias, nombreDeCategoria, opcionesCategoriaHTML } = __modules__['core/categorias.repo'];
-  const { formatoMoneda } = __modules__['utils/format'];
+  const { formatoMoneda, formatoFecha } = __modules__['utils/format'];
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
   const { icono } = __modules__['components/icons'];
+  const { db } = __modules__['storage/db'];
 
 
 
@@ -3263,6 +3270,74 @@ a { color: inherit; text-decoration: none; }
 
 
 
+
+
+  function construirSolicitudHTML(proyecto, items, categorias, empresa) {
+    const total = items.reduce((a, i) => a + totalProyeccionItem(i), 0);
+    const fechaGeneracion = new Date().toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
+    const logoHtml = empresa.logo
+      ? `<img src="${empresa.logo}" alt="Logo" style="max-height:52px; max-width:180px; object-fit:contain;" />`
+      : `<div class="empresa">${empresa.nombre || 'Empresa'}</div>`;
+
+    return `
+      <div class="hoja-informe">
+        <div class="hoja-header">
+          ${logoHtml}
+          <div class="meta">Generado: ${fechaGeneracion}${empresa.responsable ? `<br>${empresa.responsable}${empresa.cargo ? ' · ' + empresa.cargo : ''}` : ''}</div>
+        </div>
+        <div class="hoja-titulo">Solicitud de viáticos</div>
+        <div class="hoja-subtitulo">${proyecto.nombre} · ${proyecto.ciudad || ''}</div>
+
+        <div class="hoja-seccion">
+          <h3>Datos generales</h3>
+          <div class="hoja-datos-grid">
+            <div><div class="lbl">Proyecto</div><div>${proyecto.nombre}</div></div>
+            <div><div class="lbl">Cliente</div><div>${proyecto.cliente || '—'}</div></div>
+            <div><div class="lbl">Responsable</div><div>${proyecto.responsable || '—'}</div></div>
+            <div><div class="lbl">Ciudad</div><div>${proyecto.ciudad || '—'}${proyecto.provincia ? ', ' + proyecto.provincia : ''}</div></div>
+            <div><div class="lbl">Fecha inicial</div><div>${formatoFecha(proyecto.fechaInicio)}</div></div>
+            <div><div class="lbl">Fecha estimada de fin</div><div>${formatoFecha(proyecto.fechaFinEstimada)}</div></div>
+            <div><div class="lbl">N.º de personas</div><div>${proyecto.numeroPersonas || '—'}</div></div>
+            <div><div class="lbl">Motivo del viaje</div><div>${proyecto.motivoViaje || '—'}</div></div>
+          </div>
+        </div>
+
+        <div class="hoja-seccion">
+          <h3>Presupuesto solicitado</h3>
+          <table class="hoja-tabla">
+            <thead><tr><th>Categoría</th><th>Cantidad</th><th style="text-align:right;">Precio unitario</th><th style="text-align:right;">Total</th></tr></thead>
+            <tbody>
+              ${items.map((i) => `
+                <tr>
+                  <td>${nombreDeCategoria(categorias, i.categoria)}</td>
+                  <td>${i.cantidad}</td>
+                  <td class="num">${formatoMoneda(i.precioUnitario)}</td>
+                  <td class="num">${formatoMoneda(totalProyeccionItem(i))}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+            <tfoot><tr style="font-weight:700;"><td colspan="3">Total solicitado</td><td class="num">${formatoMoneda(total)}</td></tr></tfoot>
+          </table>
+        </div>
+
+        <div class="hoja-firmas">
+          <div class="hoja-firma-linea">${proyecto.responsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">Solicitado por</span></div>
+          <div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">Autorizado por</span></div>
+        </div>
+
+        <div class="hoja-footer">
+          <span>${empresa.nombre || 'Sistema de viáticos'}</span>
+          <span>Página 1</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function imprimirEnZona(html) {
+    const zona = document.getElementById('zona-impresion');
+    zona.innerHTML = html;
+    setTimeout(() => window.print(), 150);
+  }
 
   function formularioItem(categorias, proyectoId, itemExistente, onGuardado) {
     const d = itemExistente || {};
@@ -3303,10 +3378,22 @@ a { color: inherit; text-decoration: none; }
 
   async function renderProyeccion(contenedor, proyectoId) {
     const pintar = async () => {
-      const [items, gastos, categorias] = await Promise.all([listarProyeccion(proyectoId), gastosDeProyecto(proyectoId), listarCategorias()]);
+      const [items, gastos, categorias, proyecto, config] = await Promise.all([
+        listarProyeccion(proyectoId),
+        gastosDeProyecto(proyectoId),
+        listarCategorias(),
+        obtenerProyecto(proyectoId),
+        db.get('configuracion', 'general'),
+      ]);
       const realPorCategoria = agruparGastosPorCategoria(gastos);
       const totalProyectado = items.reduce((a, i) => a + totalProyeccionItem(i), 0);
       const totalReal = Object.values(realPorCategoria).reduce((a, v) => a + v, 0);
+      const empresa = {
+        nombre: config?.nombreEmpresa || '',
+        responsable: proyecto.responsable || config?.nombreResponsable || '',
+        cargo: config?.cargo || '',
+        logo: config?.logo || null,
+      };
 
       // Unir categorías que tienen proyección y/o gasto real, para la tabla comparativa
       const categoriasUnicas = Array.from(new Set([
@@ -3317,7 +3404,10 @@ a { color: inherit; text-decoration: none; }
       contenedor.innerHTML = `
         <div class="toolbar">
           <div class="section-title" style="margin-bottom:0;">Proyección de gastos</div>
-          <button class="btn btn-primary" id="btn-nueva-linea">${icono('mas')} Agregar línea</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-secondary" id="btn-solicitud-pdf" ${items.length ? '' : 'disabled'}>Generar PDF de solicitud</button>
+            <button class="btn btn-primary" id="btn-nueva-linea">${icono('mas')} Agregar línea</button>
+          </div>
         </div>
 
         <div class="card card-elevated" style="margin-bottom:var(--sp-5);">
@@ -3380,6 +3470,9 @@ a { color: inherit; text-decoration: none; }
       `;
 
       contenedor.querySelector('#btn-nueva-linea').addEventListener('click', () => formularioItem(categorias, proyectoId, null, pintar));
+      contenedor.querySelector('#btn-solicitud-pdf')?.addEventListener('click', () => {
+        imprimirEnZona(construirSolicitudHTML(proyecto, items, categorias, empresa));
+      });
       contenedor.querySelectorAll('[data-editar]').forEach((btn) => btn.addEventListener('click', () => {
         const item = items.find((i) => i.id === btn.dataset.editar);
         formularioItem(categorias, proyectoId, item, pintar);
@@ -4326,6 +4419,12 @@ a { color: inherit; text-decoration: none; }
     return 'hoja-estado-sin';
   }
 
+  function abreviaturaEstado(estado) {
+    if (estado === ESTADOS_COMPROBANTE.CON) return 'CF';
+    if (estado === ESTADOS_COMPROBANTE.PENDIENTE) return 'PF';
+    return 'SF';
+  }
+
   function filtrarGastosInforme(gastos, config) {
     return gastos.filter((g) =>
       config.gastosSeleccionados.has(g.id) &&
@@ -4416,7 +4515,7 @@ a { color: inherit; text-decoration: none; }
       if (k === 'fecha') return formatoFecha(g.fecha);
       if (k === 'categoria') return nombreDeCategoria(catalogoCategorias, g.categoria);
       if (k === 'valor') return `<span class="num">${formatoMoneda(g.valor)}</span>`;
-      if (k === 'estadoComprobante') return `<span class="hoja-estado-mini ${claseEstadoMini(g.estadoComprobante)}">${ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante].texto}</span>`;
+      if (k === 'estadoComprobante') return `<span class="hoja-estado-mini ${claseEstadoMini(g.estadoComprobante)}" title="${ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante].texto}">${abreviaturaEstado(g.estadoComprobante)}</span>`;
       if (k === 'establecimiento') return g.establecimiento || '—';
       if (k === 'ciudad') return g.ciudad || '—';
       if (k === 'ruc') return g.ruc || '—';
@@ -4436,6 +4535,7 @@ a { color: inherit; text-decoration: none; }
           </tbody>
           <tfoot><tr style="font-weight:700;"><td colspan="${cols.length - 1}">Total</td><td class="num">${formatoMoneda(totalDetalle)}</td></tr></tfoot>
         </table>
+        ${columnas.estadoComprobante ? `<p style="font-size:0.68rem; color:#8a8f9a; margin-top:6px;">CF: Con comprobante · PF: Pendiente de comprobante · SF: Sin comprobante</p>` : ''}
       </div>
     `;
   }
@@ -4537,24 +4637,24 @@ a { color: inherit; text-decoration: none; }
    */
   async function construirAnexoComprobantesHTML(gastosFiltrados) {
     const paginas = await Promise.all(gastosFiltrados.map(async (g) => {
-      let imgHtml = `<p style="margin-top:24px; font-size:0.9rem; color:#8a2f2a; font-weight:600;">SIN COMPROBANTE</p>`;
+      if (!g.comprobanteId) return null; // sin comprobante: no se genera página de anexo
+
+      const comp = await db.get('comprobantes', g.comprobanteId);
+      if (!comp?.imagenBlob) return null; // sin foto real adjunta: tampoco se genera página
+
+      const imgHtml = `<img src="${blobAUrl(comp.imagenBlob)}" style="max-width:100%; max-height:900px; margin-top:16px; border:1px solid #d8d2c4;" />`;
       let datosDetectadosHtml = '';
-      if (g.comprobanteId) {
-        const comp = await db.get('comprobantes', g.comprobanteId);
-        if (comp?.imagenBlob) {
-          imgHtml = `<img src="${blobAUrl(comp.imagenBlob)}" style="max-width:100%; max-height:900px; margin-top:16px; border:1px solid #d8d2c4;" />`;
-        }
-        const d = comp?.datosDetectados;
-        if (d && (d.ruc || d.numeroFactura || d.establecimiento)) {
-          datosDetectadosHtml = `
-            <p style="font-size:0.8rem; color:#5c6270; margin-top:8px;">
-              ${d.establecimiento ? `${d.establecimiento} · ` : ''}
-              ${d.ruc ? `RUC: ${d.ruc} · ` : ''}
-              ${d.numeroFactura ? `N.º factura: ${d.numeroFactura}` : ''}
-            </p>
-          `;
-        }
+      const d = comp?.datosDetectados;
+      if (d && (d.ruc || d.numeroFactura || d.establecimiento)) {
+        datosDetectadosHtml = `
+          <p style="font-size:0.8rem; color:#5c6270; margin-top:8px;">
+            ${d.establecimiento ? `${d.establecimiento} · ` : ''}
+            ${d.ruc ? `RUC: ${d.ruc} · ` : ''}
+            ${d.numeroFactura ? `N.º factura: ${d.numeroFactura}` : ''}
+          </p>
+        `;
       }
+
       return `
         <div class="hoja-informe" style="margin-bottom:24px; page-break-after:always;">
           <div class="hoja-titulo" style="font-size:1.1rem;">Comprobante N.º ${String(g.numero).padStart(3, '0')}</div>
@@ -4564,7 +4664,7 @@ a { color: inherit; text-decoration: none; }
         </div>
       `;
     }));
-    return paginas.join('\n');
+    return paginas.filter(Boolean).join('\n');
   }
 
   return { construirAnexoComprobantesHTML };
