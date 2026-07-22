@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Viáticos — Control de Proyectos (vista previa autocontenida)</title>
+<title>Viáticos — Control de Proyectos</title>
 <meta name="theme-color" content="#0b0f16" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -208,7 +208,7 @@ a { color: inherit; text-decoration: none; }
 .main-col { display: flex; flex-direction: column; min-height: 100vh; }
 
 .topbar {
-  height: var(--topbar-h);
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -219,11 +219,18 @@ a { color: inherit; text-decoration: none; }
   top: 0;
   z-index: 5;
 }
-.topbar h1 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: var(--fs-lg);
-  letter-spacing: -0.01em;
+.topbar-miga {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--text-300);
+}
+.topbar-marca {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-500);
 }
 .topbar-actions { display: flex; gap: var(--sp-3); align-items: center; }
 
@@ -334,11 +341,29 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
   width: 100%; max-width: 480px;
-  padding: var(--sp-5);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-pop);
+  overflow: hidden;
 }
-.modal h2 { font-family: var(--font-display); font-size: var(--fs-md); margin-bottom: var(--sp-3); }
-.modal-actions { display: flex; justify-content: flex-end; gap: var(--sp-3); margin-top: var(--sp-5); }
+.modal h2 {
+  font-family: var(--font-display); font-size: var(--fs-md);
+  padding: var(--sp-5) var(--sp-5) 0;
+  flex-shrink: 0;
+}
+.modal-body {
+  padding: var(--sp-3) var(--sp-5);
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+.modal-actions {
+  display: flex; justify-content: flex-end; gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
 
 /* ---------- Toast ---------- */
 #toast-region {
@@ -402,11 +427,19 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--radius-md);
   padding: var(--sp-4) var(--sp-5);
   display: flex; flex-direction: column; gap: 6px;
+  position: relative;
 }
+.kpi-icon {
+  position: absolute; top: var(--sp-4); right: var(--sp-4);
+  width: 20px; height: 20px; color: var(--line-strong);
+  opacity: 0.6;
+}
+.kpi-icon svg { width: 100%; height: 100%; }
 .kpi-label {
   font-family: var(--font-mono);
   font-size: 0.65rem; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--ink-500);
+  padding-right: 24px;
 }
 .kpi-value {
   font-family: var(--font-display);
@@ -432,6 +465,10 @@ a { color: inherit; text-decoration: none; }
   font-size: var(--fs-md);
   font-weight: 600;
   margin-bottom: var(--sp-4);
+  padding-bottom: var(--sp-3);
+  padding-left: 10px;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--gold-500);
   display: flex; align-items: center; justify-content: space-between;
 }
 
@@ -638,6 +675,7 @@ a { color: inherit; text-decoration: none; }
   <div id="app-shell">
     <aside class="sidebar" id="sidebar"></aside>
     <div class="main-col">
+      <header class="topbar" id="topbar"></header>
       <main class="view" id="vista" role="main"></main>
     </div>
     <nav class="bottom-nav" id="bottom-nav" aria-label="Navegación principal"></nav>
@@ -730,6 +768,10 @@ a { color: inherit; text-decoration: none; }
     mas: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`,
     papelera: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>`,
     flechaAtras: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg>`,
+    moneda: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.2 1.2-2 2.5-2s2.5.6 2.5 1.8-1.2 1.7-2.5 1.9-2.5.7-2.5 1.9S10.7 15 12 15s2.5-.8 2.5-2"/></svg>`,
+    check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg>`,
+    alerta: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l10 18H2L12 3Z"/><path d="M12 10v4M12 17.5v.1"/></svg>`,
+    carpetaCerrada: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>`,
   };
 
   function icono(nombre) {
@@ -790,7 +832,28 @@ a { color: inherit; text-decoration: none; }
     });
   }
 
-  return { renderSidebar, renderBottomNav, marcarRutaActiva };
+  const MIGAS_POR_RUTA = {
+    dashboard: 'Panel',
+    proyectos: 'Proyectos',
+    'proyectos/nuevo': 'Proyectos › Nuevo proyecto',
+    'proyectos/:id': 'Proyectos › Detalle',
+    'proyectos/:id/editar': 'Proyectos › Editar',
+    informes: 'Informes',
+    'informes/:id': 'Informes › Generar informe',
+    configuracion: 'Configuración',
+  };
+
+  function actualizarTopbar(patron) {
+    const topbar = document.getElementById('topbar');
+    if (!topbar) return;
+    const miga = MIGAS_POR_RUTA[patron] || '';
+    topbar.innerHTML = `
+      <span class="topbar-miga">${miga}</span>
+      <span class="topbar-marca">Sistema de Viáticos</span>
+    `;
+  }
+
+  return { renderSidebar, renderBottomNav, marcarRutaActiva, actualizarTopbar };
   })();
 
   // ==== storage/db ====
@@ -813,8 +876,10 @@ a { color: inherit; text-decoration: none; }
     comprobantes: 'id',
     proyecciones: 'id',
     papelera: 'id',
+    papeleraIngresos: 'id',
     informes: 'id',
     plantillas: 'id',
+    categorias: 'id',
     configuracion: 'clave',
     colaSincronizacion: 'id',
   };
@@ -1259,12 +1324,54 @@ a { color: inherit; text-decoration: none; }
   return { formatoMoneda, formatoFecha, formatoFechaLarga, ETIQUETAS_ESTADO_COMPROBANTE, ETIQUETAS_ESTADO_PROYECTO };
   })();
 
+  // ==== core/categorias.repo ====
+  __modules__['core/categorias.repo'] = (function(){
+  const { db, generarId } = __modules__['storage/db'];
+  const { CATEGORIAS_DEFECTO } = __modules__['core/models'];
+
+
+
+  /**
+   * categorias.repo.js — Categorías del sistema.
+   * Empieza con las categorías por defecto (fijas, no se pueden eliminar) y
+   * permite agregar categorías/subcategorías adicionales que el usuario cree,
+   * guardadas en IndexedDB.
+   */
+
+  async function listarCategorias() {
+    const personalizadas = await db.getAll('categorias');
+    return [...CATEGORIAS_DEFECTO, ...personalizadas.sort((a, b) => a.nombre.localeCompare(b.nombre))];
+  }
+
+  async function crearCategoria(nombre) {
+    const limpio = nombre.trim();
+    if (!limpio) return null;
+    const categoria = { id: generarId('cat'), nombre: limpio, personalizada: true };
+    await db.put('categorias', categoria);
+    return categoria;
+  }
+
+  async function eliminarCategoria(id) {
+    return db.delete('categorias', id);
+  }
+
+  function nombreDeCategoria(categorias, id) {
+    return categorias.find((c) => c.id === id)?.nombre || id;
+  }
+
+  function opcionesCategoriaHTML(categorias, seleccion) {
+    return categorias.map((c) => `<option value="${c.id}" ${c.id === seleccion ? 'selected' : ''}>${c.nombre}</option>`).join('');
+  }
+
+  return { listarCategorias, crearCategoria, eliminarCategoria, nombreDeCategoria, opcionesCategoriaHTML };
+  })();
+
   // ==== modules/dashboard/dashboard.view ====
   __modules__['modules/dashboard/dashboard.view'] = (function(){
   const { resumenGlobal } = __modules__['core/repositorio'];
   const { agruparGastosPorCategoria } = __modules__['core/finanzas'];
   const { formatoMoneda, formatoFecha, ETIQUETAS_ESTADO_PROYECTO } = __modules__['utils/format'];
-  const { CATEGORIAS_DEFECTO } = __modules__['core/models'];
+  const { listarCategorias, nombreDeCategoria } = __modules__['core/categorias.repo'];
   const { icono } = __modules__['components/icons'];
 
 
@@ -1272,20 +1379,19 @@ a { color: inherit; text-decoration: none; }
 
 
 
-  function graficoBarrasCategoria(mapaCategoria) {
+  function graficoBarrasCategoria(mapaCategoria, categorias) {
     const entradas = Object.entries(mapaCategoria).sort((a, b) => b[1] - a[1]);
     if (!entradas.length) {
       return `<div class="empty-state"><p class="lead">Sin gastos aún</p><p>Los gastos por categoría aparecerán aquí.</p></div>`;
     }
     const max = Math.max(...entradas.map(([, v]) => v));
-    const nombreCat = (id) => CATEGORIAS_DEFECTO.find((c) => c.id === id)?.nombre || id;
 
     return `
       <div style="display:flex; flex-direction:column; gap:14px;">
         ${entradas.map(([cat, valor]) => `
           <div>
             <div style="display:flex; justify-content:space-between; font-size:var(--fs-xs); margin-bottom:4px;">
-              <span style="font-weight:600;">${nombreCat(cat)}</span>
+              <span style="font-weight:600;">${nombreDeCategoria(categorias, cat)}</span>
               <span class="mono tabular">${formatoMoneda(valor)}</span>
             </div>
             <div style="height:8px; background:var(--paper-0); border-radius:4px; overflow:hidden;">
@@ -1311,7 +1417,7 @@ a { color: inherit; text-decoration: none; }
 
   async function renderDashboard(contenedor) {
     contenedor.innerHTML = `<div class="empty-state">Cargando…</div>`;
-    const resumen = await resumenGlobal();
+    const [resumen, categorias] = await Promise.all([resumenGlobal(), listarCategorias()]);
     const porCategoria = agruparGastosPorCategoria(resumen.gastos);
 
     contenedor.innerHTML = `
@@ -1325,35 +1431,43 @@ a { color: inherit; text-decoration: none; }
 
       <div class="kpi-grid">
         <div class="kpi-card">
+          <span class="kpi-icon">${icono('carpetaCerrada')}</span>
           <span class="kpi-label">Proyectos activos</span>
           <span class="kpi-value">${resumen.proyectosActivos}</span>
         </div>
         <div class="kpi-card">
+          <span class="kpi-icon">${icono('check')}</span>
           <span class="kpi-label">Proyectos cerrados</span>
           <span class="kpi-value">${resumen.proyectosCerrados}</span>
         </div>
         <div class="kpi-card accent-ledger">
+          <span class="kpi-icon">${icono('moneda')}</span>
           <span class="kpi-label">Total recibido</span>
           <span class="kpi-value small tabular">${formatoMoneda(resumen.totalRecibido)}</span>
         </div>
         <div class="kpi-card">
+          <span class="kpi-icon">${icono('gastos')}</span>
           <span class="kpi-label">Total gastado</span>
           <span class="kpi-value small tabular">${formatoMoneda(resumen.totalGastado)}</span>
         </div>
         <div class="kpi-card ${resumen.saldo < 0 ? 'accent-danger' : 'accent-success'}">
+          <span class="kpi-icon">${icono(resumen.saldo < 0 ? 'alerta' : 'check')}</span>
           <span class="kpi-label">Saldo disponible</span>
           <span class="kpi-value small tabular">${formatoMoneda(resumen.saldo)}</span>
           ${resumen.reembolsoPendiente > 0 ? `<span class="kpi-sub" style="color:var(--danger);">Reembolso pendiente: ${formatoMoneda(resumen.reembolsoPendiente)}</span>` : ''}
         </div>
         <div class="kpi-card">
+          <span class="kpi-icon">${icono('check')}</span>
           <span class="kpi-label">Con comprobante</span>
           <span class="kpi-value small tabular">${formatoMoneda(resumen.totalConComprobante)}</span>
         </div>
         <div class="kpi-card">
+          <span class="kpi-icon">${icono('alerta')}</span>
           <span class="kpi-label">Pendiente de comprobante</span>
           <span class="kpi-value small tabular">${formatoMoneda(resumen.totalPendiente)}</span>
         </div>
         <div class="kpi-card">
+          <span class="kpi-icon">${icono('alerta')}</span>
           <span class="kpi-label">Sin comprobante</span>
           <span class="kpi-value small tabular">${formatoMoneda(resumen.totalSinComprobante)}</span>
         </div>
@@ -1368,7 +1482,7 @@ a { color: inherit; text-decoration: none; }
         </div>
         <div class="card card-elevated">
           <div class="section-title">Gastos por categoría</div>
-          ${graficoBarrasCategoria(porCategoria)}
+          ${graficoBarrasCategoria(porCategoria, categorias)}
         </div>
       </div>
     `;
@@ -1705,6 +1819,11 @@ a { color: inherit; text-decoration: none; }
     return todos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   }
 
+  async function listarIngresosEnPapelera(proyectoId) {
+    const todos = await db.getAll('papeleraIngresos');
+    return todos.filter((i) => i.proyectoId === proyectoId).sort((a, b) => new Date(b.eliminadoEn) - new Date(a.eliminadoEn));
+  }
+
   async function crearNuevoIngreso(proyectoId, datos) {
     const ingreso = crearIngreso(proyectoId, datos);
     await db.put('ingresos', ingreso);
@@ -1718,16 +1837,34 @@ a { color: inherit; text-decoration: none; }
     return actualizado;
   }
 
-  async function eliminarIngreso(id) {
-    return db.delete('ingresos', id);
+  /** Envía el ingreso a la papelera (soft delete). NUNCA se borra directo. */
+  async function enviarIngresoAPapelera(id) {
+    const ingreso = await db.get('ingresos', id);
+    if (!ingreso) return null;
+    await db.put('papeleraIngresos', { ...ingreso, eliminadoEn: new Date().toISOString() });
+    await db.delete('ingresos', id);
+    return ingreso;
   }
 
-  return { listarIngresos, crearNuevoIngreso, editarIngreso, eliminarIngreso };
+  async function restaurarIngresoDePapelera(id) {
+    const ingreso = await db.get('papeleraIngresos', id);
+    if (!ingreso) return null;
+    const { eliminadoEn, ...limpio } = ingreso;
+    await db.put('ingresos', limpio);
+    await db.delete('papeleraIngresos', id);
+    return limpio;
+  }
+
+  async function eliminarIngresoDefinitivamente(id) {
+    return db.delete('papeleraIngresos', id);
+  }
+
+  return { listarIngresos, listarIngresosEnPapelera, crearNuevoIngreso, editarIngreso, enviarIngresoAPapelera, restaurarIngresoDePapelera, eliminarIngresoDefinitivamente };
   })();
 
   // ==== modules/ingresos/ingresos.view ====
   __modules__['modules/ingresos/ingresos.view'] = (function(){
-  const { listarIngresos, crearNuevoIngreso, editarIngreso, eliminarIngreso } = __modules__['modules/ingresos/ingresos.repo'];
+  const { listarIngresos, listarIngresosEnPapelera, crearNuevoIngreso, editarIngreso, enviarIngresoAPapelera, restaurarIngresoDePapelera, eliminarIngresoDefinitivamente } = __modules__['modules/ingresos/ingresos.repo'];
   const { formatoMoneda, formatoFecha } = __modules__['utils/format'];
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
@@ -1746,7 +1883,7 @@ a { color: inherit; text-decoration: none; }
       contenidoHtml: `
         <form id="form-ingreso" style="display:flex; flex-direction:column; gap:var(--sp-4);">
           <div class="field-row">
-            <div class="field"><label>Fecha</label><input type="date" name="fecha" value="${d.fecha || new Date().toISOString().slice(0, 10)}" /></div>
+            <div class="field"><label>Fecha *</label><input type="date" name="fecha" required value="${d.fecha || new Date().toISOString().slice(0, 10)}" /></div>
             <div class="field"><label>Valor (USD)</label><input type="number" name="valor" step="0.01" min="0" value="${d.valor ?? ''}" /></div>
           </div>
           <div class="field"><label>Concepto</label><input type="text" name="concepto" value="${d.concepto || ''}" placeholder="Ej. Anticipo inicial" /></div>
@@ -1760,6 +1897,7 @@ a { color: inherit; text-decoration: none; }
           onClick: async () => {
             const form = modal.querySelector('#form-ingreso');
             const datos = Object.fromEntries(new FormData(form).entries());
+            if (!datos.fecha) { mostrarToast('La fecha es obligatoria.'); return; }
             if (!(Number(datos.valor) > 0)) { mostrarToast('Ingresa un valor mayor a cero.'); return; }
             if (editando) await editarIngreso(ingresoExistente, datos);
             else await crearNuevoIngreso(proyectoId, datos);
@@ -1772,9 +1910,54 @@ a { color: inherit; text-decoration: none; }
     });
   }
 
+  async function abrirPapeleraIngresos(proyectoId, alRestaurar) {
+    const items = await listarIngresosEnPapelera(proyectoId);
+    const modal = abrirModal({
+      titulo: 'Papelera de ingresos',
+      contenidoHtml: items.length ? `
+        <div style="max-height:360px; overflow:auto;">
+          ${items.map((i) => `
+            <div class="proj-row">
+              <div>
+                <div class="proj-name">${i.concepto || '(sin concepto)'}</div>
+                <div class="proj-meta">${formatoFecha(i.fecha)} · ${formatoMoneda(i.valor)}</div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-secondary btn-sm" data-restaurar="${i.id}">Restaurar</button>
+                <button class="btn btn-danger btn-sm" data-eliminar-def="${i.id}">Eliminar definitivamente</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : `<div class="empty-state"><p class="lead">La papelera está vacía</p></div>`,
+      botones: [{ texto: 'Cerrar', clase: 'btn-secondary' }],
+    });
+
+    modal.querySelectorAll('[data-restaurar]').forEach((btn) => btn.addEventListener('click', async () => {
+      await restaurarIngresoDePapelera(btn.dataset.restaurar);
+      mostrarToast('Ingreso restaurado.');
+      cerrarModal();
+      alRestaurar();
+    }));
+    modal.querySelectorAll('[data-eliminar-def]').forEach((btn) => btn.addEventListener('click', () => {
+      abrirModal({
+        titulo: 'Eliminar definitivamente',
+        contenidoHtml: `<p style="color:var(--danger);">Esta acción no se puede deshacer.</p>`,
+        botones: [
+          { texto: 'Cancelar', clase: 'btn-secondary' },
+          { texto: 'Eliminar para siempre', clase: 'btn-danger', onClick: async () => {
+            await eliminarIngresoDefinitivamente(btn.dataset.eliminarDef);
+            mostrarToast('Ingreso eliminado definitivamente.');
+            abrirPapeleraIngresos(proyectoId, alRestaurar);
+          } },
+        ],
+      });
+    }));
+  }
+
   async function renderIngresos(contenedor, proyectoId) {
     const pintar = async () => {
-      const ingresos = await listarIngresos(proyectoId);
+      const [ingresos, papelera] = await Promise.all([listarIngresos(proyectoId), listarIngresosEnPapelera(proyectoId)]);
       const total = ingresos.reduce((a, i) => a + i.valor, 0);
 
       contenedor.innerHTML = `
@@ -1783,7 +1966,10 @@ a { color: inherit; text-decoration: none; }
             <div class="section-title" style="margin-bottom:2px;">Dinero recibido</div>
             <p style="font-size:var(--fs-sm); color:var(--text-500);">Total recibido: <strong class="tabular">${formatoMoneda(total)}</strong></p>
           </div>
-          <button class="btn btn-primary" id="btn-nuevo-ingreso">${icono('mas')} Registrar ingreso</button>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-secondary" id="btn-papelera-ingresos">${icono('papelera')} Papelera ${papelera.length ? `(${papelera.length})` : ''}</button>
+            <button class="btn btn-primary" id="btn-nuevo-ingreso">${icono('mas')} Registrar ingreso</button>
+          </div>
         </div>
         <div class="card card-elevated">
           ${ingresos.length ? ingresos.map((i) => `
@@ -1805,17 +1991,24 @@ a { color: inherit; text-decoration: none; }
       `;
 
       contenedor.querySelector('#btn-nuevo-ingreso').addEventListener('click', () => formularioIngreso(proyectoId, null, pintar));
+      contenedor.querySelector('#btn-papelera-ingresos').addEventListener('click', () => abrirPapeleraIngresos(proyectoId, pintar));
       contenedor.querySelectorAll('[data-editar]').forEach((btn) => btn.addEventListener('click', () => {
         const ingreso = ingresos.find((i) => i.id === btn.dataset.editar);
         formularioIngreso(proyectoId, ingreso, pintar);
       }));
       contenedor.querySelectorAll('[data-eliminar]').forEach((btn) => btn.addEventListener('click', () => {
+        const ingreso = ingresos.find((i) => i.id === btn.dataset.eliminar);
         abrirModal({
           titulo: '¿Eliminar este ingreso?',
-          contenidoHtml: `<p>Esta acción modificará el total recibido y el saldo disponible del proyecto.</p>`,
+          contenidoHtml: `
+            <p style="margin-bottom:8px;"><strong>${ingreso.concepto || '(sin concepto)'}</strong></p>
+            <p style="font-size:var(--fs-sm); color:var(--text-500); margin-bottom:4px;">Fecha: ${formatoFecha(ingreso.fecha)}</p>
+            <p style="font-size:var(--fs-sm); color:var(--text-500); margin-bottom:12px;">Valor: ${formatoMoneda(ingreso.valor)}</p>
+            <p style="font-size:var(--fs-sm); color:var(--danger);">Esta acción modificará el total recibido y el saldo disponible. El ingreso se enviará a la papelera.</p>
+          `,
           botones: [
             { texto: 'Cancelar', clase: 'btn-secondary' },
-            { texto: 'Sí, eliminar', clase: 'btn-danger', onClick: async () => { await eliminarIngreso(btn.dataset.eliminar); mostrarToast('Ingreso eliminado.'); pintar(); } },
+            { texto: 'Sí, eliminar', clase: 'btn-danger', onClick: async () => { await enviarIngresoAPapelera(ingreso.id); mostrarToast('Ingreso enviado a la papelera.'); pintar(); } },
           ],
         });
       }));
@@ -2071,8 +2264,8 @@ a { color: inherit; text-decoration: none; }
   const MODELO = 'claude-sonnet-4-6';
 
   const PROMPT_SISTEMA = `Analiza esta imagen de un comprobante de gasto (factura, recibo, ticket o nota de venta) y responde ÚNICAMENTE con un objeto JSON, sin texto adicional, sin markdown, con esta forma exacta:
-  {"establecimiento": string|null, "fecha": "YYYY-MM-DD"|null, "numeroFactura": string|null, "subtotal": number|null, "iva": number|null, "total": number|null, "categoriaProbable": "alimentacion"|"hospedaje"|"transporte"|"peajes"|"materiales"|"imprevistos"|"otros"}
-  Si no puedes leer algún dato con confianza, usa null en ese campo. No inventes valores.`;
+  {"establecimiento": string|null, "ruc": string|null, "fecha": "YYYY-MM-DD"|null, "numeroFactura": string|null, "subtotal": number|null, "iva": number|null, "total": number|null, "categoriaProbable": "alimentacion"|"hospedaje"|"transporte"|"peajes"|"materiales"|"imprevistos"|"otros"}
+  El campo "ruc" es el RUC o cédula del establecimiento emisor (Ecuador), suele aparecer cerca del nombre del negocio. Si no puedes leer algún dato con confianza, usa null en ese campo. No inventes valores.`;
 
   async function obtenerClaveApi() {
     const config = await db.get('configuracion', 'general');
@@ -2315,7 +2508,8 @@ a { color: inherit; text-decoration: none; }
   __modules__['modules/gastos/gastos.form'] = (function(){
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
-  const { CATEGORIAS_DEFECTO, ESTADOS_COMPROBANTE, ESTADO_INTERPRETACION } = __modules__['core/models'];
+  const { ESTADOS_COMPROBANTE, ESTADO_INTERPRETACION } = __modules__['core/models'];
+  const { listarCategorias, opcionesCategoriaHTML } = __modules__['core/categorias.repo'];
   const { crearNuevoGasto, editarGasto, vincularComprobante } = __modules__['modules/gastos/gastos.repo'];
   const { interpretarEntradaRapida } = __modules__['modules/gastos/gastos.parser'];
   const { renderBotonesCaptura } = __modules__['modules/comprobantes/captura'];
@@ -2332,29 +2526,26 @@ a { color: inherit; text-decoration: none; }
 
 
 
+
   const ETIQUETAS_ESTADO = {
     [ESTADOS_COMPROBANTE.CON]: 'Con comprobante',
     [ESTADOS_COMPROBANTE.PENDIENTE]: 'Pendiente de comprobante',
     [ESTADOS_COMPROBANTE.SIN]: 'Sin comprobante',
   };
 
-  function opcionesCategoria(seleccion) {
-    return CATEGORIAS_DEFECTO.map((c) => `<option value="${c.id}" ${c.id === seleccion ? 'selected' : ''}>${c.nombre}</option>`).join('');
-  }
-
   function opcionesEstadoComprobante(seleccion) {
     return Object.entries(ETIQUETAS_ESTADO).map(([v, l]) => `<option value="${v}" ${v === seleccion ? 'selected' : ''}>${l}</option>`).join('');
   }
 
-  function campoManual(d = {}) {
+  function campoManual(categorias, d = {}) {
     return `
       <div class="field-row">
-        <div class="field"><label>Fecha</label><input type="date" name="fecha" value="${d.fecha || new Date().toISOString().slice(0, 10)}" /></div>
-        <div class="field"><label>Valor (USD)</label><input type="number" name="valor" step="0.01" min="0" value="${d.valor ?? ''}" /></div>
+        <div class="field"><label>Fecha *</label><input type="date" name="fecha" required value="${d.fecha || new Date().toISOString().slice(0, 10)}" /></div>
+        <div class="field"><label>Valor (USD) *</label><input type="number" name="valor" step="0.01" min="0" required value="${d.valor ?? ''}" /></div>
       </div>
       <div class="field"><label>Descripción</label><input type="text" name="descripcion" value="${d.descripcion || ''}" placeholder="Ej. Almuerzo equipo obra" /></div>
       <div class="field-row">
-        <div class="field"><label>Categoría</label><select name="categoria">${opcionesCategoria(d.categoria || 'otros')}</select></div>
+        <div class="field"><label>Categoría</label><select name="categoria">${opcionesCategoriaHTML(categorias, d.categoria || 'otros')}</select></div>
         <div class="field"><label>Estado del comprobante</label><select name="estadoComprobante">${opcionesEstadoComprobante(d.estadoComprobante || ESTADOS_COMPROBANTE.SIN)}</select></div>
       </div>
       <div class="field"><label>Observaciones</label><textarea name="observaciones" rows="2">${d.observaciones || ''}</textarea></div>
@@ -2363,12 +2554,15 @@ a { color: inherit; text-decoration: none; }
 
   /**
    * Abre el modal de registro/edición de gasto.
-   * @param {{proyectoId: string, gastoExistente?: object, onGuardado: function}} opts
+   * @param {{proyectoId: string, gastoExistente?: object, onGuardado: function, estadoInicial?: string}} opts
    */
-  function abrirFormularioGasto({ proyectoId, gastoExistente, onGuardado }) {
+  async function abrirFormularioGasto({ proyectoId, gastoExistente, onGuardado, estadoInicial }) {
+    const categorias = await listarCategorias();
     const editando = Boolean(gastoExistente);
     let modo = 'manual'; // 'manual' | 'rapida' | 'foto'
     let comprobantePendiente = null; // { id, imagenBlob, datosDetectados, estadoInterpretacion }
+
+    const datosIniciales = estadoInicial ? { ...gastoExistente, estadoComprobante: estadoInicial } : gastoExistente;
 
     const modal = abrirModal({
       titulo: editando ? 'Editar gasto' : 'Registrar gasto',
@@ -2378,7 +2572,7 @@ a { color: inherit; text-decoration: none; }
           ${editando ? '' : '<button type="button" class="chip" data-modo="rapida">Entrada rápida</button>'}
           ${editando ? '' : '<button type="button" class="chip" data-modo="foto">Tomar foto / Galería</button>'}
         </div>
-        <form id="form-gasto">${campoManual(gastoExistente)}</form>
+        <form id="form-gasto">${campoManual(categorias, datosIniciales)}</form>
         <div id="zona-modo-especial"></div>
       `,
       botones: [
@@ -2390,6 +2584,10 @@ a { color: inherit; text-decoration: none; }
           onClick: async () => {
             const form = modal.querySelector('#form-gasto');
             const datos = Object.fromEntries(new FormData(form).entries());
+            if (!datos.fecha) {
+              mostrarToast('La fecha es obligatoria.');
+              return;
+            }
             if (!datos.descripcion?.trim() && !comprobantePendiente) {
               mostrarToast('Escribe una descripción para el gasto.');
               return;
@@ -2475,6 +2673,7 @@ a { color: inherit; text-decoration: none; }
                 <h3>Información detectada — edita si es necesario</h3>
                 <p style="font-size:var(--fs-sm);">
                   ${d.establecimiento ? `<strong>${d.establecimiento}</strong><br>` : ''}
+                  ${d.ruc ? `RUC: ${d.ruc}<br>` : ''}
                   ${d.fecha ? `Fecha: ${d.fecha}<br>` : ''}
                   ${d.numeroFactura ? `N.º factura: ${d.numeroFactura}<br>` : ''}
                   ${d.total != null ? `Total: ${formatoMoneda(d.total)}` : ''}
@@ -2523,13 +2722,15 @@ a { color: inherit; text-decoration: none; }
   __modules__['modules/gastos/gastos.view'] = (function(){
   const { listarGastosActivos, listarGastosEnPapelera, obtenerGasto, enviarAPapelera, restaurarDePapelera, eliminarDefinitivamente } = __modules__['modules/gastos/gastos.repo'];
   const { formatoMoneda, formatoFecha, ETIQUETAS_ESTADO_COMPROBANTE } = __modules__['utils/format'];
-  const { CATEGORIAS_DEFECTO } = __modules__['core/models'];
+  const { listarCategorias, nombreDeCategoria } = __modules__['core/categorias.repo'];
+  const { ESTADOS_COMPROBANTE } = __modules__['core/models'];
   const { abrirModal, cerrarModal, confirmarEliminacionGasto } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
   const { icono } = __modules__['components/icons'];
   const { abrirFormularioGasto } = __modules__['modules/gastos/gastos.form'];
   const { db } = __modules__['storage/db'];
   const { blobAUrl } = __modules__['modules/comprobantes/imagen.util'];
+
 
 
 
@@ -2547,18 +2748,14 @@ a { color: inherit; text-decoration: none; }
     { id: 'sin_comprobante', label: 'Sin comprobante' },
   ];
 
-  function nombreCategoria(id) {
-    return CATEGORIAS_DEFECTO.find((c) => c.id === id)?.nombre || id;
-  }
-
-  function filaGasto(g) {
+  function filaGasto(g, categorias) {
     const estado = ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante];
     return `
       <div class="gasto-row">
         <div class="mono tabular" style="color:var(--text-500);">${formatoFecha(g.fecha)}</div>
         <div>
           <div class="desc">${g.descripcion || '(sin descripción)'}</div>
-          <div class="cat">${nombreCategoria(g.categoria)}</div>
+          <div class="cat">${nombreDeCategoria(categorias, g.categoria)}</div>
         </div>
         <div><span class="stamp ${estado.clase}">${estado.texto}</span></div>
         <div class="mono tabular" style="font-weight:600;">${formatoMoneda(g.valor)}</div>
@@ -2571,12 +2768,23 @@ a { color: inherit; text-decoration: none; }
     `;
   }
 
-  async function abrirVistaGasto(gastoId) {
+  async function abrirVistaGasto(gastoId, categorias) {
     const gasto = await obtenerGasto(gastoId);
     let imgHtml = '';
+    let datosDetectadosHtml = '';
     if (gasto.comprobanteId) {
       const comp = await db.get('comprobantes', gasto.comprobanteId);
       if (comp?.imagenBlob) imgHtml = `<img src="${blobAUrl(comp.imagenBlob)}" class="comprobante-preview" />`;
+      const d = comp?.datosDetectados;
+      if (d && (d.ruc || d.numeroFactura || d.establecimiento)) {
+        datosDetectadosHtml = `
+          <p style="font-size:var(--fs-sm); color:var(--text-500); margin-top:6px;">
+            ${d.establecimiento ? `${d.establecimiento}<br>` : ''}
+            ${d.ruc ? `RUC: ${d.ruc}<br>` : ''}
+            ${d.numeroFactura ? `N.º factura: ${d.numeroFactura}` : ''}
+          </p>
+        `;
+      }
     }
     const estado = ETIQUETAS_ESTADO_COMPROBANTE[gasto.estadoComprobante];
     abrirModal({
@@ -2584,8 +2792,9 @@ a { color: inherit; text-decoration: none; }
       contenidoHtml: `
         ${imgHtml}
         <p style="margin-top:${imgHtml ? 'var(--sp-3)' : '0'};"><strong class="tabular">${formatoMoneda(gasto.valor)}</strong> · ${formatoFecha(gasto.fecha)}</p>
-        <p style="font-size:var(--fs-sm); color:var(--text-500); margin:6px 0;">${nombreCategoria(gasto.categoria)}</p>
+        <p style="font-size:var(--fs-sm); color:var(--text-500); margin:6px 0;">${nombreDeCategoria(categorias, gasto.categoria)}</p>
         <span class="stamp ${estado.clase}">${estado.texto}</span>
+        ${datosDetectadosHtml}
         ${gasto.observaciones ? `<p style="margin-top:var(--sp-3); font-size:var(--fs-sm);">${gasto.observaciones}</p>` : ''}
       `,
       botones: [{ texto: 'Cerrar', clase: 'btn-secondary' }],
@@ -2642,7 +2851,11 @@ a { color: inherit; text-decoration: none; }
     let busqueda = '';
 
     const pintar = async () => {
-      const [todos, papelera] = await Promise.all([listarGastosActivos(proyectoId), listarGastosEnPapelera(proyectoId)]);
+      const [todos, papelera, categorias] = await Promise.all([
+        listarGastosActivos(proyectoId),
+        listarGastosEnPapelera(proyectoId),
+        listarCategorias(),
+      ]);
       const filtrados = todos.filter((g) => {
         const pasaFiltro = filtro === 'todos' || g.estadoComprobante === filtro;
         const pasaBusqueda = !busqueda || g.descripcion.toLowerCase().includes(busqueda.toLowerCase());
@@ -2652,8 +2865,9 @@ a { color: inherit; text-decoration: none; }
       contenedor.innerHTML = `
         <div class="toolbar">
           <div class="section-title" style="margin-bottom:0;">Gastos registrados</div>
-          <div style="display:flex; gap:var(--sp-2);">
+          <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap;">
             <button class="btn btn-secondary" id="btn-papelera">${icono('papelera')} Papelera ${papelera.length ? `(${papelera.length})` : ''}</button>
+            <button class="btn btn-warning" id="btn-rapido-sin-comprobante">Registro rápido sin comprobante</button>
             <button class="btn btn-primary" id="btn-nuevo-gasto">${icono('mas')} Registrar gasto</button>
           </div>
         </div>
@@ -2664,12 +2878,16 @@ a { color: inherit; text-decoration: none; }
           <input type="search" id="buscar-gasto" placeholder="Buscar por descripción…" value="${busqueda}" style="padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:var(--surface-600); color:var(--text-100);" />
         </div>
         <div class="card card-elevated">
-          ${filtrados.length ? filtrados.map(filaGasto).join('') : `<div class="empty-state"><p class="lead">No hay gastos que coincidan</p></div>`}
+          ${filtrados.length ? filtrados.map((g) => filaGasto(g, categorias)).join('') : `<div class="empty-state"><p class="lead">No hay gastos que coincidan</p></div>`}
         </div>
       `;
 
       contenedor.querySelector('#btn-nuevo-gasto').addEventListener('click', () => {
         abrirFormularioGasto({ proyectoId, onGuardado: pintar });
+      });
+      // Registro rápido: fecha, valor, descripción — con "Sin comprobante" ya preseleccionado
+      contenedor.querySelector('#btn-rapido-sin-comprobante').addEventListener('click', () => {
+        abrirFormularioGasto({ proyectoId, onGuardado: pintar, estadoInicial: ESTADOS_COMPROBANTE.SIN });
       });
       contenedor.querySelector('#btn-papelera').addEventListener('click', () => abrirPapelera(proyectoId, pintar));
       contenedor.querySelectorAll('[data-filtro]').forEach((btn) => btn.addEventListener('click', () => { filtro = btn.dataset.filtro; pintar(); }));
@@ -2678,7 +2896,7 @@ a { color: inherit; text-decoration: none; }
       buscador.addEventListener('input', (e) => { busqueda = e.target.value; pintar(); });
       if (busqueda) { buscador.focus(); buscador.setSelectionRange(busqueda.length, busqueda.length); }
 
-      contenedor.querySelectorAll('[data-ver]').forEach((btn) => btn.addEventListener('click', () => abrirVistaGasto(btn.dataset.ver)));
+      contenedor.querySelectorAll('[data-ver]').forEach((btn) => btn.addEventListener('click', () => abrirVistaGasto(btn.dataset.ver, categorias)));
       contenedor.querySelectorAll('[data-editar]').forEach((btn) => btn.addEventListener('click', async () => {
         const gasto = await obtenerGasto(btn.dataset.editar);
         abrirFormularioGasto({ proyectoId, gastoExistente: gasto, onGuardado: pintar });
@@ -2757,7 +2975,8 @@ a { color: inherit; text-decoration: none; }
   const { listarProyeccion, crearItemProyeccion, editarItemProyeccion, eliminarItemProyeccion } = __modules__['modules/proyeccion/proyeccion.repo'];
   const { gastosDeProyecto } = __modules__['core/repositorio'];
   const { agruparGastosPorCategoria } = __modules__['core/finanzas'];
-  const { totalProyeccionItem, CATEGORIAS_DEFECTO } = __modules__['core/models'];
+  const { totalProyeccionItem } = __modules__['core/models'];
+  const { listarCategorias, nombreDeCategoria, opcionesCategoriaHTML } = __modules__['core/categorias.repo'];
   const { formatoMoneda } = __modules__['utils/format'];
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
@@ -2771,22 +2990,15 @@ a { color: inherit; text-decoration: none; }
 
 
 
-  function nombreCategoria(id) {
-    return CATEGORIAS_DEFECTO.find((c) => c.id === id)?.nombre || id;
-  }
 
-  function opcionesCategoria(seleccion) {
-    return CATEGORIAS_DEFECTO.map((c) => `<option value="${c.id}" ${c.id === seleccion ? 'selected' : ''}>${c.nombre}</option>`).join('');
-  }
-
-  function formularioItem(proyectoId, itemExistente, onGuardado) {
+  function formularioItem(categorias, proyectoId, itemExistente, onGuardado) {
     const d = itemExistente || {};
     const editando = Boolean(itemExistente);
     const modal = abrirModal({
       titulo: editando ? 'Editar línea de proyección' : 'Agregar línea de proyección',
       contenidoHtml: `
         <form id="form-proy" style="display:flex; flex-direction:column; gap:var(--sp-4);">
-          <div class="field"><label>Categoría</label><select name="categoria">${opcionesCategoria(d.categoria || 'hospedaje')}</select></div>
+          <div class="field"><label>Categoría</label><select name="categoria">${opcionesCategoriaHTML(categorias, d.categoria || 'hospedaje')}</select></div>
           <div class="field-row">
             <div class="field"><label>Cantidad</label><input type="number" name="cantidad" min="0" step="1" value="${d.cantidad ?? 1}" /></div>
             <div class="field"><label>Precio unitario (USD)</label><input type="number" name="precioUnitario" min="0" step="0.01" value="${d.precioUnitario ?? ''}" /></div>
@@ -2818,7 +3030,7 @@ a { color: inherit; text-decoration: none; }
 
   async function renderProyeccion(contenedor, proyectoId) {
     const pintar = async () => {
-      const [items, gastos] = await Promise.all([listarProyeccion(proyectoId), gastosDeProyecto(proyectoId)]);
+      const [items, gastos, categorias] = await Promise.all([listarProyeccion(proyectoId), gastosDeProyecto(proyectoId), listarCategorias()]);
       const realPorCategoria = agruparGastosPorCategoria(gastos);
       const totalProyectado = items.reduce((a, i) => a + totalProyeccionItem(i), 0);
       const totalReal = Object.values(realPorCategoria).reduce((a, v) => a + v, 0);
@@ -2839,7 +3051,7 @@ a { color: inherit; text-decoration: none; }
           ${items.length ? items.map((i) => `
             <div class="proj-row">
               <div>
-                <div class="proj-name">${nombreCategoria(i.categoria)}</div>
+                <div class="proj-name">${nombreDeCategoria(categorias, i.categoria)}</div>
                 <div class="proj-meta">${i.cantidad} × ${formatoMoneda(i.precioUnitario)}</div>
               </div>
               <div style="display:flex; align-items:center; gap:var(--sp-4);">
@@ -2872,7 +3084,7 @@ a { color: inherit; text-decoration: none; }
               const colorDif = diferencia < 0 ? 'var(--danger)' : 'var(--state-ok)';
               return `
                 <div class="gasto-row" style="grid-template-columns: 1.2fr 1fr 1fr 1fr;">
-                  <div class="desc">${nombreCategoria(cat)}</div>
+                  <div class="desc">${nombreDeCategoria(categorias, cat)}</div>
                   <div class="tabular">${formatoMoneda(proy)}</div>
                   <div class="tabular">${formatoMoneda(real)}</div>
                   <div class="tabular" style="color:${colorDif}; font-weight:600;">${diferencia >= 0 ? '+' : ''}${formatoMoneda(diferencia)}</div>
@@ -2894,10 +3106,10 @@ a { color: inherit; text-decoration: none; }
         </div>
       `;
 
-      contenedor.querySelector('#btn-nueva-linea').addEventListener('click', () => formularioItem(proyectoId, null, pintar));
+      contenedor.querySelector('#btn-nueva-linea').addEventListener('click', () => formularioItem(categorias, proyectoId, null, pintar));
       contenedor.querySelectorAll('[data-editar]').forEach((btn) => btn.addEventListener('click', () => {
         const item = items.find((i) => i.id === btn.dataset.editar);
-        formularioItem(proyectoId, item, pintar);
+        formularioItem(categorias, proyectoId, item, pintar);
       }));
       contenedor.querySelectorAll('[data-eliminar]').forEach((btn) => btn.addEventListener('click', () => {
         abrirModal({
@@ -2961,16 +3173,17 @@ a { color: inherit; text-decoration: none; }
   function pestanaResumen(resumen) {
     return `
       <div class="kpi-grid">
-        <div class="kpi-card accent-ledger"><span class="kpi-label">Total recibido</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalRecibido)}</span></div>
-        <div class="kpi-card"><span class="kpi-label">Total gastado</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalGastado)}</span></div>
+        <div class="kpi-card accent-ledger"><span class="kpi-icon">${icono('moneda')}</span><span class="kpi-label">Total recibido</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalRecibido)}</span></div>
+        <div class="kpi-card"><span class="kpi-icon">${icono('gastos')}</span><span class="kpi-label">Total gastado</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalGastado)}</span></div>
         <div class="kpi-card ${resumen.saldo < 0 ? 'accent-danger' : 'accent-success'}">
+          <span class="kpi-icon">${icono(resumen.saldo < 0 ? 'alerta' : 'check')}</span>
           <span class="kpi-label">Saldo disponible</span><span class="kpi-value small tabular">${formatoMoneda(resumen.saldo)}</span>
           ${resumen.reembolsoPendiente > 0 ? `<span class="kpi-sub" style="color:var(--danger);">Reembolso pendiente: ${formatoMoneda(resumen.reembolsoPendiente)}</span>` : ''}
         </div>
-        <div class="kpi-card"><span class="kpi-label">N.º de gastos</span><span class="kpi-value small tabular">${resumen.cantidadGastos}</span></div>
-        <div class="kpi-card"><span class="kpi-label">Con comprobante</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalConComprobante)}</span></div>
-        <div class="kpi-card"><span class="kpi-label">Pendiente</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalPendiente)}</span></div>
-        <div class="kpi-card"><span class="kpi-label">Sin comprobante</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalSinComprobante)}</span></div>
+        <div class="kpi-card"><span class="kpi-icon">${icono('informes')}</span><span class="kpi-label">N.º de gastos</span><span class="kpi-value small tabular">${resumen.cantidadGastos}</span></div>
+        <div class="kpi-card"><span class="kpi-icon">${icono('check')}</span><span class="kpi-label">Con comprobante</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalConComprobante)}</span></div>
+        <div class="kpi-card"><span class="kpi-icon">${icono('alerta')}</span><span class="kpi-label">Pendiente</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalPendiente)}</span></div>
+        <div class="kpi-card"><span class="kpi-icon">${icono('alerta')}</span><span class="kpi-label">Sin comprobante</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalSinComprobante)}</span></div>
       </div>
     `;
   }
@@ -3083,10 +3296,114 @@ a { color: inherit; text-decoration: none; }
   return { registrarRutasProyectos };
   })();
 
+  // ==== storage/backup ====
+  __modules__['storage/backup'] = (function(){
+  const { db } = __modules__['storage/db'];
+
+
+  const STORES_A_RESPALDAR = [
+    'proyectos', 'ingresos', 'gastos', 'proyecciones', 'papelera', 'papeleraIngresos',
+    'plantillas', 'categorias', 'configuracion', 'comprobantes',
+  ];
+
+  function blobABase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function base64ABlob(dataUrl) {
+    return fetch(dataUrl).then((r) => r.blob());
+  }
+
+  /**
+   * Genera un archivo .json con todos los datos del sistema (proyectos, gastos,
+   * ingresos, comprobantes con sus fotos, categorías, plantillas, configuración).
+   * Este archivo se puede transferir manualmente entre dispositivos (celular,
+   * computadora) mediante AirDrop, correo, Drive, etc. — no hay sincronización
+   * automática en la nube porque esta app no tiene servidor propio.
+   */
+  async function exportarRespaldo() {
+    const datos = {};
+    for (const store of STORES_A_RESPALDAR) {
+      const registros = await db.getAll(store);
+      if (store === 'comprobantes') {
+        datos[store] = await Promise.all(registros.map(async (r) => ({
+          ...r,
+          imagenBlob: r.imagenBlob ? await blobABase64(r.imagenBlob) : null,
+          miniaturaBlob: r.miniaturaBlob ? await blobABase64(r.miniaturaBlob) : null,
+        })));
+      } else {
+        datos[store] = registros;
+      }
+    }
+
+    const paquete = {
+      tipo: 'respaldo-viaticos',
+      version: 1,
+      generadoEn: new Date().toISOString(),
+      datos,
+    };
+
+    const blob = new Blob([JSON.stringify(paquete)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `viaticos-respaldo-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Restaura un archivo de respaldo generado por exportarRespaldo().
+   * Reemplaza los datos existentes con los del archivo (pensado para mover
+   * todo de un dispositivo a otro, no para fusionar).
+   */
+  async function importarRespaldo(archivo) {
+    const texto = await archivo.text();
+    const paquete = JSON.parse(texto);
+    if (paquete?.tipo !== 'respaldo-viaticos') {
+      throw new Error('Este archivo no parece ser un respaldo válido de Viáticos.');
+    }
+
+    for (const store of STORES_A_RESPALDAR) {
+      const registros = paquete.datos[store] || [];
+      await db.clear(store);
+      for (const registro of registros) {
+        if (store === 'comprobantes') {
+          const restaurado = {
+            ...registro,
+            imagenBlob: registro.imagenBlob ? await base64ABlob(registro.imagenBlob) : null,
+            miniaturaBlob: registro.miniaturaBlob ? await base64ABlob(registro.miniaturaBlob) : null,
+          };
+          await db.put(store, restaurado);
+        } else {
+          await db.put(store, registro);
+        }
+      }
+    }
+
+    return paquete.generadoEn;
+  }
+
+  return { exportarRespaldo, importarRespaldo };
+  })();
+
   // ==== modules/configuracion/configuracion.view ====
   __modules__['modules/configuracion/configuracion.view'] = (function(){
   const { db } = __modules__['storage/db'];
   const { mostrarToast } = __modules__['components/toast'];
+  const { listarCategorias, crearCategoria, eliminarCategoria } = __modules__['core/categorias.repo'];
+  const { abrirModal, cerrarModal } = __modules__['components/modal'];
+  const { exportarRespaldo, importarRespaldo } = __modules__['storage/backup'];
+
+
+
 
 
 
@@ -3100,60 +3417,174 @@ a { color: inherit; text-decoration: none; }
       nombreResponsable: '',
       cargo: '',
       moneda: 'USD',
+      logo: null,
     };
   }
 
-  async function renderConfiguracion(contenedor) {
-    const config = await obtenerConfig();
-    contenedor.innerHTML = `
-      <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600; margin-bottom:var(--sp-2);">Configuración</h1>
-      <p style="color:var(--ink-500); font-size:var(--fs-sm); margin-bottom:var(--sp-5);">Datos generales usados en los informes y PDF.</p>
-
-      <form id="form-config" class="card card-elevated" style="max-width:560px; display:flex; flex-direction:column; gap:var(--sp-4);">
-        <div class="field">
-          <label for="c-empresa">Nombre de la empresa</label>
-          <input id="c-empresa" name="nombreEmpresa" value="${config.nombreEmpresa}" />
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="c-resp">Nombre del responsable</label>
-            <input id="c-resp" name="nombreResponsable" value="${config.nombreResponsable}" />
-          </div>
-          <div class="field">
-            <label for="c-cargo">Cargo</label>
-            <input id="c-cargo" name="cargo" value="${config.cargo}" />
-          </div>
-        </div>
-        <div class="field">
-          <label for="c-moneda">Moneda</label>
-          <select id="c-moneda" name="moneda">
-            <option value="USD" ${config.moneda === 'USD' ? 'selected' : ''}>USD — Dólar</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="c-clave-api">Clave de API de Anthropic (para interpretar fotos de comprobantes)</label>
-          <input id="c-clave-api" name="claveApiAnthropic" type="password" value="${config.claveApiAnthropic || ''}" placeholder="sk-ant-…" autocomplete="off" />
-        </div>
-        <p style="font-size:var(--fs-xs); color:var(--text-500); margin-top:-8px;">
-          Se guarda únicamente en este dispositivo (IndexedDB local), nunca se envía a ningún servidor de Anthropic salvo para interpretar la foto que tú tomes. Sin esta clave, los gastos por foto se registran igual, pero deberás llenar los datos manualmente.
-        </p>
-        <div class="modal-actions" style="justify-content:flex-start;">
-          <button type="submit" class="btn btn-primary">Guardar configuración</button>
-        </div>
-      </form>
-
-      <div class="empty-state" style="margin-top:var(--sp-5);">
-        <p class="lead">Logo, categorías y plantillas de informe — integración pendiente</p>
-        <p>Estas opciones se incorporan junto con el generador de informes (Etapa 5).</p>
-      </div>
-    `;
-
-    contenedor.querySelector('#form-config').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const datos = Object.fromEntries(new FormData(e.target).entries());
-      await db.put('configuracion', { ...config, ...datos, clave: CLAVE });
-      mostrarToast('Configuración guardada.');
+  function archivoABase64(archivo) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(archivo);
     });
+  }
+
+  async function renderConfiguracion(contenedor) {
+    const pintar = async () => {
+      const [config, categorias] = await Promise.all([obtenerConfig(), listarCategorias()]);
+      const personalizadas = categorias.filter((c) => c.personalizada);
+      const porDefecto = categorias.filter((c) => !c.personalizada);
+
+      contenedor.innerHTML = `
+        <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600; margin-bottom:var(--sp-2);">Configuración</h1>
+        <p style="color:var(--text-500); font-size:var(--fs-sm); margin-bottom:var(--sp-5);">Datos generales usados en los informes y PDF.</p>
+
+        <form id="form-config" class="card card-elevated" style="max-width:560px; display:flex; flex-direction:column; gap:var(--sp-4); margin-bottom:var(--sp-5);">
+          <div class="field">
+            <label for="c-empresa">Nombre de la empresa</label>
+            <input id="c-empresa" name="nombreEmpresa" value="${config.nombreEmpresa}" />
+          </div>
+
+          <div class="field">
+            <label>Logo de la empresa (aparece en los informes)</label>
+            <div style="display:flex; align-items:center; gap:var(--sp-3);">
+              ${config.logo ? `<img src="${config.logo}" alt="Logo actual" style="height:48px; max-width:140px; object-fit:contain; background:#fff; border-radius:4px; padding:4px;" />` : `<span style="font-size:var(--fs-xs); color:var(--text-500);">Sin logo aún</span>`}
+              <input type="file" id="c-logo" accept="image/*" style="display:none;" />
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-subir-logo">Subir logo</button>
+              ${config.logo ? `<button type="button" class="btn btn-ghost btn-sm" id="btn-quitar-logo" style="color:var(--danger);">Quitar</button>` : ''}
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="c-resp">Nombre del responsable (firma por defecto)</label>
+              <input id="c-resp" name="nombreResponsable" value="${config.nombreResponsable}" />
+            </div>
+            <div class="field">
+              <label for="c-cargo">Cargo</label>
+              <input id="c-cargo" name="cargo" value="${config.cargo}" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="c-moneda">Moneda</label>
+            <select id="c-moneda" name="moneda">
+              <option value="USD" ${config.moneda === 'USD' ? 'selected' : ''}>USD — Dólar</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="c-clave-api">Clave de API de Anthropic (para interpretar fotos de comprobantes)</label>
+            <input id="c-clave-api" name="claveApiAnthropic" type="password" value="${config.claveApiAnthropic || ''}" placeholder="sk-ant-…" autocomplete="off" />
+          </div>
+          <p style="font-size:var(--fs-xs); color:var(--text-500); margin-top:-8px;">
+            Se guarda únicamente en este dispositivo, nunca se envía a ningún servidor salvo para interpretar la foto que tú tomes.
+          </p>
+          <div class="modal-actions" style="justify-content:flex-start;">
+            <button type="submit" class="btn btn-primary">Guardar configuración</button>
+          </div>
+        </form>
+
+        <div class="card card-elevated" style="max-width:560px; margin-bottom:var(--sp-5);">
+          <h3 style="font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold-400); margin-bottom:var(--sp-3);">Categorías</h3>
+          <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:var(--sp-4);">
+            ${porDefecto.map((c) => `<div style="font-size:var(--fs-sm); color:var(--text-500);">${c.nombre} <span style="font-size:var(--fs-xs);">(por defecto)</span></div>`).join('')}
+            ${personalizadas.map((c) => `
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--fs-sm);">
+                <span>${c.nombre}</span>
+                <button type="button" class="btn btn-ghost btn-sm" data-eliminar-cat="${c.id}" style="color:var(--danger);">Eliminar</button>
+              </div>
+            `).join('')}
+          </div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="input-nueva-categoria" placeholder="Ej. Lavandería, Internet, Viáticos nocturnos…" style="flex:1;" />
+            <button class="btn btn-secondary btn-sm" id="btn-agregar-categoria">Agregar</button>
+          </div>
+        </div>
+
+        <div class="card card-elevated" style="max-width:560px;">
+          <h3 style="font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold-400); margin-bottom:var(--sp-3);">Respaldo y transferencia entre dispositivos</h3>
+          <p style="font-size:var(--fs-sm); color:var(--text-500); margin-bottom:var(--sp-3);">
+            Esta app guarda los datos solo en este dispositivo — no hay sincronización automática con tu computadora.
+            Para mover todo (proyectos, gastos, fotos) a otro dispositivo: exporta el respaldo aquí, transfiere el archivo
+            (AirDrop, correo, Drive, USB) y ábrelo en la app instalada en el otro equipo con "Importar respaldo".
+          </p>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-secondary" id="btn-exportar">Exportar respaldo</button>
+            <button class="btn btn-secondary" id="btn-importar">Importar respaldo</button>
+            <input type="file" id="input-importar" accept="application/json" style="display:none;" />
+          </div>
+        </div>
+      `;
+
+      contenedor.querySelector('#form-config').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const datos = Object.fromEntries(new FormData(e.target).entries());
+        await db.put('configuracion', { ...config, ...datos, clave: CLAVE });
+        mostrarToast('Configuración guardada.');
+      });
+
+      contenedor.querySelector('#btn-subir-logo').addEventListener('click', () => contenedor.querySelector('#c-logo').click());
+      contenedor.querySelector('#c-logo').addEventListener('change', async (e) => {
+        const archivo = e.target.files[0];
+        if (!archivo) return;
+        const base64 = await archivoABase64(archivo);
+        await db.put('configuracion', { ...config, logo: base64, clave: CLAVE });
+        mostrarToast('Logo guardado.');
+        pintar();
+      });
+      contenedor.querySelector('#btn-quitar-logo')?.addEventListener('click', async () => {
+        await db.put('configuracion', { ...config, logo: null, clave: CLAVE });
+        mostrarToast('Logo eliminado.');
+        pintar();
+      });
+
+      contenedor.querySelector('#btn-agregar-categoria').addEventListener('click', async () => {
+        const input = contenedor.querySelector('#input-nueva-categoria');
+        if (!input.value.trim()) { mostrarToast('Escribe un nombre de categoría.'); return; }
+        await crearCategoria(input.value);
+        mostrarToast('Categoría agregada.');
+        pintar();
+      });
+      contenedor.querySelectorAll('[data-eliminar-cat]').forEach((btn) => btn.addEventListener('click', () => {
+        abrirModal({
+          titulo: '¿Eliminar esta categoría?',
+          contenidoHtml: `<p>Los gastos que ya la usan conservarán el nombre guardado; solo dejará de aparecer como opción nueva.</p>`,
+          botones: [
+            { texto: 'Cancelar', clase: 'btn-secondary' },
+            { texto: 'Eliminar', clase: 'btn-danger', onClick: async () => { await eliminarCategoria(btn.dataset.eliminarCat); mostrarToast('Categoría eliminada.'); cerrarModal(); pintar(); } },
+          ],
+        });
+      }));
+
+      contenedor.querySelector('#btn-exportar').addEventListener('click', async () => {
+        mostrarToast('Generando respaldo…');
+        await exportarRespaldo();
+        mostrarToast('Respaldo descargado.');
+      });
+      contenedor.querySelector('#btn-importar').addEventListener('click', () => contenedor.querySelector('#input-importar').click());
+      contenedor.querySelector('#input-importar').addEventListener('change', async (e) => {
+        const archivo = e.target.files[0];
+        if (!archivo) return;
+        abrirModal({
+          titulo: '¿Importar este respaldo?',
+          contenidoHtml: `<p style="color:var(--danger);">Esto reemplazará todos los datos actuales de este dispositivo con los del archivo. Esta acción no se puede deshacer.</p>`,
+          botones: [
+            { texto: 'Cancelar', clase: 'btn-secondary' },
+            { texto: 'Sí, importar', clase: 'btn-danger', onClick: async () => {
+              try {
+                await importarRespaldo(archivo);
+                mostrarToast('Respaldo importado correctamente.');
+                pintar();
+              } catch (err) {
+                mostrarToast('No se pudo importar: ' + err.message);
+              }
+            } },
+          ],
+        });
+      });
+    };
+
+    await pintar();
   }
 
   return { renderConfiguracion };
@@ -3164,7 +3595,9 @@ a { color: inherit; text-decoration: none; }
   const { obtenerProyecto, ingresosDeProyecto, gastosDeProyecto, resumenFinancieroProyecto } = __modules__['core/repositorio'];
   const { listarProyeccion, proyectadoPorCategoria } = __modules__['modules/proyeccion/proyeccion.repo'];
   const { agruparGastosPorCategoria } = __modules__['core/finanzas'];
+  const { listarCategorias } = __modules__['core/categorias.repo'];
   const { db } = __modules__['storage/db'];
+
 
 
 
@@ -3172,17 +3605,38 @@ a { color: inherit; text-decoration: none; }
 
   /** Reúne todo lo que un informe podría necesitar mostrar sobre un proyecto. */
   async function reunirDatosInforme(proyectoId) {
-    const [proyecto, ingresos, gastos, resumen, proyeccionItems, proyectadoCat] = await Promise.all([
+    const [proyecto, ingresos, gastos, resumen, proyeccionItems, proyectadoCat, categorias] = await Promise.all([
       obtenerProyecto(proyectoId),
       ingresosDeProyecto(proyectoId),
       gastosDeProyecto(proyectoId),
       resumenFinancieroProyecto(proyectoId),
       listarProyeccion(proyectoId),
       proyectadoPorCategoria(proyectoId),
+      listarCategorias(),
     ]);
 
     const gastosOrdenados = gastos.slice().sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-    const numerados = gastosOrdenados.map((g, i) => ({ ...g, numero: i + 1 }));
+    const numeradosBase = gastosOrdenados.map((g, i) => ({ ...g, numero: i + 1 }));
+
+    // Enriquecer cada gasto con los datos detectados de su comprobante (RUC, N.º factura,
+    // establecimiento, subtotal/IVA/total), si existen. Nunca sobrescribe el valor real
+    // del gasto — solo agrega estos campos informativos adicionales.
+    const numerados = await Promise.all(numeradosBase.map(async (g) => {
+      if (!g.comprobanteId) return g;
+      const comprobante = await db.get('comprobantes', g.comprobanteId);
+      const d = comprobante?.datosDetectados;
+      if (!d) return g;
+      return {
+        ...g,
+        establecimiento: d.establecimiento || null,
+        ruc: d.ruc || null,
+        numeroFactura: d.numeroFactura || null,
+        subtotalComprobante: d.subtotal ?? null,
+        ivaComprobante: d.iva ?? null,
+        totalComprobante: d.total ?? null,
+      };
+    }));
+
     const realPorCategoria = agruparGastosPorCategoria(gastos);
     const config = (await db.get('configuracion', 'general')) || {};
 
@@ -3194,11 +3648,13 @@ a { color: inherit; text-decoration: none; }
       proyeccionItems,
       proyectadoCat,
       realPorCategoria,
+      categorias,
       empresa: {
         nombre: config.nombreEmpresa || '',
         responsable: config.nombreResponsable || '',
         cargo: config.cargo || '',
         moneda: config.moneda || 'USD',
+        logo: config.logo || null,
       },
     };
   }
@@ -3263,18 +3719,19 @@ a { color: inherit; text-decoration: none; }
 
   // ==== modules/informes/informes.config ====
   __modules__['modules/informes/informes.config'] = (function(){
-  const { CATEGORIAS_DEFECTO } = __modules__['core/models'];
   const { ETIQUETAS_ESTADO_COMPROBANTE, formatoMoneda, formatoFecha } = __modules__['utils/format'];
   const { listarPlantillas, guardarPlantilla, eliminarPlantilla, aplicarPlantilla } = __modules__['modules/informes/plantillas.repo'];
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
+  const { db } = __modules__['storage/db'];
 
 
 
 
 
 
-  function configPorDefecto(tipo, gastos) {
+  async function configPorDefecto(tipo, gastos, categorias) {
+    const config = (await db.get('configuracion', 'general')) || {};
     const base = {
       tipo,
       datosGenerales: {
@@ -3288,14 +3745,18 @@ a { color: inherit; text-decoration: none; }
       },
       columnas: {
         numero: true, fecha: true, categoria: true, descripcion: true, valor: true,
-        estadoComprobante: true, numeroFactura: false, establecimiento: false, observaciones: false,
+        estadoComprobante: true, numeroFactura: false, establecimiento: false, ruc: false, observaciones: false,
       },
       gastosSeleccionados: new Set(gastos.map((g) => g.id)),
       filtroEstados: { con_comprobante: true, pendiente_comprobante: true, sin_comprobante: true },
-      categoriasIncluidas: new Set(CATEGORIAS_DEFECTO.map((c) => c.id)),
+      categoriasIncluidas: new Set(categorias.map((c) => c.id)),
       incluirProyeccionVsReal: false,
       firmas: {
-        responsable: { incluir: false, nombre: '', cargo: '' },
+        responsable: {
+          incluir: false,
+          nombre: config.nombreResponsable || '',
+          cargo: config.cargo || '',
+        },
         revision: { incluir: false, nombre: '', cargo: '' },
         aprobacion: { incluir: false, nombre: '', cargo: '' },
       },
@@ -3332,7 +3793,7 @@ a { color: inherit; text-decoration: none; }
   const ETIQUETAS_COLUMNAS = {
     numero: 'Número', fecha: 'Fecha', categoria: 'Categoría', descripcion: 'Descripción',
     valor: 'Valor', estadoComprobante: 'Estado del comprobante', numeroFactura: 'Número de factura',
-    establecimiento: 'Establecimiento/proveedor', observaciones: 'Observaciones',
+    establecimiento: 'Establecimiento/proveedor', ruc: 'RUC del establecimiento', observaciones: 'Observaciones',
   };
   const ETIQUETAS_FIRMAS = {
     responsable: 'Firma del responsable',
@@ -3340,7 +3801,7 @@ a { color: inherit; text-decoration: none; }
     aprobacion: 'Firma de aprobación',
   };
 
-  async function renderPasoConfiguracion(contenedor, { config, gastos, onVolver, onVerVistaPrevia }) {
+  async function renderPasoConfiguracion(contenedor, { config, gastos, categorias, onVolver, onVerVistaPrevia }) {
     const esPersonalizado = config.tipo === 'personalizado';
     const plantillas = await listarPlantillas();
 
@@ -3382,7 +3843,7 @@ a { color: inherit; text-decoration: none; }
       <div class="card" style="margin-bottom:var(--sp-4);">
         <h3 style="font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold-400); margin-bottom:var(--sp-3);">Categorías incluidas</h3>
         <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px;">
-          ${CATEGORIAS_DEFECTO.map((c) => `
+          ${categorias.map((c) => `
             <label style="display:flex; align-items:center; gap:8px; font-size:var(--fs-sm);">
               <input type="checkbox" data-categoria="${c.id}" ${config.categoriasIncluidas.has(c.id) ? 'checked' : ''} /> ${c.nombre}
             </label>
@@ -3477,7 +3938,7 @@ a { color: inherit; text-decoration: none; }
       if (!plantilla) return;
       const nuevoConfig = aplicarPlantilla(config, plantilla);
       mostrarToast(`Plantilla "${plantilla.nombre}" aplicada.`);
-      await renderPasoConfiguracion(contenedor, { config: nuevoConfig, gastos, onVolver, onVerVistaPrevia });
+      await renderPasoConfiguracion(contenedor, { config: nuevoConfig, gastos, categorias, onVolver, onVerVistaPrevia });
     });
     contenedor.querySelector('#btn-guardar-plantilla')?.addEventListener('click', () => {
       const modal = abrirModal({
@@ -3493,7 +3954,7 @@ a { color: inherit; text-decoration: none; }
               await guardarPlantilla(nombre, config);
               mostrarToast('Plantilla guardada.');
               cerrarModal();
-              await renderPasoConfiguracion(contenedor, { config, gastos, onVolver, onVerVistaPrevia });
+              await renderPasoConfiguracion(contenedor, { config, gastos, categorias, onVolver, onVerVistaPrevia });
             },
           },
         ],
@@ -3510,7 +3971,7 @@ a { color: inherit; text-decoration: none; }
           { texto: 'Eliminar', clase: 'btn-danger', onClick: async () => {
             await eliminarPlantilla(sel.value);
             mostrarToast('Plantilla eliminada.');
-            await renderPasoConfiguracion(contenedor, { config, gastos, onVolver, onVerVistaPrevia });
+            await renderPasoConfiguracion(contenedor, { config, gastos, categorias, onVolver, onVerVistaPrevia });
           } },
         ],
       });
@@ -3525,11 +3986,11 @@ a { color: inherit; text-decoration: none; }
     });
     contenedor.querySelector('#btn-marcar-todos').addEventListener('click', async () => {
       gastos.forEach((g) => config.gastosSeleccionados.add(g.id));
-      await renderPasoConfiguracion(contenedor, { config, gastos, onVolver, onVerVistaPrevia });
+      await renderPasoConfiguracion(contenedor, { config, gastos, categorias, onVolver, onVerVistaPrevia });
     });
     contenedor.querySelector('#btn-desmarcar-todos').addEventListener('click', async () => {
       config.gastosSeleccionados.clear();
-      await renderPasoConfiguracion(contenedor, { config, gastos, onVolver, onVerVistaPrevia });
+      await renderPasoConfiguracion(contenedor, { config, gastos, categorias, onVolver, onVerVistaPrevia });
     });
 
     contenedor.querySelector('#btn-vista-previa').addEventListener('click', () => onVerVistaPrevia(config));
@@ -3541,13 +4002,11 @@ a { color: inherit; text-decoration: none; }
   // ==== modules/informes/informes.preview ====
   __modules__['modules/informes/informes.preview'] = (function(){
   const { formatoMoneda, formatoFecha, ETIQUETAS_ESTADO_COMPROBANTE } = __modules__['utils/format'];
-  const { CATEGORIAS_DEFECTO, ESTADOS_COMPROBANTE, totalProyeccionItem } = __modules__['core/models'];
+  const { ESTADOS_COMPROBANTE, totalProyeccionItem } = __modules__['core/models'];
+  const { nombreDeCategoria } = __modules__['core/categorias.repo'];
 
 
 
-  function nombreCategoria(id) {
-    return CATEGORIAS_DEFECTO.find((c) => c.id === id)?.nombre || id;
-  }
 
   function claseEstadoMini(estado) {
     if (estado === ESTADOS_COMPROBANTE.CON) return 'hoja-estado-con';
@@ -3607,7 +4066,7 @@ a { color: inherit; text-decoration: none; }
     `;
   }
 
-  function seccionResumenPorCategoria(gastosFiltrados) {
+  function seccionResumenPorCategoria(gastosFiltrados, catalogoCategorias) {
     const mapa = {};
     gastosFiltrados.forEach((g) => { mapa[g.categoria] = (mapa[g.categoria] || 0) + g.valor; });
     const entradas = Object.entries(mapa);
@@ -3618,20 +4077,21 @@ a { color: inherit; text-decoration: none; }
         <table class="hoja-tabla">
           <thead><tr><th>Categoría</th><th style="text-align:right;">Total</th></tr></thead>
           <tbody>
-            ${entradas.map(([cat, val]) => `<tr><td>${nombreCategoria(cat)}</td><td class="num">${formatoMoneda(val)}</td></tr>`).join('')}
+            ${entradas.map(([cat, val]) => `<tr><td>${nombreDeCategoria(catalogoCategorias, cat)}</td><td class="num">${formatoMoneda(val)}</td></tr>`).join('')}
           </tbody>
         </table>
       </div>
     `;
   }
 
-  function seccionDetalle(gastosFiltrados, columnas) {
+  function seccionDetalle(gastosFiltrados, columnas, catalogoCategorias) {
     const cols = [
       columnas.numero && { k: 'numero', l: 'N.º' },
       columnas.fecha && { k: 'fecha', l: 'Fecha' },
       columnas.categoria && { k: 'categoria', l: 'Categoría' },
       columnas.descripcion && { k: 'descripcion', l: 'Descripción' },
       columnas.establecimiento && { k: 'establecimiento', l: 'Establecimiento' },
+      columnas.ruc && { k: 'ruc', l: 'RUC' },
       columnas.numeroFactura && { k: 'numeroFactura', l: 'N.º factura' },
       columnas.estadoComprobante && { k: 'estadoComprobante', l: 'Comprobante' },
       columnas.valor && { k: 'valor', l: 'Valor' },
@@ -3641,10 +4101,12 @@ a { color: inherit; text-decoration: none; }
 
     const celda = (g, k) => {
       if (k === 'fecha') return formatoFecha(g.fecha);
-      if (k === 'categoria') return nombreCategoria(g.categoria);
+      if (k === 'categoria') return nombreDeCategoria(catalogoCategorias, g.categoria);
       if (k === 'valor') return `<span class="num">${formatoMoneda(g.valor)}</span>`;
       if (k === 'estadoComprobante') return `<span class="hoja-estado-mini ${claseEstadoMini(g.estadoComprobante)}">${ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante].texto}</span>`;
-      if (k === 'establecimiento' || k === 'numeroFactura') return '—'; // se completan al vincular anexos de comprobante en Etapa 6
+      if (k === 'establecimiento') return g.establecimiento || '—';
+      if (k === 'ruc') return g.ruc || '—';
+      if (k === 'numeroFactura') return g.numeroFactura || '—';
       return g[k] ?? '—';
     };
 
@@ -3664,22 +4126,22 @@ a { color: inherit; text-decoration: none; }
     `;
   }
 
-  function seccionProyectadoVsReal(proyeccionItems, realPorCategoria) {
+  function seccionProyectadoVsReal(proyeccionItems, realPorCategoria, catalogoCategorias) {
     const proyPorCat = {};
     proyeccionItems.forEach((i) => { proyPorCat[i.categoria] = (proyPorCat[i.categoria] || 0) + totalProyeccionItem(i); });
-    const categorias = Array.from(new Set([...Object.keys(proyPorCat), ...Object.keys(realPorCategoria)]));
-    if (!categorias.length) return '';
+    const categoriasUnicas = Array.from(new Set([...Object.keys(proyPorCat), ...Object.keys(realPorCategoria)]));
+    if (!categoriasUnicas.length) return '';
     return `
       <div class="hoja-seccion">
         <h3>Proyectado vs. real</h3>
         <table class="hoja-tabla">
           <thead><tr><th>Categoría</th><th style="text-align:right;">Proyectado</th><th style="text-align:right;">Real</th><th style="text-align:right;">Diferencia</th></tr></thead>
           <tbody>
-            ${categorias.map((cat) => {
+            ${categoriasUnicas.map((cat) => {
               const proy = proyPorCat[cat] || 0;
               const real = realPorCategoria[cat] || 0;
               const dif = Number((proy - real).toFixed(2));
-              return `<tr><td>${nombreCategoria(cat)}</td><td class="num">${formatoMoneda(proy)}</td><td class="num">${formatoMoneda(real)}</td><td class="num">${dif >= 0 ? '+' : ''}${formatoMoneda(dif)}</td></tr>`;
+              return `<tr><td>${nombreDeCategoria(catalogoCategorias, cat)}</td><td class="num">${formatoMoneda(proy)}</td><td class="num">${formatoMoneda(real)}</td><td class="num">${dif >= 0 ? '+' : ''}${formatoMoneda(dif)}</td></tr>`;
             }).join('')}
           </tbody>
         </table>
@@ -3709,16 +4171,20 @@ a { color: inherit; text-decoration: none; }
   }
 
   function renderVistaPreviaHTML(datos, config) {
-    const { proyecto, resumen, gastos, proyeccionItems, realPorCategoria, empresa } = datos;
+    const { proyecto, resumen, gastos, proyeccionItems, realPorCategoria, empresa, categorias } = datos;
     const gastosFiltrados = filtrarGastosInforme(gastos, config);
     const fechaGeneracion = new Date().toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
 
     const tituloTipo = { resumido: 'Informe resumido de viáticos', detallado: 'Informe detallado de viáticos', personalizado: 'Informe de viáticos' }[config.tipo];
 
+    const logoHtml = empresa.logo
+      ? `<img src="${empresa.logo}" alt="Logo" style="max-height:52px; max-width:180px; object-fit:contain;" />`
+      : `<div class="empresa">${empresa.nombre || 'Empresa'}</div>`;
+
     return `
       <div class="hoja-informe" id="hoja-informe-render">
         <div class="hoja-header">
-          <div class="empresa">${empresa.nombre || 'Empresa'}</div>
+          ${logoHtml}
           <div class="meta">Generado: ${fechaGeneracion}${empresa.responsable ? `<br>${empresa.responsable}${empresa.cargo ? ' · ' + empresa.cargo : ''}` : ''}</div>
         </div>
         <div class="hoja-titulo">${tituloTipo}</div>
@@ -3726,9 +4192,9 @@ a { color: inherit; text-decoration: none; }
 
         ${seccionDatosGenerales(proyecto, config.datosGenerales)}
         ${seccionFinanciera(resumen, config.financiero)}
-        ${config.tipo === 'resumido' ? seccionResumenPorCategoria(gastosFiltrados) : ''}
-        ${config.tipo !== 'resumido' ? seccionDetalle(gastosFiltrados, config.columnas) : ''}
-        ${config.incluirProyeccionVsReal ? seccionProyectadoVsReal(proyeccionItems, realPorCategoria) : ''}
+        ${config.tipo === 'resumido' ? seccionResumenPorCategoria(gastosFiltrados, categorias) : ''}
+        ${config.tipo !== 'resumido' ? seccionDetalle(gastosFiltrados, config.columnas, categorias) : ''}
+        ${config.incluirProyeccionVsReal ? seccionProyectadoVsReal(proyeccionItems, realPorCategoria, categorias) : ''}
         ${seccionFirmas(config.firmas)}
 
         <div class="hoja-footer">
@@ -3758,16 +4224,28 @@ a { color: inherit; text-decoration: none; }
   async function construirAnexoComprobantesHTML(gastosFiltrados) {
     const paginas = await Promise.all(gastosFiltrados.map(async (g) => {
       let imgHtml = `<p style="margin-top:24px; font-size:0.9rem; color:#8a2f2a; font-weight:600;">SIN COMPROBANTE</p>`;
+      let datosDetectadosHtml = '';
       if (g.comprobanteId) {
         const comp = await db.get('comprobantes', g.comprobanteId);
         if (comp?.imagenBlob) {
           imgHtml = `<img src="${blobAUrl(comp.imagenBlob)}" style="max-width:100%; max-height:900px; margin-top:16px; border:1px solid #d8d2c4;" />`;
+        }
+        const d = comp?.datosDetectados;
+        if (d && (d.ruc || d.numeroFactura || d.establecimiento)) {
+          datosDetectadosHtml = `
+            <p style="font-size:0.8rem; color:#5c6270; margin-top:8px;">
+              ${d.establecimiento ? `${d.establecimiento} · ` : ''}
+              ${d.ruc ? `RUC: ${d.ruc} · ` : ''}
+              ${d.numeroFactura ? `N.º factura: ${d.numeroFactura}` : ''}
+            </p>
+          `;
         }
       }
       return `
         <div class="hoja-informe" style="margin-bottom:24px; page-break-after:always;">
           <div class="hoja-titulo" style="font-size:1.1rem;">Comprobante N.º ${String(g.numero).padStart(3, '0')}</div>
           <div class="hoja-subtitulo">${g.descripcion || '(sin descripción)'} · ${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
+          ${datosDetectadosHtml}
           ${imgHtml}
         </div>
       `;
@@ -3945,10 +4423,11 @@ a { color: inherit; text-decoration: none; }
     const irAPasoTipo = () => renderPasoTipo(contenedor, { proyecto: datos.proyecto, onElegir: irAPasoConfig });
 
     const irAPasoConfig = async (tipo) => {
-      const config = configPorDefecto(tipo, datos.gastos);
+      const config = await configPorDefecto(tipo, datos.gastos, datos.categorias);
       await renderPasoConfiguracion(contenedor, {
         config,
         gastos: datos.gastos,
+        categorias: datos.categorias,
         onVolver: irAPasoTipo,
         onVerVistaPrevia: (cfgFinal) => renderPasoVistaPrevia(contenedor, {
           datos,
@@ -3967,7 +4446,7 @@ a { color: inherit; text-decoration: none; }
   // ==== app ====
   (function(){
   const { registrarRuta, definirContenedor, alNavegar, iniciarRouter } = __modules__['core/router'];
-  const { renderSidebar, renderBottomNav, marcarRutaActiva } = __modules__['components/nav'];
+  const { renderSidebar, renderBottomNav, marcarRutaActiva, actualizarTopbar } = __modules__['components/nav'];
   const { renderDashboard } = __modules__['modules/dashboard/dashboard.view'];
   const { registrarRutasProyectos } = __modules__['modules/proyectos/index'];
   const { renderConfiguracion } = __modules__['modules/configuracion/configuracion.view'];
@@ -3986,7 +4465,10 @@ a { color: inherit; text-decoration: none; }
     renderBottomNav();
 
     definirContenedor(document.getElementById('vista'));
-    alNavegar((patron) => marcarRutaActiva(patron));
+    alNavegar((patron) => {
+      marcarRutaActiva(patron);
+      actualizarTopbar(patron);
+    });
 
     registrarRuta('dashboard', renderDashboard);
     registrarRutasProyectos();
