@@ -6085,11 +6085,22 @@ a { color: inherit; text-decoration: none; }
       iniciarRouter();
       iniciarEscuchaDeConexion();
 
+      // Nunca se llegó a desplegar un archivo service-worker.js real junto con la app,
+      // así que este registro no debería haber tenido efecto — pero si en algún momento
+      // SÍ llegó a registrarse uno (por ejemplo en una versión anterior), podría estar
+      // sirviendo una copia vieja en caché sin que el usuario lo note al subir un archivo
+      // nuevo. Por seguridad, se desregistra activamente cualquier service worker y se
+      // borra cualquier caché que pudiera existir, para garantizar que siempre se cargue
+      // la versión más reciente del archivo subido.
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./service-worker.js').catch(() => {
-          // Si falla el registro (p.ej. entorno de vista previa sin HTTPS),
-          // la app sigue funcionando, solo sin capacidad offline.
-        });
+        navigator.serviceWorker.getRegistrations().then((registros) => {
+          registros.forEach((reg) => reg.unregister());
+        }).catch(() => {});
+      }
+      if ('caches' in window) {
+        caches.keys().then((nombres) => {
+          nombres.forEach((nombre) => caches.delete(nombre));
+        }).catch(() => {});
       }
     } catch (err) {
       mostrarErrorFatal(err);
