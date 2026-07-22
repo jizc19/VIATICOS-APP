@@ -946,7 +946,7 @@ a { color: inherit; text-decoration: none; }
    */
 
   const DB_NAME = 'viaticos-db';
-  const DB_VERSION = 2;
+  const DB_VERSION = 3;
 
   const STORES = {
     proyectos: 'id',
@@ -961,6 +961,7 @@ a { color: inherit; text-decoration: none; }
     categorias: 'id',
     configuracion: 'clave',
     colaSincronizacion: 'id',
+    solicitudesViaticos: 'id',
   };
 
   let dbInstance = null;
@@ -989,6 +990,9 @@ a { color: inherit; text-decoration: none; }
               store.createIndex('porProyecto', 'proyectoId', { unique: false });
             }
             if (nombre === 'proyecciones') {
+              store.createIndex('porProyecto', 'proyectoId', { unique: false });
+            }
+            if (nombre === 'solicitudesViaticos') {
               store.createIndex('porProyecto', 'proyectoId', { unique: false });
             }
           }
@@ -1322,12 +1326,15 @@ a { color: inherit; text-decoration: none; }
    * Acción irreversible — debe confirmarse con una advertencia clara en la UI.
    */
   async function eliminarProyectoCompleto(proyectoId) {
-    const [ingresos, ingresosPapelera, gastos, proyeccion] = await Promise.all([
+    const [ingresos, ingresosPapelera, gastos, proyeccion, solicitudes] = await Promise.all([
       db.getAllPorIndice('ingresos', 'porProyecto', proyectoId),
       db.getAll('papeleraIngresos').then((todos) => todos.filter((i) => i.proyectoId === proyectoId)),
       db.getAllPorIndice('gastos', 'porProyecto', proyectoId),
       db.getAllPorIndice('proyecciones', 'porProyecto', proyectoId),
+      db.getAllPorIndice('solicitudesViaticos', 'porProyecto', proyectoId),
     ]);
+
+    for (const item of solicitudes) await db.delete('solicitudesViaticos', item.id);
 
     for (const ingreso of ingresos) await db.delete('ingresos', ingreso.id);
     for (const ingreso of ingresosPapelera) await db.delete('papeleraIngresos', ingreso.id);
@@ -3477,6 +3484,627 @@ a { color: inherit; text-decoration: none; }
   return { listarProyeccion, crearItemProyeccion, editarItemProyeccion, eliminarItemProyeccion, totalProyectado, proyectadoPorCategoria };
   })();
 
+  // ==== modules/proyeccion/solicitudes.repo ====
+  __modules__['modules/proyeccion/solicitudes.repo'] = (function(){
+  const { db } = __modules__['storage/db'];
+
+
+  /**
+   * solicitudes.repo.js — Las 3 solicitudes de viáticos (planificación, antes de
+   * que el proyecto pase a "activo"): mi proyección propia, personal de campo,
+   * y la solicitud formal. Se guarda un registro por tipo por proyecto, así el
+   * usuario puede reabrir y seguir ajustando antes de imprimir.
+   */
+
+  function idDe(proyectoId, tipo) {
+    return `sol_${proyectoId}_${tipo}`;
+  }
+
+  async function obtenerSolicitud(proyectoId, tipo) {
+    return db.get('solicitudesViaticos', idDe(proyectoId, tipo));
+  }
+
+  async function guardarSolicitud(proyectoId, tipo, datos) {
+    const registro = { id: idDe(proyectoId, tipo), proyectoId, tipo, ...datos, actualizadoEn: new Date().toISOString() };
+    await db.put('solicitudesViaticos', registro);
+    return registro;
+  }
+
+  return { obtenerSolicitud, guardarSolicitud };
+  })();
+
+  // ==== modules/proyeccion/proyeccion.solicitudes.view ====
+  __modules__['modules/proyeccion/proyeccion.solicitudes.view'] = (function(){
+  const { db } = __modules__['storage/db'];
+  const { abrirModal, cerrarModal } = __modules__['components/modal'];
+  const { mostrarToast } = __modules__['components/toast'];
+  const { formatoMoneda, formatoFecha } = __modules__['utils/format'];
+  const { obtenerSolicitud, guardarSolicitud } = __modules__['modules/proyeccion/solicitudes.repo'];
+  const { generarId } = __modules__['storage/db'];
+
+
+
+
+
+
+
+  /**
+   * proyeccion.solicitudes.view.js — Las 3 solicitudes de viáticos que se
+   * entregan a la empresa ANTES de que el proyecto pase a activo:
+   *  1) Mi solicitud (jefe de instalación) — una sola fila con tarifas fijas.
+   *  2) Personal de campo — equipo propio + personal externo (día-rate).
+   *  3) Solicitud formal — el documento oficial con motivo, logística y firmas.
+   * Cada una se guarda para poder reabrirla y ajustarla antes de imprimir.
+   */
+
+  function diasEntre(inicio, fin) {
+    if (!inicio || !fin) return 0;
+    const a = new Date(inicio);
+    const b = new Date(fin);
+    const dias = Math.round((b - a) / 86400000) + 1; // inclusivo (mismo día = 1 día)
+    return Math.max(dias, 0);
+  }
+
+  function imprimirEnZona(html) {
+    const zona = document.getElementById('zona-impresion');
+    zona.innerHTML = html;
+    setTimeout(() => window.print(), 150);
+  }
+
+  async function obtenerEmpresa() {
+    const config = (await db.get('configuracion', 'general')) || {};
+    return config;
+  }
+
+  /* ============================================================
+     1) MI SOLICITUD (JEFE DE INSTALACIÓN)
+     ============================================================ */
+
+  async function abrirSolicitudJefe({ proyecto, onGuardado }) {
+    const config = await obtenerEmpresa();
+    const previa = await obtenerSolicitud(proyecto.id, 'jefe');
+    const datos = previa || {
+      fechaInicio: proyecto.fechaInicio || new Date().toISOString().slice(0, 10),
+      fechaFin: proyecto.fechaFinEstimada || proyecto.fechaInicio || new Date().toISOString().slice(0, 10),
+      hospedaje: 'SI',
+      tarifaAlimentacionDia: config.tarifaAlimentacionJefe ?? 10,
+      movilizacion: 0,
+      gastosInstalacion: 0,
+      gastosMateriales: 0,
+      cajaChica: 0,
+    };
+
+    const modal = abrirModal({
+      titulo: 'Mi solicitud de viáticos (jefe de instalación)',
+      contenidoHtml: `
+        <div class="field-row">
+          <div class="field"><label>Fecha inicio</label><input type="date" id="s1-inicio" value="${datos.fechaInicio}" /></div>
+          <div class="field"><label>Fecha fin</label><input type="date" id="s1-fin" value="${datos.fechaFin}" /></div>
+        </div>
+        <div class="field">
+          <label>¿Requiere hospedaje?</label>
+          <select id="s1-hospedaje"><option value="SI" ${datos.hospedaje === 'SI' ? 'selected' : ''}>Sí</option><option value="NO" ${datos.hospedaje === 'NO' ? 'selected' : ''}>No</option></select>
+        </div>
+        <div class="field"><label>Alimentación por día (se multiplica × días)</label><input type="number" step="0.01" min="0" id="s1-alim" value="${datos.tarifaAlimentacionDia}" /></div>
+        <div class="field-row">
+          <div class="field"><label>Movilización (total)</label><input type="number" step="0.01" min="0" id="s1-mov" value="${datos.movilizacion}" /></div>
+          <div class="field"><label>Caja chica (total)</label><input type="number" step="0.01" min="0" id="s1-caja" value="${datos.cajaChica}" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Gastos instalación (total)</label><input type="number" step="0.01" min="0" id="s1-inst" value="${datos.gastosInstalacion}" /></div>
+          <div class="field"><label>Gastos materiales (total)</label><input type="number" step="0.01" min="0" id="s1-mat" value="${datos.gastosMateriales}" /></div>
+        </div>
+        <div class="deteccion-card" id="s1-resultado"><h3>Total</h3><p style="font-size:var(--fs-sm);">—</p></div>
+      `,
+      botones: [
+        { texto: 'Cancelar', clase: 'btn-secondary' },
+        {
+          texto: 'Guardar', clase: 'btn-secondary', cerrar: false,
+          onClick: async () => { await guardarDatos1(); mostrarToast('Solicitud guardada.'); },
+        },
+        {
+          texto: 'Guardar y generar PDF', clase: 'btn-primary', cerrar: false,
+          onClick: async () => {
+            const guardado = await guardarDatos1();
+            cerrarModal();
+            imprimirEnZona(construirHTMLJefe(proyecto, guardado, config));
+          },
+        },
+      ],
+    });
+
+    const leerValores = () => ({
+      fechaInicio: modal.querySelector('#s1-inicio').value,
+      fechaFin: modal.querySelector('#s1-fin').value,
+      hospedaje: modal.querySelector('#s1-hospedaje').value,
+      tarifaAlimentacionDia: Number(modal.querySelector('#s1-alim').value) || 0,
+      movilizacion: Number(modal.querySelector('#s1-mov').value) || 0,
+      gastosInstalacion: Number(modal.querySelector('#s1-inst').value) || 0,
+      gastosMateriales: Number(modal.querySelector('#s1-mat').value) || 0,
+      cajaChica: Number(modal.querySelector('#s1-caja').value) || 0,
+    });
+
+    const actualizarResultado = () => {
+      const v = leerValores();
+      const dias = diasEntre(v.fechaInicio, v.fechaFin);
+      const totalAlim = v.tarifaAlimentacionDia * dias;
+      const total = totalAlim + v.movilizacion + v.gastosInstalacion + v.gastosMateriales + v.cajaChica;
+      modal.querySelector('#s1-resultado').innerHTML = `
+        <h3>Total</h3>
+        <p style="font-size:var(--fs-sm);">Días totales: <strong>${dias}</strong> · Alimentación: ${formatoMoneda(totalAlim)}<br>
+        <strong style="font-size:var(--fs-md);">Total solicitado: ${formatoMoneda(total)}</strong></p>
+      `;
+    };
+
+    async function guardarDatos1() {
+      const v = leerValores();
+      return guardarSolicitud(proyecto.id, 'jefe', v);
+    }
+
+    modal.querySelectorAll('input, select').forEach((el) => el.addEventListener('input', actualizarResultado));
+    actualizarResultado();
+  }
+
+  function construirHTMLJefe(proyecto, datos, config) {
+    const dias = diasEntre(datos.fechaInicio, datos.fechaFin);
+    const totalAlim = datos.tarifaAlimentacionDia * dias;
+    const total = totalAlim + datos.movilizacion + datos.gastosInstalacion + datos.gastosMateriales + datos.cajaChica;
+    return `
+      <div class="hoja-informe">
+        <div class="hoja-header">
+          ${config.logo ? `<img src="${config.logo}" style="max-height:52px; max-width:180px; object-fit:contain;" />` : `<div class="empresa">${config.nombreEmpresa || 'Empresa'}</div>`}
+          <div class="meta">Generado: ${formatoFecha(new Date().toISOString().slice(0, 10))}</div>
+        </div>
+        <div class="hoja-titulo">Solicitud de viáticos — Jefe de instalación</div>
+        <div class="hoja-subtitulo">${proyecto.nombre}</div>
+
+        <div class="hoja-seccion">
+          <h3>Datos del solicitante</h3>
+          <div class="hoja-datos-grid">
+            <div><div class="lbl">Nombre</div><div>${config.nombreResponsable || '—'}</div></div>
+            <div><div class="lbl">Cargo</div><div>${config.cargo || '—'}</div></div>
+          </div>
+        </div>
+
+        <div class="hoja-seccion">
+          <h3>Requerimiento de viáticos</h3>
+          <table class="hoja-tabla">
+            <thead><tr><th>Fecha inicio</th><th>Fecha fin</th><th>Total días</th><th>Hospedaje</th><th>Alimentación</th><th>Movilización</th><th>Gastos instalación</th><th>Gastos materiales</th><th>Caja chica</th><th style="text-align:right;">Total</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>${formatoFecha(datos.fechaInicio)}</td>
+                <td>${formatoFecha(datos.fechaFin)}</td>
+                <td>${dias}</td>
+                <td>${datos.hospedaje}</td>
+                <td class="num">${formatoMoneda(totalAlim)}</td>
+                <td class="num">${formatoMoneda(datos.movilizacion)}</td>
+                <td class="num">${formatoMoneda(datos.gastosInstalacion)}</td>
+                <td class="num">${formatoMoneda(datos.gastosMateriales)}</td>
+                <td class="num">${formatoMoneda(datos.cajaChica)}</td>
+                <td class="num" style="font-weight:700;">${formatoMoneda(total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="hoja-firmas">
+          <div class="hoja-firma-linea">${config.nombreResponsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div>
+          <div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div>
+        </div>
+        <div class="hoja-footer"><span>${config.nombreEmpresa || ''}</span><span>Página 1</span></div>
+      </div>
+    `;
+  }
+
+  /* ============================================================
+     2) PERSONAL DE CAMPO (equipo propio + personal externo)
+     ============================================================ */
+
+  function filaEquipo(p = {}) {
+    const id = p.id || generarId('emp');
+    return { id, nombre: p.nombre || '', cargo: p.cargo || '', fechaInicio: p.fechaInicio || '', fechaFin: p.fechaFin || '', hospedaje: p.hospedaje || 'SI', tarifaAlimentacionDia: p.tarifaAlimentacionDia ?? 0, moviViaje: p.moviViaje ?? 0, moviInterna: p.moviInterna ?? 0 };
+  }
+  function filaExterno(p = {}) {
+    const id = p.id || generarId('ext');
+    return { id, nombre: p.nombre || '', diasNecesarios: p.diasNecesarios ?? 0, costoPorDia: p.costoPorDia ?? 0 };
+  }
+
+  async function abrirSolicitudPersonal({ proyecto, onGuardado }) {
+    const config = await obtenerEmpresa();
+    const previa = await obtenerSolicitud(proyecto.id, 'personal');
+    let equipo = (previa?.equipo || []).map(filaEquipo);
+    let externos = (previa?.externos || []).map(filaExterno);
+    if (!equipo.length) equipo = [filaEquipo({ fechaInicio: proyecto.fechaInicio, fechaFin: proyecto.fechaFinEstimada, tarifaAlimentacionDia: config.tarifaAlimentacionPersonal ?? 20 })];
+
+    const modal = abrirModal({
+      titulo: 'Solicitud de viáticos — Personal de campo',
+      contenidoHtml: `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 style="margin:0;">Equipo propio</h3>
+          <button type="button" class="btn btn-secondary btn-sm" id="s2-add-equipo">+ Agregar persona</button>
+        </div>
+        <div id="s2-equipo"></div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 8px;">
+          <h3 style="margin:0;">Personal externo (día-rate)</h3>
+          <button type="button" class="btn btn-secondary btn-sm" id="s2-add-externo">+ Agregar persona</button>
+        </div>
+        <div id="s2-externos"></div>
+
+        <div class="deteccion-card" id="s2-resultado" style="margin-top:12px;"><h3>Total</h3><p style="font-size:var(--fs-sm);">—</p></div>
+      `,
+      botones: [
+        { texto: 'Cancelar', clase: 'btn-secondary' },
+        { texto: 'Guardar', clase: 'btn-secondary', cerrar: false, onClick: async () => { await guardarDatos2(); mostrarToast('Solicitud guardada.'); } },
+        {
+          texto: 'Guardar y generar PDF', clase: 'btn-primary', cerrar: false,
+          onClick: async () => {
+            const guardado = await guardarDatos2();
+            cerrarModal();
+            imprimirEnZona(construirHTMLPersonal(proyecto, guardado, config));
+          },
+        },
+      ],
+    });
+
+    function filaEquipoHTML(p) {
+      return `
+        <div class="card" style="padding:10px; margin-bottom:8px;" data-fila-equipo="${p.id}">
+          <div class="field-row">
+            <div class="field"><label>Nombre</label><input type="text" class="eq-nombre" value="${p.nombre}" /></div>
+            <div class="field"><label>Cargo</label><input type="text" class="eq-cargo" value="${p.cargo}" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Fecha inicio</label><input type="date" class="eq-inicio" value="${p.fechaInicio}" /></div>
+            <div class="field"><label>Fecha fin</label><input type="date" class="eq-fin" value="${p.fechaFin}" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Hospedaje</label><select class="eq-hospedaje"><option value="SI" ${p.hospedaje === 'SI' ? 'selected' : ''}>Sí</option><option value="NO" ${p.hospedaje === 'NO' ? 'selected' : ''}>No</option></select></div>
+            <div class="field"><label>Alimentación/día</label><input type="number" step="0.01" min="0" class="eq-alim" value="${p.tarifaAlimentacionDia}" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Movilización viaje (total)</label><input type="number" step="0.01" min="0" class="eq-movi" value="${p.moviViaje}" /></div>
+            <div class="field"><label>Movilización interna (total)</label><input type="number" step="0.01" min="0" class="eq-movint" value="${p.moviInterna}" /></div>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm eq-eliminar" style="color:var(--danger);">Quitar</button>
+        </div>
+      `;
+    }
+    function filaExternoHTML(p) {
+      return `
+        <div class="card" style="padding:10px; margin-bottom:8px;" data-fila-externo="${p.id}">
+          <div class="field-row">
+            <div class="field"><label>Nombre</label><input type="text" class="ex-nombre" value="${p.nombre}" /></div>
+            <div class="field"><label>Días necesarios</label><input type="number" step="1" min="0" class="ex-dias" value="${p.diasNecesarios}" /></div>
+            <div class="field"><label>Costo por día</label><input type="number" step="0.01" min="0" class="ex-costo" value="${p.costoPorDia}" /></div>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm ex-eliminar" style="color:var(--danger);">Quitar</button>
+        </div>
+      `;
+    }
+
+    function repintar() {
+      modal.querySelector('#s2-equipo').innerHTML = equipo.map(filaEquipoHTML).join('');
+      modal.querySelector('#s2-externos').innerHTML = externos.map(filaExternoHTML).join('');
+      wireFilas();
+      actualizarResultado();
+    }
+
+    function leerFilaEquipo(el) {
+      return {
+        id: el.dataset.filaEquipo,
+        nombre: el.querySelector('.eq-nombre').value,
+        cargo: el.querySelector('.eq-cargo').value,
+        fechaInicio: el.querySelector('.eq-inicio').value,
+        fechaFin: el.querySelector('.eq-fin').value,
+        hospedaje: el.querySelector('.eq-hospedaje').value,
+        tarifaAlimentacionDia: Number(el.querySelector('.eq-alim').value) || 0,
+        moviViaje: Number(el.querySelector('.eq-movi').value) || 0,
+        moviInterna: Number(el.querySelector('.eq-movint').value) || 0,
+      };
+    }
+    function leerFilaExterno(el) {
+      return {
+        id: el.dataset.filaExterno,
+        nombre: el.querySelector('.ex-nombre').value,
+        diasNecesarios: Number(el.querySelector('.ex-dias').value) || 0,
+        costoPorDia: Number(el.querySelector('.ex-costo').value) || 0,
+      };
+    }
+
+    function sincronizarDesdeD0M() {
+      equipo = Array.from(modal.querySelectorAll('[data-fila-equipo]')).map(leerFilaEquipo);
+      externos = Array.from(modal.querySelectorAll('[data-fila-externo]')).map(leerFilaExterno);
+    }
+
+    function actualizarResultado() {
+      sincronizarDesdeD0M();
+      const subtotalesEquipo = equipo.map((p) => (p.tarifaAlimentacionDia * diasEntre(p.fechaInicio, p.fechaFin)) + p.moviViaje + p.moviInterna);
+      const totalEquipo = subtotalesEquipo.reduce((a, v) => a + v, 0);
+      const totalExterno = externos.reduce((a, p) => a + (p.diasNecesarios * p.costoPorDia), 0);
+      const total = totalEquipo + totalExterno;
+      modal.querySelector('#s2-resultado').innerHTML = `
+        <h3>Total</h3>
+        <p style="font-size:var(--fs-sm);">Equipo propio: ${formatoMoneda(totalEquipo)} · Personal externo: ${formatoMoneda(totalExterno)}<br>
+        <strong style="font-size:var(--fs-md);">Total solicitado: ${formatoMoneda(total)}</strong></p>
+      `;
+    }
+
+    function wireFilas() {
+      modal.querySelectorAll('input, select').forEach((el) => el.addEventListener('input', actualizarResultado));
+      modal.querySelectorAll('.eq-eliminar').forEach((btn) => btn.addEventListener('click', () => {
+        const id = btn.closest('[data-fila-equipo]').dataset.filaEquipo;
+        equipo = equipo.filter((p) => p.id !== id);
+        repintar();
+      }));
+      modal.querySelectorAll('.ex-eliminar').forEach((btn) => btn.addEventListener('click', () => {
+        const id = btn.closest('[data-fila-externo]').dataset.filaExterno;
+        externos = externos.filter((p) => p.id !== id);
+        repintar();
+      }));
+    }
+
+    modal.querySelector('#s2-add-equipo').addEventListener('click', () => {
+      sincronizarDesdeD0M();
+      equipo.push(filaEquipo({ fechaInicio: proyecto.fechaInicio, fechaFin: proyecto.fechaFinEstimada, tarifaAlimentacionDia: config.tarifaAlimentacionPersonal ?? 20 }));
+      repintar();
+    });
+    modal.querySelector('#s2-add-externo').addEventListener('click', () => {
+      sincronizarDesdeD0M();
+      externos.push(filaExterno());
+      repintar();
+    });
+
+    async function guardarDatos2() {
+      sincronizarDesdeD0M();
+      return guardarSolicitud(proyecto.id, 'personal', { equipo, externos });
+    }
+
+    repintar();
+  }
+
+  function construirHTMLPersonal(proyecto, datos, config) {
+    const { equipo, externos } = datos;
+    const totalEquipo = equipo.reduce((a, p) => a + (p.tarifaAlimentacionDia * diasEntre(p.fechaInicio, p.fechaFin)) + p.moviViaje + p.moviInterna, 0);
+    const totalExterno = externos.reduce((a, p) => a + (p.diasNecesarios * p.costoPorDia), 0);
+    const total = totalEquipo + totalExterno;
+
+    return `
+      <div class="hoja-informe">
+        <div class="hoja-header">
+          ${config.logo ? `<img src="${config.logo}" style="max-height:52px; max-width:180px; object-fit:contain;" />` : `<div class="empresa">${config.nombreEmpresa || 'Empresa'}</div>`}
+          <div class="meta">Generado: ${formatoFecha(new Date().toISOString().slice(0, 10))}</div>
+        </div>
+        <div class="hoja-titulo">Solicitud de viáticos — Personal de campo</div>
+        <div class="hoja-subtitulo">${proyecto.nombre}</div>
+
+        <div class="hoja-seccion">
+          <h3>Equipo propio</h3>
+          <div class="hoja-tabla-scroll">
+            <table class="hoja-tabla">
+              <thead><tr><th>Nombre</th><th>Cargo</th><th>Fecha inicio</th><th>Fecha final</th><th>Días</th><th>Hospedaje</th><th>Alimentación</th><th>Movi. viaje</th><th>Movi. interna</th><th style="text-align:right;">Total</th></tr></thead>
+              <tbody>
+                ${equipo.map((p) => {
+                  const dias = diasEntre(p.fechaInicio, p.fechaFin);
+                  const totalAlim = p.tarifaAlimentacionDia * dias;
+                  const subtotal = totalAlim + p.moviViaje + p.moviInterna;
+                  return `<tr>
+                    <td>${p.nombre || '—'}</td><td>${p.cargo || '—'}</td>
+                    <td class="hoja-nowrap">${formatoFecha(p.fechaInicio)}</td><td class="hoja-nowrap">${formatoFecha(p.fechaFin)}</td><td>${dias}</td>
+                    <td>${p.hospedaje}</td><td class="num">${formatoMoneda(totalAlim)}</td>
+                    <td class="num">${formatoMoneda(p.moviViaje)}</td><td class="num">${formatoMoneda(p.moviInterna)}</td>
+                    <td class="num" style="font-weight:700;">${formatoMoneda(subtotal)}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+              <tfoot><tr style="font-weight:700;"><td colspan="9">Total equipo propio</td><td class="num">${formatoMoneda(totalEquipo)}</td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+
+        ${externos.length ? `
+        <div class="hoja-seccion">
+          <h3>Personal externo</h3>
+          <table class="hoja-tabla" style="max-width:520px;">
+            <thead><tr><th>Nombre</th><th>Días necesarios</th><th>Costo por día</th><th style="text-align:right;">Total</th></tr></thead>
+            <tbody>
+              ${externos.map((p) => `<tr><td>${p.nombre || '—'}</td><td>${p.diasNecesarios}</td><td class="num">${formatoMoneda(p.costoPorDia)}</td><td class="num">${formatoMoneda(p.diasNecesarios * p.costoPorDia)}</td></tr>`).join('')}
+            </tbody>
+            <tfoot><tr style="font-weight:700;"><td colspan="3">Total personal externo</td><td class="num">${formatoMoneda(totalExterno)}</td></tr></tfoot>
+          </table>
+        </div>
+        ` : ''}
+
+        <div class="hoja-seccion">
+          <table class="hoja-tabla" style="max-width:340px; margin-left:auto;">
+            <tbody><tr style="font-weight:700; font-size:1rem;"><td>Total general</td><td class="num">${formatoMoneda(total)}</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="hoja-firmas">
+          <div class="hoja-firma-linea">${config.nombreResponsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div>
+          <div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div>
+        </div>
+        <div class="hoja-footer"><span>${config.nombreEmpresa || ''}</span><span>Página 1</span></div>
+      </div>
+    `;
+  }
+
+  /* ============================================================
+     3) SOLICITUD FORMAL (documento oficial)
+     ============================================================ */
+
+  async function abrirSolicitudFormal({ proyecto, onGuardado }) {
+    const config = await obtenerEmpresa();
+    const previa = await obtenerSolicitud(proyecto.id, 'formal');
+
+    // Suma los totales de las otras dos solicitudes (si existen) para sugerir el monto
+    const [solJefe, solPersonal] = await Promise.all([
+      obtenerSolicitud(proyecto.id, 'jefe'),
+      obtenerSolicitud(proyecto.id, 'personal'),
+    ]);
+    let sugerido = 0;
+    if (solJefe) sugerido += (solJefe.tarifaAlimentacionDia * diasEntre(solJefe.fechaInicio, solJefe.fechaFin)) + solJefe.movilizacion + solJefe.gastosInstalacion + solJefe.gastosMateriales + solJefe.cajaChica;
+    if (solPersonal) {
+      sugerido += (solPersonal.equipo || []).reduce((a, p) => a + (p.tarifaAlimentacionDia * diasEntre(p.fechaInicio, p.fechaFin)) + p.moviViaje + p.moviInterna, 0);
+      sugerido += (solPersonal.externos || []).reduce((a, p) => a + (p.diasNecesarios * p.costoPorDia), 0);
+    }
+
+    const datos = previa || {
+      fechaSolicitud: new Date().toISOString().slice(0, 10),
+      motivoDelViaje: proyecto.motivoViaje || '',
+      terrestre: true, aereo: false, propio: false,
+      nombreSolicitante: config.nombreResponsable || '',
+      cedula: config.cedulaResponsable || '',
+      departamento: config.departamento || '',
+      fechaSalida: proyecto.fechaInicio || '',
+      horaSalida: '',
+      fechaRegreso: proyecto.fechaFinEstimada || '',
+      horaRegreso: '',
+      destino: proyecto.ciudad || '',
+      idaYVuelta: 'SI',
+      requiereHotel: 'SI',
+      gastoSolicitado: sugerido || 0,
+      observaciones: proyecto.motivoViaje || '',
+    };
+
+    const modal = abrirModal({
+      titulo: 'Solicitud formal de viáticos',
+      contenidoHtml: `
+        <div class="field"><label>Fecha de la solicitud</label><input type="date" id="s3-fecha" value="${datos.fechaSolicitud}" /></div>
+        <div class="field"><label>Motivo del viaje</label><input type="text" id="s3-motivo" value="${datos.motivoDelViaje}" /></div>
+        <div class="field">
+          <label>Transporte</label>
+          <div style="display:flex; gap:16px;">
+            <label style="display:flex; align-items:center; gap:6px; font-weight:400;"><input type="checkbox" id="s3-terrestre" ${datos.terrestre ? 'checked' : ''} /> Terrestre</label>
+            <label style="display:flex; align-items:center; gap:6px; font-weight:400;"><input type="checkbox" id="s3-aereo" ${datos.aereo ? 'checked' : ''} /> Aéreo</label>
+            <label style="display:flex; align-items:center; gap:6px; font-weight:400;"><input type="checkbox" id="s3-propio" ${datos.propio ? 'checked' : ''} /> Propio</label>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Nombre del solicitante</label><input type="text" id="s3-nombre" value="${datos.nombreSolicitante}" /></div>
+          <div class="field"><label>C.I.</label><input type="text" id="s3-cedula" value="${datos.cedula}" /></div>
+        </div>
+        <div class="field"><label>Departamento</label><input type="text" id="s3-depto" value="${datos.departamento}" /></div>
+        <div class="field-row">
+          <div class="field"><label>Fecha de salida</label><input type="date" id="s3-fsalida" value="${datos.fechaSalida}" /></div>
+          <div class="field"><label>Hora</label><input type="time" id="s3-hsalida" value="${datos.horaSalida}" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Fecha de regreso</label><input type="date" id="s3-fregreso" value="${datos.fechaRegreso}" /></div>
+          <div class="field"><label>Hora</label><input type="time" id="s3-hregreso" value="${datos.horaRegreso}" /></div>
+        </div>
+        <div class="field"><label>Destino</label><input type="text" id="s3-destino" value="${datos.destino}" /></div>
+        <div class="field-row">
+          <div class="field"><label>¿Ida y vuelta?</label><select id="s3-idavuelta"><option value="SI" ${datos.idaYVuelta === 'SI' ? 'selected' : ''}>Sí</option><option value="NO" ${datos.idaYVuelta === 'NO' ? 'selected' : ''}>No</option></select></div>
+          <div class="field"><label>¿Requiere hotel?</label><select id="s3-hotel"><option value="SI" ${datos.requiereHotel === 'SI' ? 'selected' : ''}>Sí</option><option value="NO" ${datos.requiereHotel === 'NO' ? 'selected' : ''}>No</option></select></div>
+        </div>
+        <div class="field">
+          <label>Gastos de viaje solicitados (USD)</label>
+          <input type="number" step="0.01" min="0" id="s3-gasto" value="${datos.gastoSolicitado}" />
+          ${sugerido > 0 ? `<p style="font-size:var(--fs-xs); color:var(--text-500); margin-top:4px;">Sugerido según tus otras solicitudes: ${formatoMoneda(sugerido)}</p>` : ''}
+        </div>
+        <div class="field"><label>Observaciones (detalle de gastos e itinerario)</label><textarea id="s3-obs" rows="3">${datos.observaciones}</textarea></div>
+      `,
+      botones: [
+        { texto: 'Cancelar', clase: 'btn-secondary' },
+        { texto: 'Guardar', clase: 'btn-secondary', cerrar: false, onClick: async () => { await guardarDatos3(); mostrarToast('Solicitud guardada.'); } },
+        {
+          texto: 'Guardar y generar PDF', clase: 'btn-primary', cerrar: false,
+          onClick: async () => {
+            const guardado = await guardarDatos3();
+            cerrarModal();
+            imprimirEnZona(construirHTMLFormal(proyecto, guardado, config));
+          },
+        },
+      ],
+    });
+
+    function leerValores3() {
+      return {
+        fechaSolicitud: modal.querySelector('#s3-fecha').value,
+        motivoDelViaje: modal.querySelector('#s3-motivo').value,
+        terrestre: modal.querySelector('#s3-terrestre').checked,
+        aereo: modal.querySelector('#s3-aereo').checked,
+        propio: modal.querySelector('#s3-propio').checked,
+        nombreSolicitante: modal.querySelector('#s3-nombre').value,
+        cedula: modal.querySelector('#s3-cedula').value,
+        departamento: modal.querySelector('#s3-depto').value,
+        fechaSalida: modal.querySelector('#s3-fsalida').value,
+        horaSalida: modal.querySelector('#s3-hsalida').value,
+        fechaRegreso: modal.querySelector('#s3-fregreso').value,
+        horaRegreso: modal.querySelector('#s3-hregreso').value,
+        destino: modal.querySelector('#s3-destino').value,
+        idaYVuelta: modal.querySelector('#s3-idavuelta').value,
+        requiereHotel: modal.querySelector('#s3-hotel').value,
+        gastoSolicitado: Number(modal.querySelector('#s3-gasto').value) || 0,
+        observaciones: modal.querySelector('#s3-obs').value,
+      };
+    }
+
+    async function guardarDatos3() {
+      return guardarSolicitud(proyecto.id, 'formal', leerValores3());
+    }
+  }
+
+  function construirHTMLFormal(proyecto, datos, config) {
+    const transportes = [datos.terrestre && 'Terrestre', datos.aereo && 'Aéreo', datos.propio && 'Propio'].filter(Boolean).join(' · ') || '—';
+    return `
+      <div class="hoja-informe">
+        <div class="hoja-header">
+          ${config.logo ? `<img src="${config.logo}" style="max-height:52px; max-width:180px; object-fit:contain;" />` : `<div class="empresa">${config.nombreEmpresa || 'Empresa'}</div>`}
+          <div class="meta">Fecha de la solicitud: ${formatoFecha(datos.fechaSolicitud)}</div>
+        </div>
+        <div class="hoja-titulo">Proyección de gastos de viaje</div>
+        <div class="hoja-subtitulo">${proyecto.nombre}</div>
+
+        <div class="hoja-seccion">
+          <h3>Motivo del viaje</h3>
+          <p style="font-size:var(--fs-sm);">${datos.motivoDelViaje || '—'}</p>
+        </div>
+
+        <div class="hoja-seccion">
+          <h3>Transporte</h3>
+          <p style="font-size:var(--fs-sm);">${transportes}</p>
+        </div>
+
+        <div class="hoja-seccion">
+          <h3>Información</h3>
+          <div class="hoja-datos-grid">
+            <div><div class="lbl">Nombre del solicitante</div><div>${datos.nombreSolicitante || '—'}</div></div>
+            <div><div class="lbl">C.I.</div><div>${datos.cedula || '—'}</div></div>
+            <div><div class="lbl">Departamento</div><div>${datos.departamento || '—'}</div></div>
+            <div><div class="lbl">Destino</div><div>${datos.destino || '—'}</div></div>
+            <div><div class="lbl">Fecha de salida</div><div>${formatoFecha(datos.fechaSalida)} ${datos.horaSalida || ''}</div></div>
+            <div><div class="lbl">Fecha de regreso</div><div>${formatoFecha(datos.fechaRegreso)} ${datos.horaRegreso || ''}</div></div>
+            <div><div class="lbl">Ida y vuelta</div><div>${datos.idaYVuelta}</div></div>
+            <div><div class="lbl">Requiere hotel</div><div>${datos.requiereHotel}</div></div>
+          </div>
+        </div>
+
+        <div class="hoja-seccion">
+          <h3>Gastos de viaje solicitados</h3>
+          <p style="font-family:var(--font-mono); font-size:1.4rem; font-weight:700;">${formatoMoneda(datos.gastoSolicitado)}</p>
+        </div>
+
+        <div class="hoja-seccion">
+          <h3>Observaciones (detalle de gastos e itinerario)</h3>
+          <p style="font-size:var(--fs-sm); white-space:pre-wrap;">${datos.observaciones || '—'}</p>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:52px;">
+          <div class="hoja-firma-linea" style="margin-top:0;">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div>
+          <div class="hoja-firma-linea" style="margin-top:0;">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div>
+          <div class="hoja-firma-linea" style="margin-top:0;">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Tesorería</span></div>
+        </div>
+        <div class="hoja-footer"><span>${config.nombreEmpresa || ''}</span><span>Página 1</span></div>
+      </div>
+    `;
+  }
+
+  return { abrirSolicitudJefe, abrirSolicitudPersonal, abrirSolicitudFormal };
+  })();
+
   // ==== modules/proyeccion/proyeccion.view ====
   __modules__['modules/proyeccion/proyeccion.view'] = (function(){
   const { listarProyeccion, crearItemProyeccion, editarItemProyeccion, eliminarItemProyeccion } = __modules__['modules/proyeccion/proyeccion.repo'];
@@ -3489,6 +4117,8 @@ a { color: inherit; text-decoration: none; }
   const { mostrarToast } = __modules__['components/toast'];
   const { icono } = __modules__['components/icons'];
   const { db } = __modules__['storage/db'];
+  const { abrirSolicitudJefe, abrirSolicitudPersonal, abrirSolicitudFormal } = __modules__['modules/proyeccion/proyeccion.solicitudes.view'];
+
 
 
 
@@ -3631,6 +4261,20 @@ a { color: inherit; text-decoration: none; }
 
       contenedor.innerHTML = `
         <div class="toolbar">
+          <div class="section-title" style="margin-bottom:0;">Solicitudes de viáticos (planificación)</div>
+        </div>
+        <div class="card card-elevated" style="margin-bottom:var(--sp-5);">
+          <p style="font-size:var(--fs-sm); color:var(--ink-500); margin-bottom:var(--sp-3);">
+            Genera estos documentos para pedir el anticipo a la empresa, antes de que el proyecto pase a activo.
+          </p>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-secondary" id="btn-sol-jefe">1. Mi solicitud (jefe)</button>
+            <button class="btn btn-secondary" id="btn-sol-personal">2. Personal de campo</button>
+            <button class="btn btn-secondary" id="btn-sol-formal">3. Solicitud formal</button>
+          </div>
+        </div>
+
+        <div class="toolbar">
           <div class="section-title" style="margin-bottom:0;">Proyección de gastos</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn btn-secondary" id="btn-solicitud-pdf" ${items.length ? '' : 'disabled'}>Generar PDF de solicitud</button>
@@ -3697,6 +4341,9 @@ a { color: inherit; text-decoration: none; }
         </div>
       `;
 
+      contenedor.querySelector('#btn-sol-jefe').addEventListener('click', () => abrirSolicitudJefe({ proyecto, onGuardado: pintar }));
+      contenedor.querySelector('#btn-sol-personal').addEventListener('click', () => abrirSolicitudPersonal({ proyecto, onGuardado: pintar }));
+      contenedor.querySelector('#btn-sol-formal').addEventListener('click', () => abrirSolicitudFormal({ proyecto, onGuardado: pintar }));
       contenedor.querySelector('#btn-nueva-linea').addEventListener('click', () => formularioItem(categorias, proyectoId, null, pintar));
       contenedor.querySelector('#btn-solicitud-pdf')?.addEventListener('click', () => {
         imprimirEnZona(construirSolicitudHTML(proyecto, items, categorias, empresa));
@@ -3934,7 +4581,7 @@ a { color: inherit; text-decoration: none; }
 
   const STORES_A_RESPALDAR = [
     'proyectos', 'ingresos', 'gastos', 'proyecciones', 'papelera', 'papeleraIngresos',
-    'plantillas', 'categorias', 'configuracion', 'comprobantes',
+    'plantillas', 'categorias', 'configuracion', 'comprobantes', 'solicitudesViaticos',
   ];
 
   function blobABase64(blob) {
@@ -4104,6 +4751,20 @@ a { color: inherit; text-decoration: none; }
           <div class="field">
             <label for="c-tarifa-km">Tarifa por kilómetro (vehículo propio, USD)</label>
             <input id="c-tarifa-km" name="tarifaKm" type="number" step="0.01" min="0" value="${config.tarifaKm ?? 0.35}" />
+          </div>
+          <div class="field">
+            <label for="c-departamento">Departamento (para solicitudes formales de viáticos)</label>
+            <input id="c-departamento" name="departamento" value="${config.departamento || ''}" placeholder="Ej. Departamento técnico" />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="c-tarifa-alim-jefe">Tarifa alimentación tuya / día (USD)</label>
+              <input id="c-tarifa-alim-jefe" name="tarifaAlimentacionJefe" type="number" step="0.01" min="0" value="${config.tarifaAlimentacionJefe ?? 10}" />
+            </div>
+            <div class="field">
+              <label for="c-tarifa-alim-personal">Tarifa alimentación personal / día (USD)</label>
+              <input id="c-tarifa-alim-personal" name="tarifaAlimentacionPersonal" type="number" step="0.01" min="0" value="${config.tarifaAlimentacionPersonal ?? 20}" />
+            </div>
           </div>
           <div class="field">
             <label for="c-moneda">Moneda</label>
