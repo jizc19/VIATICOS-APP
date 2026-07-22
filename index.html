@@ -1086,6 +1086,9 @@ a { color: inherit; text-decoration: none; }
     { id: 'transporte', nombre: 'Transporte' },
     { id: 'peajes', nombre: 'Peajes' },
     { id: 'materiales', nombre: 'Materiales' },
+    { id: 'kilometraje', nombre: 'Kilometraje vehículo propio' },
+    { id: 'camioneta_herramientas', nombre: 'Camioneta - traslado de herramientas' },
+    { id: 'diligencias', nombre: 'Diligencias y carreras' },
     { id: 'imprevistos', nombre: 'Imprevistos' },
     { id: 'otros', nombre: 'Otros' },
   ];
@@ -1143,7 +1146,8 @@ a { color: inherit; text-decoration: none; }
       valor: Number(datos.valor) || 0,
       estadoComprobante: datos.estadoComprobante || ESTADOS_COMPROBANTE.SIN,
       comprobanteId: datos.comprobanteId || null,
-      origenRegistro: datos.origenRegistro || 'manual', // 'manual' | 'foto'
+      origenRegistro: datos.origenRegistro || 'manual', // 'manual' | 'foto' | 'kilometraje'
+      kilometraje: datos.kilometraje || null, // { fotoSalidaId, fotoLlegadaId, kmSalida, kmLlegada, tarifaKm }
       observaciones: datos.observaciones?.trim() || '',
       eliminado: false,
       creadoEn: new Date().toISOString(),
@@ -1330,6 +1334,8 @@ a { color: inherit; text-decoration: none; }
     for (const item of proyeccion) await db.delete('proyecciones', item.id);
     for (const gasto of gastos) {
       if (gasto.comprobanteId) await db.delete('comprobantes', gasto.comprobanteId);
+      if (gasto.kilometraje?.fotoSalidaId) await db.delete('comprobantes', gasto.kilometraje.fotoSalidaId);
+      if (gasto.kilometraje?.fotoLlegadaId) await db.delete('comprobantes', gasto.kilometraje.fotoLlegadaId);
       await db.delete('gastos', gasto.id);
     }
     await db.delete('proyectos', proyectoId);
@@ -2217,6 +2223,8 @@ a { color: inherit; text-decoration: none; }
     if (gasto?.comprobanteId) {
       await db.delete('comprobantes', gasto.comprobanteId);
     }
+    if (gasto?.kilometraje?.fotoSalidaId) await db.delete('comprobantes', gasto.kilometraje.fotoSalidaId);
+    if (gasto?.kilometraje?.fotoLlegadaId) await db.delete('comprobantes', gasto.kilometraje.fotoLlegadaId);
     return db.delete('gastos', id);
   }
 
@@ -2740,7 +2748,7 @@ a { color: inherit; text-decoration: none; }
    * Si no hay conexión, la deja en cola y llama a `onListo` igual
    * (con estadoInterpretacion = pendiente_conexion) para no bloquear al usuario.
    */
-  function renderBotonesCaptura(contenedor, onListo) {
+  function renderBotonesCaptura(contenedor, onListo, { interpretar = true } = {}) {
     contenedor.innerHTML = `
       <div style="display:flex; gap:var(--sp-3); flex-wrap:wrap;">
         <button type="button" class="btn btn-secondary" id="btn-camara">${icono('camara')} Tomar foto</button>
@@ -2762,6 +2770,19 @@ a { color: inherit; text-decoration: none; }
       if (!archivo) return;
       try {
         let comprobante;
+
+        if (!interpretar) {
+          // Foto simple sin intento de lectura de factura (ej. fotos de kilometraje)
+          estadoEl.textContent = 'Guardando imagen…';
+          const { imagenBlob, miniaturaBlob } = await comprimirComprobante(archivo);
+          comprobante = crearComprobante(null, { imagenBlob, miniaturaBlob });
+          comprobante = { ...comprobante, estadoInterpretacion: ESTADO_INTERPRETACION.NO_APLICA };
+          await db.put('comprobantes', comprobante);
+          estadoEl.textContent = '';
+          onListo(comprobante);
+          return;
+        }
+
         const enLinea = navigator.onLine;
 
         if (enLinea) {
@@ -3072,6 +3093,145 @@ a { color: inherit; text-decoration: none; }
   return { abrirFormularioGasto };
   })();
 
+  // ==== modules/gastos/gastos.kilometraje ====
+  __modules__['modules/gastos/gastos.kilometraje'] = (function(){
+  const { abrirModal, cerrarModal } = __modules__['components/modal'];
+  const { mostrarToast } = __modules__['components/toast'];
+  const { ESTADOS_COMPROBANTE } = __modules__['core/models'];
+  const { crearNuevoGasto } = __modules__['modules/gastos/gastos.repo'];
+  const { renderBotonesCaptura } = __modules__['modules/comprobantes/captura'];
+  const { blobAUrl } = __modules__['modules/comprobantes/imagen.util'];
+  const { formatoMoneda } = __modules__['utils/format'];
+  const { db } = __modules__['storage/db'];
+
+
+
+
+
+
+
+
+
+  /**
+   * gastos.kilometraje.js — Registro de kilometraje con vehículo propio.
+   * Flujo: foto del odómetro al salir + foto al llegar, el usuario escribe
+   * ambas lecturas, y la app calcula km recorridos × tarifa = valor del gasto.
+   * Se guarda como un gasto normal (con las dos fotos como respaldo).
+   */
+
+  function celdaFoto(id, titulo) {
+    return `
+      <div class="field">
+        <label>${titulo}</label>
+        <div id="zona-${id}"></div>
+        <div id="preview-${id}" style="margin-top:8px;"></div>
+      </div>
+    `;
+  }
+
+  async function abrirRegistroKilometraje({ proyectoId, onGuardado }) {
+    const config = (await db.get('configuracion', 'general')) || {};
+    const tarifaKm = Number(config.tarifaKm ?? 0.35);
+
+    let fotoSalida = null; // { id, imagenBlob }
+    let fotoLlegada = null;
+
+    const modal = abrirModal({
+      titulo: 'Registrar kilometraje',
+      contenidoHtml: `
+        <p style="font-size:var(--fs-sm); color:var(--text-500); margin-bottom:var(--sp-3);">
+          Toma una foto del odómetro al salir y otra al llegar. La app calcula los km recorridos y el valor automáticamente (tarifa: ${formatoMoneda(tarifaKm)}/km).
+        </p>
+        <div class="field"><label>Fecha *</label><input type="date" name="fecha" required value="${new Date().toISOString().slice(0, 10)}" /></div>
+        <div class="field-row">
+          ${celdaFoto('salida', 'Foto al salir')}
+          ${celdaFoto('llegada', 'Foto al llegar')}
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Km al salir</label><input type="number" step="0.1" min="0" id="km-salida" value="" /></div>
+          <div class="field"><label>Km al llegar</label><input type="number" step="0.1" min="0" id="km-llegada" value="" /></div>
+        </div>
+        <div class="deteccion-card" id="resultado-km">
+          <h3>Resultado</h3>
+          <p style="font-size:var(--fs-sm);">Ingresa ambas lecturas para calcular.</p>
+        </div>
+        <div class="field"><label>Descripción (opcional)</label><input type="text" id="descripcion-km" placeholder="Ej. Viaje Manta - Portoviejo" /></div>
+      `,
+      botones: [
+        { texto: 'Cancelar', clase: 'btn-secondary' },
+        {
+          texto: 'Guardar', clase: 'btn-primary', cerrar: false,
+          onClick: async () => {
+            const fecha = modal.querySelector('[name="fecha"]').value;
+            const kmSalida = Number(modal.querySelector('#km-salida').value);
+            const kmLlegada = Number(modal.querySelector('#km-llegada').value);
+            const descripcionManual = modal.querySelector('#descripcion-km').value.trim();
+
+            if (!fecha) { mostrarToast('La fecha es obligatoria.'); return; }
+            if (!(kmLlegada > kmSalida)) { mostrarToast('El km de llegada debe ser mayor al de salida.'); return; }
+            if (!fotoSalida || !fotoLlegada) { mostrarToast('Toma ambas fotos del odómetro antes de guardar.'); return; }
+
+            const kmRecorridos = Number((kmLlegada - kmSalida).toFixed(1));
+            const valor = Number((kmRecorridos * tarifaKm).toFixed(2));
+            const descripcion = descripcionManual || `Kilometraje: ${kmRecorridos} km × ${formatoMoneda(tarifaKm)}`;
+
+            const gasto = await crearNuevoGasto(proyectoId, {
+              fecha,
+              descripcion,
+              categoria: 'kilometraje',
+              valor,
+              estadoComprobante: ESTADOS_COMPROBANTE.CON,
+              origenRegistro: 'kilometraje',
+              kilometraje: {
+                fotoSalidaId: fotoSalida.id,
+                fotoLlegadaId: fotoLlegada.id,
+                kmSalida,
+                kmLlegada,
+                tarifaKm,
+              },
+            });
+
+            mostrarToast(`Kilometraje registrado: ${kmRecorridos} km · ${formatoMoneda(valor)}`);
+            cerrarModal();
+            onGuardado?.(gasto);
+          },
+        },
+      ],
+    });
+
+    const actualizarResultado = () => {
+      const kmSalida = Number(modal.querySelector('#km-salida').value);
+      const kmLlegada = Number(modal.querySelector('#km-llegada').value);
+      const resultadoEl = modal.querySelector('#resultado-km');
+      if (kmLlegada > kmSalida && kmSalida >= 0) {
+        const kmRecorridos = Number((kmLlegada - kmSalida).toFixed(1));
+        const valor = kmRecorridos * tarifaKm;
+        resultadoEl.innerHTML = `
+          <h3>Resultado</h3>
+          <p style="font-size:var(--fs-sm);"><strong>${kmRecorridos} km</strong> recorridos × ${formatoMoneda(tarifaKm)}/km = <strong>${formatoMoneda(valor)}</strong></p>
+        `;
+      } else {
+        resultadoEl.innerHTML = `<h3>Resultado</h3><p style="font-size:var(--fs-sm);">Ingresa ambas lecturas para calcular.</p>`;
+      }
+    };
+
+    modal.querySelector('#km-salida').addEventListener('input', actualizarResultado);
+    modal.querySelector('#km-llegada').addEventListener('input', actualizarResultado);
+
+    renderBotonesCaptura(modal.querySelector('#zona-salida'), (comprobante) => {
+      fotoSalida = comprobante;
+      modal.querySelector('#preview-salida').innerHTML = `<img src="${blobAUrl(comprobante.imagenBlob)}" style="max-width:100%; max-height:180px; border-radius:4px;" />`;
+    }, { interpretar: false });
+
+    renderBotonesCaptura(modal.querySelector('#zona-llegada'), (comprobante) => {
+      fotoLlegada = comprobante;
+      modal.querySelector('#preview-llegada').innerHTML = `<img src="${blobAUrl(comprobante.imagenBlob)}" style="max-width:100%; max-height:180px; border-radius:4px;" />`;
+    }, { interpretar: false });
+  }
+
+  return { abrirRegistroKilometraje };
+  })();
+
   // ==== modules/gastos/gastos.view ====
   __modules__['modules/gastos/gastos.view'] = (function(){
   const { listarGastosActivos, listarGastosEnPapelera, obtenerGasto, enviarAPapelera, restaurarDePapelera, eliminarDefinitivamente } = __modules__['modules/gastos/gastos.repo'];
@@ -3082,8 +3242,10 @@ a { color: inherit; text-decoration: none; }
   const { mostrarToast } = __modules__['components/toast'];
   const { icono } = __modules__['components/icons'];
   const { abrirFormularioGasto } = __modules__['modules/gastos/gastos.form'];
+  const { abrirRegistroKilometraje } = __modules__['modules/gastos/gastos.kilometraje'];
   const { db } = __modules__['storage/db'];
   const { blobAUrl } = __modules__['modules/comprobantes/imagen.util'];
+
 
 
 
@@ -3126,7 +3288,37 @@ a { color: inherit; text-decoration: none; }
     const gasto = await obtenerGasto(gastoId);
     let imgHtml = '';
     let datosDetectadosHtml = '';
-    if (gasto.comprobanteId) {
+
+    if (gasto.kilometraje) {
+      const km = gasto.kilometraje;
+      const [fotoSalida, fotoLlegada] = await Promise.all([
+        km.fotoSalidaId ? db.get('comprobantes', km.fotoSalidaId) : null,
+        km.fotoLlegadaId ? db.get('comprobantes', km.fotoLlegadaId) : null,
+      ]);
+      imgHtml = `
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <p style="font-size:var(--fs-xs); color:var(--text-500); text-transform:uppercase; margin-bottom:4px;">Foto al salir</p>
+            ${fotoSalida?.imagenBlob ? `<img src="${blobAUrl(fotoSalida.imagenBlob)}" class="comprobante-preview" />` : '<p style="font-size:var(--fs-xs);">No disponible</p>'}
+          </div>
+          <div>
+            <p style="font-size:var(--fs-xs); color:var(--text-500); text-transform:uppercase; margin-bottom:4px;">Foto al llegar</p>
+            ${fotoLlegada?.imagenBlob ? `<img src="${blobAUrl(fotoLlegada.imagenBlob)}" class="comprobante-preview" />` : '<p style="font-size:var(--fs-xs);">No disponible</p>'}
+          </div>
+        </div>
+      `;
+      datosDetectadosHtml = `
+        <div class="deteccion-card" style="margin-top:var(--sp-3);">
+          <h3>Cálculo de kilometraje</h3>
+          <p style="font-size:var(--fs-sm);">
+            Km al salir: ${km.kmSalida}<br>
+            Km al llegar: ${km.kmLlegada}<br>
+            Km recorridos: ${Number((km.kmLlegada - km.kmSalida).toFixed(1))}<br>
+            Tarifa: ${formatoMoneda(km.tarifaKm)}/km
+          </p>
+        </div>
+      `;
+    } else if (gasto.comprobanteId) {
       const comp = await db.get('comprobantes', gasto.comprobanteId);
       if (comp?.imagenBlob) imgHtml = `<img src="${blobAUrl(comp.imagenBlob)}" class="comprobante-preview" />`;
       const d = comp?.datosDetectados;
@@ -3236,6 +3428,7 @@ a { color: inherit; text-decoration: none; }
           <div style="display:flex; gap:var(--sp-2); flex-wrap:wrap;">
             <button class="btn btn-secondary" id="btn-papelera">${icono('papelera')} Papelera ${papelera.length ? `(${papelera.length})` : ''}</button>
             <button class="btn btn-warning" id="btn-rapido-sin-comprobante">Registro rápido sin comprobante</button>
+            <button class="btn btn-secondary" id="btn-kilometraje">${icono('camara')} Registrar kilometraje</button>
             <button class="btn btn-primary" id="btn-nuevo-gasto">${icono('mas')} Registrar gasto</button>
           </div>
         </div>
@@ -3258,6 +3451,9 @@ a { color: inherit; text-decoration: none; }
         abrirFormularioGasto({ proyectoId, onGuardado: pintar, estadoInicial: ESTADOS_COMPROBANTE.SIN });
       });
       contenedor.querySelector('#btn-papelera').addEventListener('click', () => abrirPapelera(proyectoId, pintar));
+      contenedor.querySelector('#btn-kilometraje').addEventListener('click', () => {
+        abrirRegistroKilometraje({ proyectoId, onGuardado: pintar });
+      });
       contenedor.querySelectorAll('[data-filtro]').forEach((btn) => btn.addEventListener('click', () => { filtro = btn.dataset.filtro; pintar(); }));
 
       const buscador = contenedor.querySelector('#buscar-gasto');
@@ -3961,6 +4157,10 @@ a { color: inherit; text-decoration: none; }
           <div class="field">
             <label for="c-cedula">Cédula del responsable</label>
             <input id="c-cedula" name="cedulaResponsable" value="${config.cedulaResponsable || ''}" placeholder="Ej. 1103760250" />
+          </div>
+          <div class="field">
+            <label for="c-tarifa-km">Tarifa por kilómetro (vehículo propio, USD)</label>
+            <input id="c-tarifa-km" name="tarifaKm" type="number" step="0.01" min="0" value="${config.tarifaKm ?? 0.35}" />
           </div>
           <div class="field">
             <label for="c-moneda">Moneda</label>
@@ -4837,10 +5037,19 @@ a { color: inherit; text-decoration: none; }
   async function construirAnexoComprobantesHTML(gastosFiltrados) {
     const conFoto = [];
     for (const g of gastosFiltrados) {
+      if (g.kilometraje?.fotoSalidaId && g.kilometraje?.fotoLlegadaId) {
+        const [fotoSalida, fotoLlegada] = await Promise.all([
+          db.get('comprobantes', g.kilometraje.fotoSalidaId),
+          db.get('comprobantes', g.kilometraje.fotoLlegadaId),
+        ]);
+        if (fotoSalida?.imagenBlob) conFoto.push({ gasto: g, url: blobAUrl(fotoSalida.imagenBlob), etiqueta: 'Salida' });
+        if (fotoLlegada?.imagenBlob) conFoto.push({ gasto: g, url: blobAUrl(fotoLlegada.imagenBlob), etiqueta: 'Llegada' });
+        continue;
+      }
       if (!g.comprobanteId) continue;
       const comp = await db.get('comprobantes', g.comprobanteId);
       if (!comp?.imagenBlob) continue;
-      conFoto.push({ gasto: g, url: blobAUrl(comp.imagenBlob) });
+      conFoto.push({ gasto: g, url: blobAUrl(comp.imagenBlob), etiqueta: null });
     }
     if (!conFoto.length) return '';
 
@@ -4852,9 +5061,9 @@ a { color: inherit; text-decoration: none; }
         <div class="hoja-informe" style="margin-bottom:24px; page-break-after:always;">
           <div class="hoja-titulo" style="font-size:1.1rem; margin-bottom:16px;">Anexo de comprobantes</div>
           <div class="hoja-anexo-grid">
-            ${grupo.map(({ gasto: g, url }) => `
+            ${grupo.map(({ gasto: g, url, etiqueta }) => `
               <div class="hoja-anexo-celda">
-                <div class="hoja-anexo-titulo">Comprobante N.º ${String(g.numero).padStart(3, '0')}</div>
+                <div class="hoja-anexo-titulo">Comprobante N.º ${String(g.numero).padStart(3, '0')}${etiqueta ? ` — ${etiqueta}` : ''}</div>
                 <div class="hoja-anexo-meta">${g.descripcion || '(sin descripción)'} · ${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
                 <img src="${url}" class="hoja-anexo-img" />
               </div>
