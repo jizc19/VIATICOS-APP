@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Viáticos — Control de Proyectos</title>
 <meta name="theme-color" content="#0b0f16" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -335,6 +335,7 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--radius-sm);
   background: var(--surface-600);
   color: var(--text-100);
+  font-size: 16px; /* nunca menor a 16px: si no, iOS hace zoom automático al tocar el campo y a veces se queda así */
 }
 .field input::placeholder, .field textarea::placeholder { color: var(--text-500); }
 .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold-500); }
@@ -1503,12 +1504,12 @@ a { color: inherit; text-decoration: none; }
     const resumenesActivos = await Promise.all(activos.map((p) => resumenFinancieroProyecto(p.id)));
 
     contenedor.innerHTML = `
-      <div class="topbar-inline" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--sp-5);">
-        <div>
+      <div class="topbar-inline" style="display:flex; flex-wrap:wrap; gap:var(--sp-3); justify-content:space-between; align-items:center; margin-bottom:var(--sp-5);">
+        <div style="flex:1; min-width:200px;">
           <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600;">Dashboard</h1>
           <p style="color:var(--ink-500); font-size:var(--fs-sm);">Cada proyecto tiene su propio viático — no se mezclan entre sí</p>
         </div>
-        <a href="#proyectos/nuevo" class="btn btn-primary">${icono('mas')} Nuevo proyecto</a>
+        <a href="#proyectos/nuevo" class="btn btn-primary" style="flex-shrink:0;">${icono('mas')} Nuevo proyecto</a>
       </div>
 
       <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr); margin-bottom:var(--sp-5);">
