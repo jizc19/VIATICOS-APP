@@ -688,6 +688,10 @@ a { color: inherit; text-decoration: none; }
 .hoja-tabla tr.hoja-fila-par td { background: #f7f5f0; }
 .hoja-tabla .num { font-family: var(--font-mono); text-align: right; white-space: nowrap; }
 .hoja-nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+/* RUC y N.º de factura NUNCA deben truncarse con "…" — se necesitan completos
+   para la contabilidad. Se les da ancho de columna suficiente (ver
+   ANCHOS_COLUMNA) y aquí solo se evita el salto de línea a media cifra. */
+.hoja-nowrap-full { white-space: nowrap; display: block; font-family: var(--font-mono); font-size: 0.8rem; }
 .hoja-tabla tfoot td { border-top: 1.5px solid #1b1f27; border-bottom: none; padding-top: 9px; }
 
 .hoja-anexo-grid {
@@ -722,8 +726,9 @@ a { color: inherit; text-decoration: none; }
 .hoja-estado-pendiente { color: #9a6a1f; }
 .hoja-estado-sin { color: #8a2f2a; }
 
-.hoja-firma-linea { border-top: 1px solid #1b1f27; margin-top: 52px; padding-top: 7px; font-size: 0.78rem; text-align: center; }
+.hoja-firma-linea { border-top: 1px solid #1b1f27; padding-top: 7px; font-size: 0.78rem; text-align: center; }
 .hoja-firmas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; margin-top: 28px; }
+.hoja-firma-bloque { break-inside: avoid; page-break-inside: avoid; display: flex; flex-direction: column; justify-content: flex-end; min-height: 90px; }
 
 .hoja-footer {
   margin-top: 36px; padding-top: 13px; border-top: 1px solid #d8d2c4;
@@ -1443,6 +1448,18 @@ a { color: inherit; text-decoration: none; }
     return fecha.toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
   }
 
+  /** Fecha corta "21 jul" — solo para columnas angostas de tablas de informes,
+   * donde el formato dd/mm/aaaa completo no deja espacio suficiente para
+   * RUC/N.º de factura sin truncarlos. NO usar fuera de tablas de informes. */
+  function formatoFechaCorta(fechaISO) {
+    if (!fechaISO) return '—';
+    const f = fechaISO.slice(0, 10);
+    const [anio, mes, dia] = f.split('-');
+    if (!anio) return '—';
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return `${Number(dia)} ${meses[Number(mes) - 1] || ''}`;
+  }
+
   const ETIQUETAS_ESTADO_COMPROBANTE = {
     con_comprobante: { texto: 'Con comprobante', clase: 'stamp-ok' },
     pendiente_comprobante: { texto: 'Pendiente', clase: 'stamp-pending' },
@@ -1456,7 +1473,7 @@ a { color: inherit; text-decoration: none; }
     archivado: 'Archivado',
   };
 
-  return { formatoMoneda, formatoFecha, formatoFechaLarga, ETIQUETAS_ESTADO_COMPROBANTE, ETIQUETAS_ESTADO_PROYECTO };
+  return { formatoMoneda, formatoFecha, formatoFechaCorta, formatoFechaLarga, ETIQUETAS_ESTADO_COMPROBANTE, ETIQUETAS_ESTADO_PROYECTO };
   })();
 
   // ==== modules/dashboard/dashboard.view ====
@@ -3812,8 +3829,8 @@ a { color: inherit; text-decoration: none; }
         </div>
 
         <div class="hoja-firmas">
-          <div class="hoja-firma-linea">${config.nombreResponsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div>
-          <div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div>
+          <div class="hoja-firma-bloque"><div class="hoja-firma-linea">${config.nombreResponsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div></div>
+          <div class="hoja-firma-bloque"><div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div></div>
         </div>
         <div class="hoja-footer"><span>${config.nombreEmpresa || ''}</span><span>Página 1</span></div>
       </div>
@@ -4050,8 +4067,8 @@ a { color: inherit; text-decoration: none; }
         </div>
 
         <div class="hoja-firmas">
-          <div class="hoja-firma-linea">${config.nombreResponsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div>
-          <div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div>
+          <div class="hoja-firma-bloque"><div class="hoja-firma-linea">${config.nombreResponsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div></div>
+          <div class="hoja-firma-bloque"><div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div></div>
         </div>
         <div class="hoja-footer"><span>${config.nombreEmpresa || ''}</span><span>Página 1</span></div>
       </div>
@@ -4223,9 +4240,9 @@ a { color: inherit; text-decoration: none; }
         </div>
 
         <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:52px;">
-          <div class="hoja-firma-linea" style="margin-top:0;">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div>
-          <div class="hoja-firma-linea" style="margin-top:0;">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div>
-          <div class="hoja-firma-linea" style="margin-top:0;">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Tesorería</span></div>
+          <div class="hoja-firma-bloque"><div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div></div>
+          <div class="hoja-firma-bloque"><div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div></div>
+          <div class="hoja-firma-bloque"><div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Tesorería</span></div></div>
         </div>
         <div class="hoja-footer"><span>${config.nombreEmpresa || ''}</span><span>Página 1</span></div>
       </div>
@@ -4311,8 +4328,8 @@ a { color: inherit; text-decoration: none; }
         </div>
 
         <div class="hoja-firmas">
-          <div class="hoja-firma-linea">${proyecto.responsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">Solicitado por</span></div>
-          <div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">Autorizado por</span></div>
+          <div class="hoja-firma-bloque"><div class="hoja-firma-linea">${proyecto.responsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">Solicitado por</span></div></div>
+          <div class="hoja-firma-bloque"><div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">Autorizado por</span></div></div>
         </div>
 
         <div class="hoja-footer">
@@ -5496,7 +5513,7 @@ a { color: inherit; text-decoration: none; }
 
   // ==== modules/informes/informes.preview ====
   __modules__['modules/informes/informes.preview'] = (function(){
-  const { formatoMoneda, formatoFecha, ETIQUETAS_ESTADO_COMPROBANTE } = __modules__['utils/format'];
+  const { formatoMoneda, formatoFecha, formatoFechaCorta, ETIQUETAS_ESTADO_COMPROBANTE } = __modules__['utils/format'];
   const { ESTADOS_COMPROBANTE, totalProyeccionItem } = __modules__['core/models'];
   const { nombreDeCategoria } = __modules__['core/categorias.repo'];
 
@@ -5586,8 +5603,8 @@ a { color: inherit; text-decoration: none; }
   }
 
   const ANCHOS_COLUMNA = {
-    numero: 4, fecha: 8, categoria: 9, ruc: 11, numeroFactura: 10,
-    estadoComprobante: 8, valor: 8, ciudad: 8, establecimiento: 12,
+    numero: 4, fecha: 6, categoria: 9, ruc: 14, numeroFactura: 15,
+    estadoComprobante: 6, valor: 8, ciudad: 8, establecimiento: 12,
   };
 
   function construirColgroup(cols) {
@@ -5619,14 +5636,14 @@ a { color: inherit; text-decoration: none; }
     if (!cols.length || !gastosFiltrados.length) return '';
 
     const celda = (g, k) => {
-      if (k === 'fecha') return `<span class="hoja-nowrap">${formatoFecha(g.fecha)}</span>`;
+      if (k === 'fecha') return `<span class="hoja-nowrap">${formatoFechaCorta(g.fecha)}</span>`;
       if (k === 'categoria') return `<span class="hoja-nowrap">${nombreDeCategoria(catalogoCategorias, g.categoria)}</span>`;
       if (k === 'valor') return `<span class="num">${formatoMoneda(g.valor)}</span>`;
       if (k === 'estadoComprobante') return `<span class="hoja-estado-mini ${claseEstadoMini(g.estadoComprobante)}" title="${ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante].texto}">${abreviaturaEstado(g.estadoComprobante)}</span>`;
       if (k === 'establecimiento') return g.establecimiento || '—';
       if (k === 'ciudad') return g.ciudad || '—';
-      if (k === 'ruc') return `<span class="hoja-nowrap">${g.ruc || '—'}</span>`;
-      if (k === 'numeroFactura') return `<span class="hoja-nowrap">${g.numeroFactura || '—'}</span>`;
+      if (k === 'ruc') return `<span class="hoja-nowrap-full">${g.ruc || '—'}</span>`;
+      if (k === 'numeroFactura') return `<span class="hoja-nowrap-full">${g.numeroFactura || '—'}</span>`;
       return g[k] ?? '—';
     };
 
@@ -5663,20 +5680,21 @@ a { color: inherit; text-decoration: none; }
       return `
         <div class="hoja-cat-banda">${cat.nombre.toUpperCase()}</div>
         <table class="hoja-tabla">
-          <colgroup><col style="width:10%;"><col style="width:13%;"><col style="width:14%;"><col style="width:51%;"><col style="width:12%;"></colgroup>
-          <thead><tr><th>Fecha</th><th>N.º Doc.</th><th>RUC</th><th>Descripción / Proveedor</th><th style="text-align:right;">Valor</th></tr></thead>
+          <colgroup><col style="width:7%;"><col style="width:15%;"><col style="width:14%;"><col style="width:6%;"><col style="width:46%;"><col style="width:12%;"></colgroup>
+          <thead><tr><th>Fecha</th><th>N.º Doc.</th><th>RUC</th><th>Estado</th><th>Descripción / Proveedor</th><th style="text-align:right;">Valor</th></tr></thead>
           <tbody>
             ${items.map((g) => `
               <tr>
-                <td><span class="hoja-nowrap">${formatoFecha(g.fecha)}</span></td>
-                <td><span class="hoja-nowrap">${g.numeroFactura || '—'}</span></td>
-                <td><span class="hoja-nowrap">${g.ruc || '—'}</span></td>
+                <td><span class="hoja-nowrap">${formatoFechaCorta(g.fecha)}</span></td>
+                <td><span class="hoja-nowrap-full">${g.numeroFactura || '—'}</span></td>
+                <td><span class="hoja-nowrap-full">${g.ruc || '—'}</span></td>
+                <td><span class="hoja-estado-mini ${claseEstadoMini(g.estadoComprobante)}" title="${ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante].texto}">${abreviaturaEstado(g.estadoComprobante)}</span></td>
                 <td>${g.establecimiento ? `${g.descripcion || ''}${g.descripcion ? ' — ' : ''}${g.establecimiento}` : (g.descripcion || '—')}</td>
                 <td class="num">${formatoMoneda(g.valor)}</td>
               </tr>
             `).join('')}
           </tbody>
-          <tfoot><tr style="font-weight:700;"><td colspan="4">Total ${cat.nombre}</td><td class="num">${formatoMoneda(subtotal)}</td></tr></tfoot>
+          <tfoot><tr style="font-weight:700;"><td colspan="5">Total ${cat.nombre}</td><td class="num">${formatoMoneda(subtotal)}</td></tr></tfoot>
         </table>
       `;
     }).join('');
@@ -5685,6 +5703,7 @@ a { color: inherit; text-decoration: none; }
       <div class="hoja-seccion">
         <h3>Detalle de movimientos con comprobante</h3>
         <div class="hoja-tabla-scroll">${bloques}</div>
+        <p style="font-size:0.68rem; color:#8a8f9a; margin-top:6px;">CF: Con factura · PF: Pendiente de factura</p>
       </div>
     `;
   }
@@ -5701,7 +5720,7 @@ a { color: inherit; text-decoration: none; }
             <colgroup><col style="width:16%;"><col style="width:72%;"><col style="width:12%;"></colgroup>
             <thead><tr><th>Fecha</th><th>Descripción</th><th style="text-align:right;">Valor</th></tr></thead>
             <tbody>
-              ${sinRespaldo.map((g) => `<tr><td>${formatoFecha(g.fecha)}</td><td>${g.descripcion || '—'}</td><td class="num">${formatoMoneda(g.valor)}</td></tr>`).join('')}
+              ${sinRespaldo.map((g) => `<tr><td><span class="hoja-nowrap">${formatoFechaCorta(g.fecha)}</span></td><td>${g.descripcion || '—'}</td><td class="num">${formatoMoneda(g.valor)}</td></tr>`).join('')}
             </tbody>
             <tfoot><tr style="font-weight:700;"><td colspan="2">Total sin comprobante</td><td class="num">${formatoMoneda(subtotal)}</td></tr></tfoot>
           </table>
@@ -5764,10 +5783,10 @@ a { color: inherit; text-decoration: none; }
     return `
       <div class="hoja-firmas">
         ${activas.map(([clave, f]) => `
-          <div class="hoja-firma-linea">
+          <div class="hoja-firma-bloque"><div class="hoja-firma-linea">
             ${f.nombre || '\u00A0'}<br>
             <span style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">${ETIQUETAS_FIRMAS[clave]}${f.cargo ? ' · ' + f.cargo : ''}</span>
-          </div>
+          </div></div>
         `).join('')}
       </div>
     `;
