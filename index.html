@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Viáticos — Control de Proyectos</title>
-<meta name="theme-color" content="#25252D" />
+<meta name="theme-color" content="#0b0f16" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Viáticos" />
@@ -18,29 +18,25 @@
    no un único acento genérico repetido en todo.
    ============================================================ */
 :root {
-  /* Fondo y superficies — paleta amarillo/gris (recoloreo 2026-07,
-     tomada de la misma referencia visual del Dashboard). El tema
-     azul/dorado original se conserva SOLO para la sección de Informes,
-     ver override más abajo con body[data-ruta-base="informes"]. */
-  --bg-950: #25252D;      /* fondo de la app */
-  --bg-900: #1e1e24;      /* fondo de paneles grandes */
-  --surface-800: #39373E; /* tarjetas */
-  --surface-700: #423f48; /* tarjetas elevadas / hover */
-  --surface-600: #4a4750; /* inputs, superficies interactivas */
-  --line: #4a4750;        /* bordes y reglas finas */
-  --line-strong: #5c5964;
+  /* Fondo y superficies — azul-tinta, no negro plano */
+  --bg-950: #0b0f16;      /* fondo de la app */
+  --bg-900: #10151e;      /* fondo de paneles grandes */
+  --surface-800: #161d29; /* tarjetas */
+  --surface-700: #1c2431; /* tarjetas elevadas / hover */
+  --surface-600: #232c3b; /* inputs, superficies interactivas */
+  --line: #2a3444;        /* bordes y reglas finas */
+  --line-strong: #38455a;
 
   /* Texto */
-  --text-100: #f5f5f2;
-  --text-300: #c9c8cb;
-  --text-500: #a3a2a8;
+  --text-100: #eef1f2;
+  --text-300: #b6c0cc;
+  --text-500: #7b8798;
 
-  /* Acento principal — amarillo pastel (acción primaria) */
-  --gold-400: #FEF27A;
-  --gold-500: #F2E463;
-  --gold-600: #D9CB4A;
-  --gold-bg: #3a371f;
-  --gold-ink: #20200f; /* texto sobre fondo amarillo */
+  /* Acento principal — dorado sello de cera (acción primaria) */
+  --gold-400: #e8c07a;
+  --gold-500: #d4a24f;
+  --gold-600: #b8863a;
+  --gold-bg: #2b2416;
 
   /* Estados del comprobante — semánticos */
   --state-ok: #4fb08a;
@@ -92,45 +88,8 @@
   --stamp-ok: var(--state-ok); --stamp-ok-bg: var(--state-ok-bg);
   --stamp-pending: var(--state-pending); --stamp-pending-bg: var(--state-pending-bg);
   --stamp-missing: var(--state-missing); --stamp-missing-bg: var(--state-missing-bg);
-
-  /* ---- Paleta exclusiva del Dashboard rediseñado (namespace dash-) ----
-     Tomada por muestreo de color directo de la imagen de referencia del
-     usuario: amarillo pastel #FEF27A, fondo #25252D, tarjeta #39373E,
-     tarjeta clara #DCDCDC. NO usar estas variables fuera del Dashboard. */
-  --dash-bg: #25252D;
-  --dash-card: #39373E;
-  --dash-card-2: #423f48;
-  --dash-yellow: #FEF27A;
-  --dash-yellow-ink: #20200f;
-  --dash-light: #DCDCDC;
-  --dash-light-ink: #1c1c1c;
-  --dash-text: #f5f5f2;
-  --dash-text-dim: #a3a2a8;
-  --dash-radius: 26px;
 }
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
-
-/* ---- Excepción: Informes mantiene el tema original azul/dorado
-   "libro contable nocturno" (documentos formales, no se recolorea).
-   Se activa cuando el body tiene data-ruta-base="informes", atributo
-   que pone marcarRutaActiva() en cada navegación. ---- */
-body[data-ruta-base="informes"] {
-  --bg-950: #0b0f16;
-  --bg-900: #10151e;
-  --surface-800: #161d29;
-  --surface-700: #1c2431;
-  --surface-600: #232c3b;
-  --line: #2a3444;
-  --line-strong: #38455a;
-  --text-100: #eef1f2;
-  --text-300: #b6c0cc;
-  --text-500: #7b8798;
-  --gold-400: #e8c07a;
-  --gold-500: #d4a24f;
-  --gold-600: #b8863a;
-  --gold-bg: #2b2416;
-  --gold-ink: #1c1406;
-}
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -148,7 +107,7 @@ html, body {
 body {
   overscroll-behavior-y: contain;
   background-image:
-    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(242,228,99,0.05), transparent),
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(212,162,79,0.05), transparent),
     radial-gradient(ellipse 700px 500px at 100% 0%, rgba(79,176,138,0.04), transparent);
   background-attachment: fixed;
 }
@@ -174,7 +133,6 @@ a { color: inherit; text-decoration: none; }
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
   min-height: 100vh;
-  min-height: 100dvh;
 }
 
 .sidebar {
@@ -188,7 +146,6 @@ a { color: inherit; text-decoration: none; }
   position: sticky;
   top: 0;
   height: 100vh;
-  height: 100dvh;
 }
 
 .brand {
@@ -250,15 +207,14 @@ a { color: inherit; text-decoration: none; }
   padding: 0 var(--sp-2);
 }
 
-.main-col { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+.main-col { display: flex; flex-direction: column; min-height: 100vh; }
 
 .topbar {
-  height: calc(40px + env(safe-area-inset-top));
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--sp-6);
-  padding-top: env(safe-area-inset-top);
   border-bottom: 1px solid var(--line);
   background: var(--bg-900);
   position: sticky;
@@ -312,8 +268,8 @@ a { color: inherit; text-decoration: none; }
 /* Primaria — dorado sello, para crear / guardar / avanzar */
 .btn-primary {
   background: linear-gradient(180deg, var(--gold-400), var(--gold-500));
-  color: var(--gold-ink);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(242,228,99,0.18);
+  color: #1c1406;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 14px rgba(212,162,79,0.18);
 }
 .btn-primary:hover { filter: brightness(1.08); }
 
@@ -441,15 +397,14 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 860px) {
   #app-shell { grid-template-columns: 1fr; }
   .sidebar { display: none; }
-  .view { padding: var(--sp-4); padding-bottom: calc(var(--bottomnav-h) + var(--sp-4) + env(safe-area-inset-bottom)); }
-  .topbar { padding: 0 var(--sp-4); padding-top: env(safe-area-inset-top); }
+  .view { padding: var(--sp-4); padding-bottom: calc(var(--bottomnav-h) + var(--sp-4)); }
+  .topbar { padding: 0 var(--sp-4); }
   .field-row { grid-template-columns: 1fr; }
 
   .bottom-nav {
     display: flex;
     position: fixed; bottom: 0; left: 0; right: 0;
-    height: calc(var(--bottomnav-h) + env(safe-area-inset-bottom));
-    padding-bottom: env(safe-area-inset-bottom);
+    height: var(--bottomnav-h);
     background: var(--bg-900);
     border-top: 1px solid var(--line);
     z-index: 40;
@@ -464,9 +419,9 @@ a { color: inherit; text-decoration: none; }
   .bottom-nav-item.active { color: var(--gold-400); }
   .bottom-nav-item.fab {
     background: linear-gradient(180deg, var(--gold-400), var(--gold-500));
-    color: var(--gold-ink);
+    color: #1c1406;
     border-radius: 50%; width: 48px; height: 48px;
-    margin-top: -24px; box-shadow: 0 4px 16px rgba(242,228,99,0.35);
+    margin-top: -24px; box-shadow: 0 4px 16px rgba(212,162,79,0.35);
     justify-content: center;
   }
   .bottom-nav-item.fab span { display: none; }
@@ -799,91 +754,6 @@ a { color: inherit; text-decoration: none; }
   @page { size: A4 landscape; margin: 12mm; }
 }
 
-/* ============================================================
-   DASHBOARD REDISEÑADO v3 — namespace dash- (NO afecta otras vistas)
-   Paleta muestreada de la referencia del usuario: amarillo pastel,
-   fondo gris-azulado oscuro, tarjeta oscura y tarjeta clara.
-
-   Diseño de una sola columna (sin paneles forzados a la misma altura):
-   cada bloque mide exactamente lo que su contenido necesita, así que
-   es IMPOSIBLE que queden tiras o huecos vacíos sin usar, sin importar
-   cuántos proyectos tenga el usuario. Solo aplica dentro de .dash-view.
-   ============================================================ */
-.dash-view {
-  background: var(--dash-bg);
-  margin: calc(var(--sp-4) * -1);
-  padding: 20px 16px;
-  border-radius: var(--radius-md);
-}
-@media (max-width: 860px) {
-  .dash-view {
-    margin: calc(var(--sp-4) * -1);
-    padding: 18px 16px calc(var(--bottomnav-h) + var(--sp-4) + env(safe-area-inset-bottom));
-  }
-}
-
-/* Encabezado: avatar + saludo, en una fila compacta (ya no ocupa una
-   columna vertical completa, así que no puede dejar huecos) */
-.dash-header { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
-.dash-header-avatar {
-  width:46px; height:46px; border-radius:14px; flex-shrink:0;
-  background:var(--dash-yellow); color:var(--dash-yellow-ink);
-  display:flex; align-items:center; justify-content:center;
-  font-weight:800; font-size:17px;
-}
-.dash-header-text { min-width:0; }
-.dash-header-greeting { font-size:19px; font-weight:700; color:var(--dash-text); letter-spacing:-.01em; }
-.dash-header-sub { font-size:12px; color:var(--dash-text-dim); margin-top:2px; line-height:1.35; }
-
-/* Tarjeta amarilla grande: saldo total disponible */
-.dash-hero {
-  background:var(--dash-yellow); color:var(--dash-yellow-ink);
-  border-radius:24px; padding:18px 20px; margin-bottom:10px;
-}
-.dash-hero-label { font-size:11.5px; font-weight:700; opacity:.7; text-transform:uppercase; letter-spacing:.03em; }
-.dash-hero-value { font-size:32px; font-weight:800; margin-top:4px; letter-spacing:-.02em; line-height:1.1; }
-
-/* Fila de 2 tarjetas oscuras: último gasto + tiempo desde el registro */
-.dash-chip-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
-.dash-chip { background:var(--dash-card); border-radius:18px; padding:13px 14px; min-width:0; }
-.dash-chip-value { font-size:15px; font-weight:800; color:var(--dash-text); line-height:1.25; overflow-wrap:break-word; }
-.dash-chip-label { font-size:10.5px; color:var(--dash-text-dim); margin-top:4px; line-height:1.3; }
-
-.dash-pill-row { display:flex; gap:8px; margin-bottom:14px; }
-.dash-pill { background:var(--dash-yellow); color:var(--dash-yellow-ink); font-weight:700; font-size:12.5px; padding:9px 14px; border-radius:999px; white-space:nowrap; }
-.dash-pill.dash-pill-ghost { background:var(--dash-card); color:var(--dash-text); }
-
-.dash-btn-yellow { display:block; text-align:center; background:var(--dash-yellow); color:var(--dash-yellow-ink); font-weight:700; padding:14px; border-radius:16px; font-size:15px; text-decoration:none; }
-
-.dash-section-title { display:flex; align-items:center; justify-content:space-between; margin:20px 0 10px; }
-.dash-section-title span { font-size:14px; font-weight:700; color:var(--dash-text); }
-.dash-section-title a { font-size:12px; color:var(--dash-text-dim); text-decoration:none; font-weight:600; }
-
-.dash-proj-card { display:block; background:var(--dash-card); border-radius:18px; padding:14px 16px; margin-bottom:10px; text-decoration:none; color:var(--dash-text); }
-.dash-proj-card .dash-proj-name { font-size:14px; font-weight:700; margin-bottom:2px; }
-.dash-proj-card .dash-proj-meta { font-size:11.5px; color:var(--dash-text-dim); margin-bottom:10px; }
-.dash-proj-metrics { display:flex; gap:14px; font-size:11px; color:var(--dash-text-dim); }
-.dash-proj-metrics strong { display:block; font-size:13px; color:var(--dash-text); font-weight:700; margin-top:1px; }
-.dash-proj-reembolso { margin-top:8px; font-size:11.5px; color:var(--danger-strong); font-weight:600; }
-
-.dash-empty { background:var(--dash-card); border-radius:22px; padding:28px 22px; text-align:center; color:var(--dash-text-dim); font-size:13px; }
-.dash-empty a { color:var(--dash-yellow); font-weight:700; text-decoration:none; display:block; margin-top:8px; font-size:15px; }
-
-@media (max-width: 340px) {
-  .dash-chip-row { grid-template-columns: 1fr; }
-}
-
-</style>
-</head>
-<body>
-  <div id="app-shell">
-    <aside class="sidebar" id="sidebar"></aside>
-    <div class="main-col">
-      <header class="topbar" id="topbar"></header>
-      <main class="view" id="vista" role="main"></main>
-    </div>
-    <nav class="bottom-nav" id="bottom-nav" aria-label="Navegación principal"></nav>
-
 </style>
 </head>
 <body>
@@ -1045,6 +915,7 @@ a { color: inherit; text-decoration: none; }
     el.innerHTML = `
       <a class="bottom-nav-item" data-ruta="dashboard" href="#dashboard">${icono('dashboard')}<span>Inicio</span></a>
       <a class="bottom-nav-item" data-ruta="proyectos" href="#proyectos">${icono('proyectos')}<span>Proyectos</span></a>
+      <a class="bottom-nav-item fab" href="#proyectos/nuevo" aria-label="Nuevo proyecto">${icono('mas')}</a>
       <a class="bottom-nav-item" data-ruta="informes" href="#informes">${icono('informes')}<span>Informes</span></a>
       <a class="bottom-nav-item" data-ruta="configuracion" href="#configuracion">${icono('config')}<span>Ajustes</span></a>
     `;
@@ -1055,10 +926,6 @@ a { color: inherit; text-decoration: none; }
     document.querySelectorAll('.nav-item, .bottom-nav-item').forEach((el) => {
       el.classList.toggle('active', el.dataset.ruta === base);
     });
-    // Marca la ruta base en <body> como data-attribute — usado por el CSS
-    // para aislar Informes/PDF del recoloreo global del resto de la app
-    // (informes y documentos generados deben mantener el tema original).
-    document.body.setAttribute('data-ruta-base', base);
   }
 
   const MIGAS_POR_RUTA = {
@@ -1595,89 +1462,40 @@ a { color: inherit; text-decoration: none; }
 
   // ==== modules/dashboard/dashboard.view ====
   __modules__['modules/dashboard/dashboard.view'] = (function(){
-  const { listarProyectos, resumenFinancieroProyecto, resumenGlobal } = __modules__['core/repositorio'];
-  const { CATEGORIAS_DEFECTO } = __modules__['core/models'];
-  const { formatoMoneda } = __modules__['utils/format'];
+  const { resumenGlobal, listarProyectos, resumenFinancieroProyecto } = __modules__['core/repositorio'];
+  const { formatoMoneda, ETIQUETAS_ESTADO_PROYECTO } = __modules__['utils/format'];
   const { icono } = __modules__['components/icons'];
-  const { db } = __modules__['storage/db'];
 
-  /* Rediseño de Dashboard v3 (2026-07): una sola columna, sin paneles
-     forzados a la misma altura. Cada bloque mide exactamente lo que su
-     contenido necesita: encabezado (avatar+saludo) en fila compacta,
-     tarjeta amarilla de saldo total, 2 tarjetas oscuras (último gasto /
-     tiempo desde el registro), pastillas de activos-cerrados, botón
-     nuevo proyecto y la lista de proyectos activos. Al no forzar alturas
-     iguales entre columnas, es imposible que queden huecos o tiras
-     vacías sin usar — cada elemento ocupa solo lo que necesita.
-     Paleta exacta muestreada de la referencia visual del usuario.
-     Namespace CSS: dash-. No toca ninguna otra vista. */
 
-  async function obtenerNombreResponsable() {
-    try {
-      const config = await db.get('configuracion', 'general');
-      return config?.nombreResponsable?.trim() || '';
-    } catch {
-      return '';
-    }
-  }
 
-  function nombreCategoria(id) {
-    return CATEGORIAS_DEFECTO.find((c) => c.id === id)?.nombre || 'Otros';
-  }
 
-  function etiquetaFechaRelativa(fechaISO) {
-    if (!fechaISO) return '—';
-    const hoy = new Date().toISOString().slice(0, 10);
-    const ayer = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    const f = fechaISO.slice(0, 10);
-    if (f === hoy) return 'Hoy';
-    if (f === ayer) return 'Ayer';
-    const [, mes, dia] = f.split('-');
-    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    return `${dia} ${meses[Number(mes) - 1] || ''}`;
-  }
-
-  function tiempoDesdeRegistro(creadoEnISO) {
-    if (!creadoEnISO) return '—';
-    const creado = new Date(creadoEnISO);
-    if (Number.isNaN(creado.getTime())) return '—';
-    const minutos = Math.floor((Date.now() - creado.getTime()) / 60000);
-    if (minutos < 1) return 'Recién registrado';
-    if (minutos < 60) return `Hace ${minutos} min`;
-    const horas = Math.floor(minutos / 60);
-    if (horas < 24) return `Hace ${horas} h`;
-    const dias = Math.floor(horas / 24);
-    if (dias === 1) return 'Registrado ayer';
-    if (dias < 7) return `Hace ${dias} días`;
-    return `El ${creado.toLocaleDateString('es-EC', { day: '2-digit', month: 'short' })}`;
-  }
-
-  function tarjetaProyectoDash(p, resumen) {
+  function tarjetaProyectoPropio(p, resumen) {
     return `
-      <a class="dash-proj-card" href="#proyectos/${p.id}">
-        <div class="dash-proj-name">${p.nombre}</div>
-        <div class="dash-proj-meta">${p.ciudad || 'Sin ciudad'}</div>
-        <div class="dash-proj-metrics">
-          <span>Recibido<strong>${formatoMoneda(resumen.totalRecibido)}</strong></span>
-          <span>Gastado<strong>${formatoMoneda(resumen.totalGastado)}</strong></span>
-          <span>Saldo<strong style="color:${resumen.saldo < 0 ? 'var(--danger-strong)' : 'inherit'};">${formatoMoneda(resumen.saldo)}</strong></span>
+      <a class="card card-elevated" href="#proyectos/${p.id}" style="display:block; margin-bottom:var(--sp-3); text-decoration:none; color:inherit;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+          <div>
+            <div class="proj-name">${p.nombre}</div>
+            <div class="proj-meta">${p.ciudad || 'Sin ciudad'} · ${ETIQUETAS_ESTADO_PROYECTO[p.estado]}</div>
+          </div>
+          <span class="btn btn-ghost btn-sm">Ver →</span>
         </div>
-        ${resumen.reembolsoPendiente > 0 ? `<div class="dash-proj-reembolso">⚠ Reembolso pendiente: ${formatoMoneda(resumen.reembolsoPendiente)}</div>` : ''}
+        <div style="display:flex; gap:20px; font-size:var(--fs-xs); color:var(--ink-500);">
+          <span>Recibido <strong class="tabular" style="color:var(--text-100); display:block; font-size:var(--fs-sm);">${formatoMoneda(resumen.totalRecibido)}</strong></span>
+          <span>Gastado <strong class="tabular" style="color:var(--text-100); display:block; font-size:var(--fs-sm);">${formatoMoneda(resumen.totalGastado)}</strong></span>
+          <span>Saldo <strong class="tabular" style="display:block; font-size:var(--fs-sm); color:${resumen.saldo < 0 ? 'var(--danger)' : 'var(--state-ok)'};">${formatoMoneda(resumen.saldo)}</strong></span>
+        </div>
+        ${resumen.reembolsoPendiente > 0 ? `<div style="margin-top:8px; font-size:var(--fs-xs); color:var(--danger);">Reembolso pendiente: ${formatoMoneda(resumen.reembolsoPendiente)}</div>` : ''}
       </a>
     `;
   }
 
   async function renderDashboard(contenedor) {
-    contenedor.innerHTML = `<div class="dash-view"><div class="empty-state">Cargando…</div></div>`;
-    let resumen, proyectos, nombreResponsable;
+    contenedor.innerHTML = `<div class="empty-state">Cargando…</div>`;
+    let resumen, proyectos;
     try {
-      [resumen, proyectos, nombreResponsable] = await Promise.all([
-        resumenGlobal(),
-        listarProyectos(),
-        obtenerNombreResponsable(),
-      ]);
+      [resumen, proyectos] = await Promise.all([resumenGlobal(), listarProyectos()]);
     } catch (err) {
-      contenedor.innerHTML = `<div class="dash-view"><div class="empty-state"><p class="lead">No se pudo cargar el panel</p><p>${err.message}. Intenta recargar la página; si persiste, es posible que necesites actualizar la app.</p></div></div>`;
+      contenedor.innerHTML = `<div class="empty-state"><p class="lead">No se pudo cargar el panel</p><p>${err.message}. Intenta recargar la página; si persiste, es posible que necesites actualizar la app.</p></div>`;
       console.error(err);
       return;
     }
@@ -1685,55 +1503,32 @@ a { color: inherit; text-decoration: none; }
     const activos = proyectos.filter((p) => p.estado === 'activo');
     const resumenesActivos = await Promise.all(activos.map((p) => resumenFinancieroProyecto(p.id)));
 
-    const saldoTotalActivos = resumenesActivos.reduce((acc, r) => acc + r.saldo, 0);
-
-    const gastosOrdenados = [...resumen.gastos].sort((a, b) => (b.fecha + b.creadoEn).localeCompare(a.fecha + a.creadoEn));
-    const ultimoGasto = gastosOrdenados[0] || null;
-
-    const primerNombre = nombreResponsable ? nombreResponsable.split(' ')[0] : 'ahí';
-    const inicialAvatar = nombreResponsable ? nombreResponsable.trim()[0].toUpperCase() : '?';
-
-    const listaProyectos = activos.length
-      ? activos.map((p, i) => tarjetaProyectoDash(p, resumenesActivos[i])).join('')
-      : `<div class="dash-empty">SIN PROYECTOS ACTIVOS<a href="#proyectos/nuevo">Crear el primero →</a></div>`;
-
     contenedor.innerHTML = `
-      <div class="dash-view">
-        <div class="dash-header">
-          <div class="dash-header-avatar">${inicialAvatar}</div>
-          <div class="dash-header-text">
-            <div class="dash-header-greeting">Hola, ${primerNombre}</div>
-            <div class="dash-header-sub">Cada proyecto tiene su propio viático — no se mezclan entre sí</div>
-          </div>
+      <div class="topbar-inline" style="display:flex; flex-direction:column; gap:var(--sp-3); margin-bottom:var(--sp-5);">
+        <div>
+          <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600;">Dashboard</h1>
+          <p style="color:var(--ink-500); font-size:var(--fs-sm);">Cada proyecto tiene su propio viático — no se mezclan entre sí</p>
         </div>
-
-        <div class="dash-hero">
-          <div class="dash-hero-label">Saldo total disponible</div>
-          <div class="dash-hero-value" style="color:${saldoTotalActivos < 0 ? 'var(--danger-strong)' : 'var(--dash-yellow-ink)'};">${formatoMoneda(saldoTotalActivos)}</div>
-        </div>
-
-        <div class="dash-chip-row">
-          <div class="dash-chip">
-            ${ultimoGasto
-              ? `<div class="dash-chip-value">${formatoMoneda(ultimoGasto.valor)}</div><div class="dash-chip-label">${ultimoGasto.descripcion || nombreCategoria(ultimoGasto.categoria)} · ${etiquetaFechaRelativa(ultimoGasto.fecha)}</div>`
-              : `<div class="dash-chip-value">—</div><div class="dash-chip-label">Sin gastos aún</div>`}
-          </div>
-          <div class="dash-chip">
-            <div class="dash-chip-value">${ultimoGasto ? tiempoDesdeRegistro(ultimoGasto.creadoEn) : '—'}</div>
-            <div class="dash-chip-label">Desde tu último registro</div>
-          </div>
-        </div>
-
-        <div class="dash-pill-row">
-          <div class="dash-pill">${resumen.proyectosActivos} activo${resumen.proyectosActivos === 1 ? '' : 's'}</div>
-          <div class="dash-pill dash-pill-ghost">${resumen.proyectosCerrados} cerrado${resumen.proyectosCerrados === 1 ? '' : 's'}</div>
-        </div>
-
-        <a href="#proyectos/nuevo" class="btn dash-btn-yellow">${icono('mas')} Nuevo proyecto</a>
-
-        <div class="dash-section-title"><span>Tus proyectos activos</span></div>
-        ${listaProyectos}
+        <a href="#proyectos/nuevo" class="btn btn-primary" style="align-self:flex-start;">${icono('mas')} Nuevo proyecto</a>
       </div>
+
+      <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr); margin-bottom:var(--sp-5);">
+        <div class="kpi-card">
+          <span class="kpi-icon">${icono('carpetaCerrada')}</span>
+          <span class="kpi-label">Proyectos activos</span>
+          <span class="kpi-value">${resumen.proyectosActivos}</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-icon">${icono('check')}</span>
+          <span class="kpi-label">Proyectos cerrados</span>
+          <span class="kpi-value">${resumen.proyectosCerrados}</span>
+        </div>
+      </div>
+
+      <div class="section-title">Tus proyectos activos</div>
+      ${activos.length
+        ? activos.map((p, i) => tarjetaProyectoPropio(p, resumenesActivos[i])).join('')
+        : `<div class="card card-elevated"><div class="empty-state"><p class="lead">No tienes proyectos activos</p><p>Crea un proyecto para empezar a registrar su viático.</p><a href="#proyectos/nuevo" class="btn btn-primary" style="margin-top:16px; display:inline-flex;">${icono('mas')} Crear proyecto</a></div></div>`}
     `;
   }
 
