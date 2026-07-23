@@ -5230,7 +5230,8 @@ a { color: inherit; text-decoration: none; }
       tipo,
       datosGenerales: {
         nombre: true, cliente: true, ciudad: true, responsable: true,
-        fechaInicio: true, fechaFin: tipo !== 'resumido', numeroPersonas: false,
+        fechaInicio: true, fechaFin: tipo !== 'resumido', numeroDias: true,
+        numeroPersonas: true, fechaPresentacion: true,
         motivoViaje: tipo === 'personalizado' ? false : true, observaciones: false,
       },
       financiero: {
@@ -5277,7 +5278,8 @@ a { color: inherit; text-decoration: none; }
 
   const ETIQUETAS_DATOS_GENERALES = {
     nombre: 'Nombre del proyecto', cliente: 'Cliente', ciudad: 'Ciudad', responsable: 'Responsable',
-    fechaInicio: 'Fecha inicial', fechaFin: 'Fecha final', numeroPersonas: 'Número de personas',
+    fechaInicio: 'Fecha inicial', fechaFin: 'Fecha final', numeroDias: 'Número de días',
+    numeroPersonas: 'Número de personas', fechaPresentacion: 'Fecha de presentación',
     motivoViaje: 'Motivo del viaje', observaciones: 'Observaciones',
   };
   const ETIQUETAS_FINANCIERO = {
@@ -5542,14 +5544,26 @@ a { color: inherit; text-decoration: none; }
   }
 
   function seccionDatosGenerales(proyecto, dg) {
-    const filas = [
+    /** Días de viaje, inclusivo (22 al 24 de julio = 3 días). Cálculo local
+   * a este módulo — no depende del diasEntre() de proyeccion.view. */
+  function diasDeViaje(inicio, fin) {
+    if (!inicio || !fin) return '—';
+    const a = new Date(inicio);
+    const b = new Date(fin);
+    const dias = Math.round((b - a) / 86400000) + 1;
+    return dias > 0 ? dias : '—';
+  }
+
+  const filas = [
       dg.nombre && ['Proyecto', proyecto.nombre],
       dg.cliente && ['Cliente', proyecto.cliente || '—'],
       dg.ciudad && ['Ciudad', `${proyecto.ciudad || '—'}${proyecto.provincia ? ', ' + proyecto.provincia : ''}`],
       dg.responsable && ['Responsable', proyecto.responsable || '—'],
       dg.fechaInicio && ['Fecha inicial', formatoFecha(proyecto.fechaInicio)],
       dg.fechaFin && ['Fecha final', formatoFecha(proyecto.fechaFinReal || proyecto.fechaFinEstimada)],
-      dg.numeroPersonas && ['N.º de personas', proyecto.numeroPersonas],
+      dg.numeroDias && ['N.º de días', diasDeViaje(proyecto.fechaInicio, proyecto.fechaFinReal || proyecto.fechaFinEstimada)],
+      dg.numeroPersonas && ['N.º de personas', proyecto.numeroPersonas || 1],
+      dg.fechaPresentacion && ['Fecha de presentación', formatoFecha(new Date().toISOString().slice(0, 10))],
       dg.motivoViaje && ['Motivo del viaje', proyecto.motivoViaje || '—'],
       dg.observaciones && ['Observaciones', proyecto.observaciones || '—'],
     ].filter(Boolean);
