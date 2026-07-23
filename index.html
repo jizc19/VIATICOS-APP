@@ -689,9 +689,11 @@ a { color: inherit; text-decoration: none; }
 .hoja-tabla .num { font-family: var(--font-mono); text-align: right; white-space: nowrap; }
 .hoja-nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 /* RUC y N.º de factura NUNCA deben truncarse con "…" — se necesitan completos
-   para la contabilidad. Se les da ancho de columna suficiente (ver
-   ANCHOS_COLUMNA) y aquí solo se evita el salto de línea a media cifra. */
-.hoja-nowrap-full { white-space: nowrap; display: block; font-family: var(--font-mono); font-size: 0.8rem; }
+   para la contabilidad. En vez de desbordarse sobre la celda vecina (lo que
+   pasaba antes con nowrap+sin overflow), si no caben en una línea se parten
+   a una segunda línea dentro de su propia celda (word-break), nunca se cortan
+   ni se superponen. Fuente algo más chica para que quepan enteros casi siempre. */
+.hoja-nowrap-full { font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.3; word-break: break-word; overflow-wrap: anywhere; }
 .hoja-tabla tfoot td { border-top: 1.5px solid #1b1f27; border-bottom: none; padding-top: 9px; }
 
 .hoja-anexo-grid {
@@ -5603,7 +5605,7 @@ a { color: inherit; text-decoration: none; }
   }
 
   const ANCHOS_COLUMNA = {
-    numero: 4, fecha: 6, categoria: 9, ruc: 14, numeroFactura: 15,
+    numero: 4, fecha: 6, categoria: 9, ruc: 15, numeroFactura: 16,
     estadoComprobante: 6, valor: 8, ciudad: 8, establecimiento: 12,
   };
 
@@ -5680,7 +5682,7 @@ a { color: inherit; text-decoration: none; }
       return `
         <div class="hoja-cat-banda">${cat.nombre.toUpperCase()}</div>
         <table class="hoja-tabla">
-          <colgroup><col style="width:7%;"><col style="width:15%;"><col style="width:14%;"><col style="width:6%;"><col style="width:46%;"><col style="width:12%;"></colgroup>
+          <colgroup><col style="width:7%;"><col style="width:16%;"><col style="width:15%;"><col style="width:6%;"><col style="width:44%;"><col style="width:12%;"></colgroup>
           <thead><tr><th>Fecha</th><th>N.º Doc.</th><th>RUC</th><th>Estado</th><th>Descripción / Proveedor</th><th style="text-align:right;">Valor</th></tr></thead>
           <tbody>
             ${items.map((g) => `
