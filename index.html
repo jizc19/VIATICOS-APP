@@ -729,8 +729,9 @@ a { color: inherit; text-decoration: none; }
 .hoja-estado-sin { color: #8a2f2a; }
 
 .hoja-firma-linea { border-top: 1px solid #1b1f27; padding-top: 7px; font-size: 0.78rem; text-align: center; }
-.hoja-firmas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; margin-top: 28px; }
-.hoja-firma-bloque { break-inside: avoid; page-break-inside: avoid; display: flex; flex-direction: column; justify-content: flex-end; min-height: 90px; }
+.hoja-firmas { display: table; width: 100%; table-layout: fixed; margin-top: 28px; break-inside: avoid; page-break-inside: avoid; }
+.hoja-firma-bloque { display: table-cell; vertical-align: bottom; padding-right: 32px; break-inside: avoid; page-break-inside: avoid; min-height: 90px; }
+.hoja-firma-bloque:last-child { padding-right: 0; }
 
 .hoja-footer {
   margin-top: 36px; padding-top: 13px; border-top: 1px solid #d8d2c4;
@@ -5196,14 +5197,16 @@ a { color: inherit; text-decoration: none; }
     return {
       ...configBase,
       tipo: plantilla.tipo,
-      datosGenerales: { ...plantilla.datosGenerales },
-      financiero: { ...plantilla.financiero },
-      columnas: { ...plantilla.columnas },
-      filtroEstados: { ...plantilla.filtroEstados },
+      // Merge seguro (no reemplazo total): una plantilla guardada ANTES de
+      // agregar un campo nuevo (p. ej. numeroDias, fechaPresentacion) no debe
+      // hacer que ese campo nuevo desaparezca — se combina con los valores
+      // por defecto actuales para que las claves nuevas siempre existan.
+      datosGenerales: { ...configBase.datosGenerales, ...plantilla.datosGenerales },
+      financiero: { ...configBase.financiero, ...plantilla.financiero },
+      columnas: { ...configBase.columnas, ...plantilla.columnas },
+      filtroEstados: { ...configBase.filtroEstados, ...plantilla.filtroEstados },
       categoriasIncluidas: new Set(plantilla.categoriasIncluidas),
       incluirProyeccionVsReal: plantilla.incluirProyeccionVsReal,
-      // Se combina con lo que ya había (no se sobrescribe entero), para que una plantilla
-      // guardada antes de renombrar los roles de firma no deje claves faltantes.
       firmas: { ...configBase.firmas, ...plantilla.firmas },
     };
   }
@@ -5224,10 +5227,14 @@ a { color: inherit; text-decoration: none; }
 
 
 
-  async function configPorDefecto(tipo, gastos, categorias) {
+  async function configPorDefecto(tipo, gastos, categorias, proyecto) {
     const config = (await db.get('configuracion', 'general')) || {};
     const base = {
       tipo,
+      // Número de personas para ESTE informe en particular — arranca con el valor
+      // guardado en el proyecto, pero el usuario puede corregirlo manualmente
+      // antes de generar el informe (por si cambió el equipo para este viaje).
+      numeroPersonasManual: proyecto?.numeroPersonas || 1,
       datosGenerales: {
         nombre: true, cliente: true, ciudad: true, responsable: true,
         fechaInicio: true, fechaFin: tipo !== 'resumido', numeroDias: true,
@@ -5329,6 +5336,12 @@ a { color: inherit; text-decoration: none; }
           ${plantillas.length ? `<button class="btn btn-ghost btn-sm" id="btn-borrar-plantilla" style="color:var(--danger);">Eliminar</button>` : ''}
         </div>
         <button class="btn btn-secondary btn-sm" id="btn-guardar-plantilla">Guardar configuración actual como plantilla</button>
+      </div>
+
+      <div class="card" style="margin-bottom:var(--sp-4); display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <label for="input-num-personas" style="font-size:var(--fs-sm); color:var(--text-500);">Número de personas en este viaje</label>
+        <input type="number" id="input-num-personas" min="1" step="1" value="${config.numeroPersonasManual || 1}"
+          style="width:80px; padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--surface-600); color:var(--text-100);" />
       </div>
 
       ${esPersonalizado ? `
@@ -5440,6 +5453,10 @@ a { color: inherit; text-decoration: none; }
       inp.addEventListener('input', () => { config.firmas[inp.dataset.firmaCargo].cargo = inp.value; });
     });
 
+    contenedor.querySelector('#input-num-personas').addEventListener('input', (e) => {
+      config.numeroPersonasManual = Math.max(1, Number(e.target.value) || 1);
+    });
+
     contenedor.querySelector('#sel-plantilla').addEventListener('change', async (e) => {
       if (!e.target.value) {
         config.plantillaSeleccionadaId = null;
@@ -5543,7 +5560,7 @@ a { color: inherit; text-decoration: none; }
     );
   }
 
-  function seccionDatosGenerales(proyecto, dg) {
+  function seccionDatosGenerales(proyecto, dg, numeroPersonasManual) {
     /** Días de viaje, inclusivo (22 al 24 de julio = 3 días). Cálculo local
    * a este módulo — no depende del diasEntre() de proyeccion.view. */
   function diasDeViaje(inicio, fin) {
@@ -5562,7 +5579,7 @@ a { color: inherit; text-decoration: none; }
       dg.fechaInicio && ['Fecha inicial', formatoFecha(proyecto.fechaInicio)],
       dg.fechaFin && ['Fecha final', formatoFecha(proyecto.fechaFinReal || proyecto.fechaFinEstimada)],
       dg.numeroDias && ['N.º de días', diasDeViaje(proyecto.fechaInicio, proyecto.fechaFinReal || proyecto.fechaFinEstimada)],
-      dg.numeroPersonas && ['N.º de personas', proyecto.numeroPersonas || 1],
+      dg.numeroPersonas && ['N.º de personas', numeroPersonasManual || proyecto.numeroPersonas || 1],
       dg.fechaPresentacion && ['Fecha de presentación', formatoFecha(new Date().toISOString().slice(0, 10))],
       dg.motivoViaje && ['Motivo del viaje', proyecto.motivoViaje || '—'],
       dg.observaciones && ['Observaciones', proyecto.observaciones || '—'],
@@ -5832,7 +5849,7 @@ a { color: inherit; text-decoration: none; }
         <div class="hoja-titulo">${tituloTipo}</div>
         <div class="hoja-subtitulo">${proyecto.nombre} · ${proyecto.ciudad || ''}</div>
 
-        ${seccionDatosGenerales(proyecto, config.datosGenerales)}
+        ${seccionDatosGenerales(proyecto, config.datosGenerales, config.numeroPersonasManual)}
         ${seccionFinanciera(resumen, config.financiero)}
         ${config.tipo === 'resumido' ? seccionResumenPorCategoria(gastosFiltrados, categorias) : ''}
         ${config.tipo === 'detallado' ? seccionMovimientosPorCategoria(gastosFiltrados, categorias) : ''}
@@ -6123,7 +6140,7 @@ a { color: inherit; text-decoration: none; }
     const irAPasoTipo = () => renderPasoTipo(contenedor, { proyecto: datos.proyecto, onElegir: irAPasoConfig });
 
     const irAPasoConfig = async (tipo) => {
-      const config = await configPorDefecto(tipo, datos.gastos, datos.categorias);
+      const config = await configPorDefecto(tipo, datos.gastos, datos.categorias, datos.proyecto);
       await renderPasoConfiguracion(contenedor, {
         config,
         gastos: datos.gastos,
