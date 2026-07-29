@@ -5768,14 +5768,15 @@ a { color: inherit; text-decoration: none; }
         <h3>Propinas, movilización y otros sin comprobante</h3>
         <div class="hoja-tabla-scroll">
           <table class="hoja-tabla">
-            <colgroup><col style="width:16%;"><col style="width:72%;"><col style="width:12%;"></colgroup>
-            <thead><tr><th>Fecha</th><th>Descripción</th><th style="text-align:right;">Valor</th></tr></thead>
+            <colgroup><col style="width:14%;"><col style="width:10%;"><col style="width:64%;"><col style="width:12%;"></colgroup>
+            <thead><tr><th>Fecha</th><th>Estado</th><th>Descripción</th><th style="text-align:right;">Valor</th></tr></thead>
             <tbody>
-              ${sinRespaldo.map((g) => `<tr><td><span class="hoja-nowrap">${formatoFechaCorta(g.fecha)}</span></td><td>${g.descripcion || '—'}</td><td class="num">${formatoMoneda(g.valor)}</td></tr>`).join('')}
+              ${sinRespaldo.map((g) => `<tr><td><span class="hoja-nowrap">${formatoFechaCorta(g.fecha)}</span></td><td><span class="hoja-estado-mini ${claseEstadoMini(g.estadoComprobante)}" title="${ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante].texto}">${abreviaturaEstado(g.estadoComprobante)}</span></td><td>${g.descripcion || '—'}</td><td class="num">${formatoMoneda(g.valor)}</td></tr>`).join('')}
             </tbody>
-            <tfoot><tr style="font-weight:700;"><td colspan="2">Total sin comprobante</td><td class="num">${formatoMoneda(subtotal)}</td></tr></tfoot>
+            <tfoot><tr style="font-weight:700;"><td colspan="3">Total sin comprobante</td><td class="num">${formatoMoneda(subtotal)}</td></tr></tfoot>
           </table>
         </div>
+        <p style="font-size:0.68rem; color:#8a8f9a; margin-top:6px;">SF: Sin factura</p>
       </div>
     `;
   }
