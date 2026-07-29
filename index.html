@@ -2983,7 +2983,7 @@ a { color: inherit; text-decoration: none; }
         <div class="tabs-modo">
           <button type="button" class="chip active" data-modo="manual">Manual</button>
           ${editando || estadoInicial ? '' : '<button type="button" class="chip" data-modo="rapida">Entrada rápida</button>'}
-          ${editando || estadoInicial ? '' : '<button type="button" class="chip" data-modo="foto">Tomar foto / Galería</button>'}
+          ${estadoInicial ? '' : `<button type="button" class="chip" data-modo="foto">${editando ? 'Agregar foto de comprobante' : 'Tomar foto / Galería'}</button>`}
         </div>
         ${comprobanteExistenteHtml}
         <form id="form-gasto">${campoManual(categorias, datosIniciales)}</form>
@@ -3082,6 +3082,16 @@ a { color: inherit; text-decoration: none; }
           comprobantePendiente = comprobante;
           const zonaDeteccion = zonaEspecial.querySelector('#zona-deteccion');
           const url = blobAUrl(comprobante.imagenBlob || comprobante.miniaturaBlob);
+
+          // El estado se actualiza SOLO al capturar la foto — el usuario ya no
+          // tiene que acordarse de cambiarlo manualmente de "Pendiente"/"Sin
+          // comprobante" a "Con comprobante".
+          const selectEstado = formEl.querySelector('[name="estadoComprobante"]');
+          if (selectEstado) {
+            selectEstado.value = comprobante.estadoInterpretacion === ESTADO_INTERPRETACION.PENDIENTE_CONEXION
+              ? ESTADOS_COMPROBANTE.PENDIENTE
+              : ESTADOS_COMPROBANTE.CON;
+          }
 
           if (comprobante.estadoInterpretacion === ESTADO_INTERPRETACION.LISTO && comprobante.datosDetectados) {
             const d = comprobante.datosDetectados;
