@@ -712,9 +712,9 @@ a { color: inherit; text-decoration: none; }
   break-after: page;
 }
 .hoja-anexo-celda:last-child { page-break-after: auto; break-after: auto; margin-bottom: 0; }
-.hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.9rem; line-height: 1.2; }
-.hoja-anexo-meta { font-size: 0.7rem; color: #5c6270; margin-bottom: 6px; }
-.hoja-anexo-img { display: block; width: auto; max-width: 100%; max-height: 650px; margin: 0 auto; object-fit: contain; background: #fff; }
+.hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; line-height: 1.2; display: inline; }
+.hoja-anexo-meta { font-size: 0.72rem; color: #5c6270; margin-bottom: 8px; }
+.hoja-anexo-img { display: block; width: auto; max-width: 100%; max-height: 720px; margin: 0 auto; object-fit: contain; background: #fff; }
 
 .hoja-cat-banda {
   background: #dce6f0; color: #1b2f47; font-weight: 700; font-size: 0.72rem;
@@ -5913,13 +5913,12 @@ a { color: inherit; text-decoration: none; }
     for (let i = 0; i < conFoto.length; i += POR_PAGINA) {
       const grupo = conFoto.slice(i, i + POR_PAGINA);
       paginas.push(`
-        <div class="hoja-informe" style="margin-bottom:24px; padding:24px 30px; page-break-after:always;">
-          <div class="hoja-titulo" style="font-size:1.1rem; margin-bottom:14px;">Anexo de comprobantes</div>
+        <div class="hoja-informe" style="margin-bottom:24px; padding:16px 20px; page-break-after:always;">
+          <div class="hoja-titulo" style="font-size:1rem; margin-bottom:10px;">Anexo de comprobantes</div>
           <div class="hoja-anexo-grid">
             ${grupo.map(({ gasto: g, url, etiqueta }) => `
               <div class="hoja-anexo-celda">
-                <div class="hoja-anexo-titulo">Comprobante N.º ${String(g.numero).padStart(3, '0')}${etiqueta ? ` — ${etiqueta}` : ''}</div>
-                <div class="hoja-anexo-meta">${g.descripcion || '(sin descripción)'} · ${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
+                <div class="hoja-anexo-meta"><span class="hoja-anexo-titulo">Comprobante N.º ${String(g.numero).padStart(3, '0')}${etiqueta ? ` — ${etiqueta}` : ''}</span> · ${g.descripcion || '(sin descripción)'} · ${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
                 <img src="${url}" class="hoja-anexo-img" />
               </div>
             `).join('')}
