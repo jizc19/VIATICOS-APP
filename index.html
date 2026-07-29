@@ -696,7 +696,7 @@ a { color: inherit; text-decoration: none; }
 .hoja-nowrap-full { font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.3; word-break: break-word; overflow-wrap: anywhere; }
 .hoja-tabla tfoot td { border-top: 1.5px solid #1b1f27; border-bottom: none; padding-top: 9px; }
 
-.hoja-anexo-encabezado { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; color: #8a8f9a; margin-bottom: 6px; }
+.hoja-anexo-encabezado { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; color: #8a8f9a; }
 .hoja-anexo-grid {
   font-size: 0; /* elimina el espacio en blanco entre inline-block por saltos de línea en el HTML */
 }
@@ -714,8 +714,8 @@ a { color: inherit; text-decoration: none; }
 }
 .hoja-anexo-celda:last-child { page-break-after: auto; break-after: auto; margin-bottom: 0; }
 .hoja-anexo-titulo { font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; line-height: 1.2; display: inline; }
-.hoja-anexo-meta { font-size: 0.72rem; color: #5c6270; margin-bottom: 8px; }
-.hoja-anexo-img { display: block; width: auto; max-width: 100%; max-height: 720px; margin: 0 auto; object-fit: contain; background: #fff; }
+.hoja-anexo-meta { font-size: 0.72rem; color: #5c6270; margin-bottom: 4px; }
+.hoja-anexo-img { display: block; width: auto; max-width: 100%; max-height: 760px; margin: 0 auto; object-fit: contain; background: #fff; }
 
 .hoja-cat-banda {
   background: #dce6f0; color: #1b2f47; font-weight: 700; font-size: 0.72rem;
@@ -763,7 +763,7 @@ a { color: inherit; text-decoration: none; }
   }
   #zona-impresion .hoja-informe { box-shadow: none; margin: 0 auto; max-width: 100%; padding: 18px 14px; }
   #zona-impresion .hoja-tabla-scroll { overflow-x: visible; margin: 0; padding: 0; }
-  @page { size: A4 landscape; margin: 8mm; }
+  @page { size: A4 landscape; margin: 6mm; }
 }
 
 </style>
@@ -5925,12 +5925,11 @@ a { color: inherit; text-decoration: none; }
     for (let i = 0; i < conFoto.length; i += POR_PAGINA) {
       const grupo = conFoto.slice(i, i + POR_PAGINA);
       paginas.push(`
-        <div class="hoja-informe" style="margin-bottom:24px; padding:14px 20px; page-break-after:always;">
-          <div class="hoja-anexo-encabezado">Anexo de comprobantes</div>
+        <div class="hoja-informe" style="margin-bottom:24px; padding:8px 16px; page-break-after:always;">
           <div class="hoja-anexo-grid">
             ${grupo.map(({ gasto: g, url, etiqueta }) => `
               <div class="hoja-anexo-celda">
-                <div class="hoja-anexo-meta"><span class="hoja-anexo-titulo">Comprobante N.º ${String(g.numero).padStart(3, '0')}${etiqueta ? ` — ${etiqueta}` : ''}</span> · ${g.descripcion || '(sin descripción)'} · ${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
+                <div class="hoja-anexo-meta"><span class="hoja-anexo-encabezado">Anexo</span> · <span class="hoja-anexo-titulo">Comprobante N.º ${String(g.numero).padStart(3, '0')}${etiqueta ? ` — ${etiqueta}` : ''}</span> · ${g.descripcion || '(sin descripción)'} · ${formatoFecha(g.fecha)} · ${formatoMoneda(g.valor)}</div>
                 <img src="${url}" class="hoja-anexo-img" />
               </div>
             `).join('')}
