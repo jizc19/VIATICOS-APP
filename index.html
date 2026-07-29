@@ -6206,6 +6206,12 @@ a { color: inherit; text-decoration: none; }
 
   function iniciar() {
     try {
+      // La app siempre debe abrir en "Inicio" (Dashboard), nunca quedarse en la
+      // última pantalla donde estaba antes de cerrarla — así que se reinicia el
+      // hash de la URL en cada carga completa de la app (no afecta la navegación
+      // normal mientras la app ya está abierta y en uso).
+      location.hash = '#dashboard';
+
       renderSidebar();
       renderBottomNav();
 
