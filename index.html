@@ -735,6 +735,7 @@ a { color: inherit; text-decoration: none; }
 
 .hoja-firma-linea { border-top: 1px solid #1b1f27; padding-top: 7px; font-size: 0.78rem; text-align: center; }
 .hoja-firmas { display: table; width: 100%; table-layout: fixed; margin-top: 95px; break-inside: avoid; page-break-inside: avoid; }
+.hoja-firmas.hoja-firmas-compacta { margin-top: 45px; }
 .hoja-firma-bloque { display: table-cell; vertical-align: bottom; padding-right: 32px; break-inside: avoid; page-break-inside: avoid; min-height: 90px; }
 .hoja-firma-bloque:last-child { padding-right: 0; }
 
@@ -3827,6 +3828,11 @@ a { color: inherit; text-decoration: none; }
         <div class="hoja-seccion">
           <h3>Requerimiento de viáticos</h3>
           <table class="hoja-tabla">
+            <colgroup>
+              <col style="width:9%;"><col style="width:9%;"><col style="width:7%;">
+              <col style="width:9%;"><col style="width:10%;"><col style="width:11%;">
+              <col style="width:13%;"><col style="width:13%;"><col style="width:8%;"><col style="width:11%;">
+            </colgroup>
             <thead><tr><th>Fecha inicio</th><th>Fecha fin</th><th>Total días</th><th>Hospedaje</th><th>Alimentación</th><th>Movilización</th><th>Gastos instalación</th><th>Gastos materiales</th><th>Caja chica</th><th style="text-align:right;">Total</th></tr></thead>
             <tbody>
               <tr>
@@ -3845,7 +3851,7 @@ a { color: inherit; text-decoration: none; }
           </table>
         </div>
 
-        <div class="hoja-firmas">
+        <div class="hoja-firmas hoja-firmas-compacta">
           <div class="hoja-firma-bloque"><div class="hoja-firma-linea">${config.nombreResponsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div></div>
           <div class="hoja-firma-bloque"><div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div></div>
         </div>
@@ -4044,6 +4050,12 @@ a { color: inherit; text-decoration: none; }
           <h3>Equipo propio</h3>
           <div class="hoja-tabla-scroll">
             <table class="hoja-tabla">
+              <colgroup>
+                <col style="width:13%;"><col style="width:9%;">
+                <col style="width:10%;"><col style="width:10%;"><col style="width:6%;">
+                <col style="width:9%;"><col style="width:10%;">
+                <col style="width:9%;"><col style="width:9%;"><col style="width:15%;">
+              </colgroup>
               <thead><tr><th>Nombre</th><th>Cargo</th><th>Fecha inicio</th><th>Fecha final</th><th>Días</th><th>Hospedaje</th><th>Alimentación</th><th>Movi. viaje</th><th>Movi. interna</th><th style="text-align:right;">Total</th></tr></thead>
               <tbody>
                 ${equipo.map((p) => {
@@ -4068,6 +4080,7 @@ a { color: inherit; text-decoration: none; }
         <div class="hoja-seccion">
           <h3>Personal externo</h3>
           <table class="hoja-tabla" style="max-width:520px;">
+            <colgroup><col style="width:40%;"><col style="width:22%;"><col style="width:19%;"><col style="width:19%;"></colgroup>
             <thead><tr><th>Nombre</th><th>Días necesarios</th><th>Costo por día</th><th style="text-align:right;">Total</th></tr></thead>
             <tbody>
               ${externos.map((p) => `<tr><td>${p.nombre || '—'}</td><td>${p.diasNecesarios}</td><td class="num">${formatoMoneda(p.costoPorDia)}</td><td class="num">${formatoMoneda(p.diasNecesarios * p.costoPorDia)}</td></tr>`).join('')}
@@ -4083,7 +4096,7 @@ a { color: inherit; text-decoration: none; }
           </table>
         </div>
 
-        <div class="hoja-firmas">
+        <div class="hoja-firmas hoja-firmas-compacta">
           <div class="hoja-firma-bloque"><div class="hoja-firma-linea">${config.nombreResponsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase;">Solicitado por</span></div></div>
           <div class="hoja-firma-bloque"><div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase;">Jefe inmediato</span></div></div>
         </div>
@@ -4329,6 +4342,7 @@ a { color: inherit; text-decoration: none; }
         <div class="hoja-seccion">
           <h3>Presupuesto solicitado</h3>
           <table class="hoja-tabla">
+            <colgroup><col style="width:40%;"><col style="width:15%;"><col style="width:22%;"><col style="width:23%;"></colgroup>
             <thead><tr><th>Categoría</th><th>Cantidad</th><th style="text-align:right;">Precio unitario</th><th style="text-align:right;">Total</th></tr></thead>
             <tbody>
               ${items.map((i) => `
@@ -4344,7 +4358,7 @@ a { color: inherit; text-decoration: none; }
           </table>
         </div>
 
-        <div class="hoja-firmas">
+        <div class="hoja-firmas hoja-firmas-compacta">
           <div class="hoja-firma-bloque"><div class="hoja-firma-linea">${proyecto.responsable || '\u00A0'}<br><span style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">Solicitado por</span></div></div>
           <div class="hoja-firma-bloque"><div class="hoja-firma-linea">&nbsp;<br><span style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em;">Autorizado por</span></div></div>
         </div>
