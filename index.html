@@ -4064,7 +4064,7 @@ a { color: inherit; text-decoration: none; }
                   const subtotal = totalAlim + p.moviViaje + p.moviInterna;
                   return `<tr>
                     <td>${p.nombre || '—'}</td><td>${p.cargo || '—'}</td>
-                    <td class="hoja-nowrap">${formatoFecha(p.fechaInicio)}</td><td class="hoja-nowrap">${formatoFecha(p.fechaFin)}</td><td>${dias}</td>
+                    <td><span class="hoja-nowrap">${formatoFecha(p.fechaInicio)}</span></td><td><span class="hoja-nowrap">${formatoFecha(p.fechaFin)}</span></td><td>${dias}</td>
                     <td>${p.hospedaje}</td><td class="num">${formatoMoneda(totalAlim)}</td>
                     <td class="num">${formatoMoneda(p.moviViaje)}</td><td class="num">${formatoMoneda(p.moviInterna)}</td>
                     <td class="num" style="font-weight:700;">${formatoMoneda(subtotal)}</td>
