@@ -436,6 +436,7 @@ a { color: inherit; text-decoration: none; }
 
   .field-row { grid-template-columns: 1fr; }
 
+  body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--bg-950, #050507); z-index: 45; pointer-events: none; }
   .bottom-nav {
     display: flex;
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -5244,6 +5245,14 @@ a { color: inherit; text-decoration: none; }
 
     const contenido = contenedor.querySelector('#tab-contenido');
     const pintarTab = async (tabId) => {
+      // Se conserva la altura mientras se dibuja la pestaña nueva: si la página se encoge de golpe,
+      // el iPhone deja la barra inferior a media pantalla (MEJ auditoría 07/10/2026)
+      contenido.style.minHeight = contenido.offsetHeight ? contenido.offsetHeight + 'px' : '';
+      try { await pintarTabInterno(tabId); } finally {
+        requestAnimationFrame(() => { contenido.style.minHeight = ''; if (window.ajustarBarraInferior) window.ajustarBarraInferior(); });
+      }
+    };
+    const pintarTabInterno = async (tabId) => {
       contenedor.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tabId));
       if (tabId === 'resumen') {
         const resumenActual = await resumenFinancieroProyecto(proyecto.id);
@@ -6856,6 +6865,28 @@ a { color: inherit; text-decoration: none; }
   window.addEventListener('unhandledrejection', (event) => mostrarErrorFatal(event.reason || new Error('Promesa rechazada sin manejar')));
 
   document.addEventListener('DOMContentLoaded', iniciar);
+
+  // En iPhone, una barra "position: fixed" puede quedar a media pantalla después de que la página
+  // cambia de alto o se cierra el teclado. Se mide dónde quedó y se devuelve al borde inferior visible.
+  let _barraPendiente = false;
+  function ajustarBarraInferior() {
+    if (_barraPendiente) return; _barraPendiente = true;
+    requestAnimationFrame(() => {
+      _barraPendiente = false;
+      const n = document.getElementById('bottom-nav'); if (!n) return;
+      if (getComputedStyle(n).display === 'none') { n.style.transform = ''; return; }
+      n.style.transform = '';
+      const r = n.getBoundingClientRect();
+      const vv = window.visualViewport;
+      const borde = vv ? vv.height + vv.offsetTop : window.innerHeight;
+      const d = Math.round(borde - r.bottom);
+      if (Math.abs(d) > 2 && Math.abs(d) < borde) n.style.transform = `translateY(${d}px)`;
+    });
+  }
+  window.ajustarBarraInferior = ajustarBarraInferior;
+  ['scroll', 'resize', 'orientationchange', 'hashchange', 'pageshow', 'focusout'].forEach((ev) => window.addEventListener(ev, ajustarBarraInferior, { passive: true }));
+  if (window.visualViewport) { visualViewport.addEventListener('resize', ajustarBarraInferior); visualViewport.addEventListener('scroll', ajustarBarraInferior); }
+  document.addEventListener('click', () => setTimeout(ajustarBarraInferior, 350), true);
 
   })();
 
