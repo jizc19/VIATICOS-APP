@@ -135,6 +135,27 @@ a { color: inherit; text-decoration: none; }
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
+/* ---------- Entrada de marca ---------- */
+.brand-intro {
+  position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center;
+  overflow: hidden; background: radial-gradient(ellipse at 50% 46%, #211615 0%, #100d0c 40%, #050507 78%);
+  opacity: 1; visibility: visible; transition: opacity .42s cubic-bezier(.32,.72,0,1), visibility .42s;
+}
+.brand-intro.salir { opacity: 0; visibility: hidden; }
+.brand-intro__halo {
+  position: absolute; width: min(62vw, 340px); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(227,49,29,.21) 0%, rgba(227,49,29,.07) 38%, transparent 72%);
+  filter: blur(16px); animation: intro-resplandor 1.5s ease-in-out infinite alternate;
+}
+.brand-intro__contenido { position: relative; display: grid; justify-items: center; gap: 18px; animation: intro-aparecer .72s cubic-bezier(.2,.75,.25,1) both; }
+.brand-intro__logo { width: clamp(156px, 45vw, 224px); height: auto; padding: 9px 12px; box-sizing: border-box; border-radius: 12px; background: #fff; box-shadow: 0 12px 44px rgba(0,0,0,.42); opacity: 0; transition: opacity .2s ease; }
+.brand-intro.listo .brand-intro__logo { opacity: 1; }
+.brand-intro__regla { width: 38px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, #a92316, #f05a35, #a92316); box-shadow: 0 0 16px rgba(240,90,53,.45); transform-origin: center; animation: intro-regla .7s .16s cubic-bezier(.32,.72,0,1) both; }
+.brand-intro__texto { color: rgba(255,255,255,.68); font: 600 10px/1.2 system-ui, sans-serif; letter-spacing: .22em; text-transform: uppercase; }
+@keyframes intro-aparecer { from { opacity: 0; transform: translateY(8px) scale(.965); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes intro-regla { from { opacity: 0; transform: scaleX(.15); } to { opacity: 1; transform: scaleX(1); } }
+@keyframes intro-resplandor { from { opacity: .52; transform: scale(.92); } to { opacity: .9; transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .brand-intro { display: none !important; } }
 /* ---------- Shell ---------- */
 #app-shell {
   display: grid;
@@ -195,11 +216,23 @@ a { color: inherit; text-decoration: none; }
 .dash-aviso.pend { color: var(--state-pending); background: var(--state-pending-bg); border-color: color-mix(in srgb, var(--state-pending) 30%, transparent); }
 .dash-aviso.sin { color: var(--state-missing); background: var(--state-missing-bg); border-color: color-mix(in srgb, var(--state-missing) 30%, transparent); }
 .dash-aviso.ok { color: var(--state-ok); background: var(--state-ok-bg); border-color: color-mix(in srgb, var(--state-ok) 30%, transparent); }
+.dash-acciones { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.aviso-respaldo { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap;
+  padding: 12px 14px; margin-bottom: var(--sp-5); border-radius: var(--radius-md); background: var(--state-pending-bg);
+  border: 1px solid color-mix(in srgb, var(--state-pending) 35%, transparent); }
+.aviso-respaldo div { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.aviso-respaldo strong { color: var(--state-pending); font-size: var(--fs-sm); }
+.aviso-respaldo span { color: var(--text-300); font-size: var(--fs-xs); line-height: 1.45; }
+.lista-eleccion { display: flex; flex-direction: column; gap: 8px; }
+.eleccion { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; padding: 12px 14px;
+  border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--surface-700); color: var(--text-100); min-height: 48px; }
+.eleccion:hover, .eleccion:focus-visible { border-color: var(--gold-500); }
+.eleccion span { font-size: var(--fs-xs); color: var(--text-500); }
 .dash-saludo .pos { color: var(--state-ok); }
 .dash-saludo .neg { color: var(--danger); }
 .dash-saludo .warn { color: var(--state-pending); }
-/* Plata por justificar */
-.dash-justificar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Comprobantes que requieren seguimiento */
+.dash-justificar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .dj-item { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: var(--radius-md, 12px); border: 1px solid var(--line); background: var(--surface-800, #1b1817); }
 .dj-lbl { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-500); }
 .dj-lbl i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
@@ -446,7 +479,24 @@ a { color: inherit; text-decoration: none; }
 }
 .field input::placeholder, .field textarea::placeholder { color: var(--text-500); }
 .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold-500); }
-.field-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-4); }
+.field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); }
+/* Los campos nunca más anchos que su columna (las listas con textos largos desbordaban la ventana) */
+.field { min-width: 0; }
+.field input, .field select, .field textarea { width: 100%; min-width: 0; }
+.field input[type="checkbox"], .field input[type="radio"] { width: auto; }
+#form-gasto { display: flex; flex-direction: column; gap: var(--sp-4); }
+.grupo-factura { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 var(--sp-3); background: var(--surface-700); }
+.grupo-factura[open] { padding-bottom: var(--sp-3); }
+.grupo-factura > summary { cursor: pointer; padding: var(--sp-3) 0; font-size: var(--fs-sm); font-weight: 600; color: var(--text-100); list-style-position: inside; }
+.grupo-factura > summary span { font-weight: 400; color: var(--text-500); font-size: var(--fs-xs); }
+.grupo-factura .field-row { margin-bottom: var(--sp-3); }
+.ruc-ayuda { font-size: var(--fs-xs); line-height: 1.4; margin-top: 4px; min-height: 0; }
+.ruc-ayuda:empty { display: none; }
+.ruc-ayuda.ok { color: var(--state-ok); }
+.ruc-ayuda.aviso { color: var(--state-pending); }
+.ruc-ayuda.error { color: var(--danger); }
+.resumen-filtro { font-size: var(--fs-sm); color: var(--text-500); margin: 0 0 var(--sp-3); }
+.resumen-filtro strong { color: var(--text-100); }
 
 /* ---------- Modal ---------- */
 .modal-backdrop {
@@ -494,7 +544,9 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid var(--line-strong);
   padding: var(--sp-3) var(--sp-4); border-radius: var(--radius-sm);
   font-size: var(--fs-sm); box-shadow: var(--shadow-pop);
+  max-width: 420px; cursor: pointer;
 }
+.toast-error { background: var(--danger-bg); color: #ffd6dc; border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
 
 /* ---------- Mobile nav ---------- */
 .bottom-nav { display: none; }
@@ -659,11 +711,12 @@ a { color: inherit; text-decoration: none; }
 .detail-meta { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-2); font-size: var(--fs-sm); color: var(--ink-500); }
 .detail-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 
-.tabs { display: flex; gap: var(--sp-2); border-bottom: 1px solid var(--line); margin-bottom: var(--sp-5); }
+.tabs { display: flex; gap: var(--sp-2); border-bottom: 1px solid var(--line); margin-bottom: var(--sp-5); overflow-x: auto; scrollbar-width: thin; }
 .tab-btn {
   background: none; border: 0; border-radius: 0;
   padding: var(--sp-3) var(--sp-2); font-size: var(--fs-sm); font-weight: 600;
   color: var(--ink-500); border-bottom: 2px solid transparent; margin-bottom: -1px;
+  flex: 0 0 auto; white-space: nowrap;
   transition: color .2s ease, border-color .25s ease;
 }
 .tab-btn.active { color: var(--ink-900); border-bottom-color: var(--ledger-700); }
@@ -1122,7 +1175,14 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
 <style id="estilo-pagina-pdf">@media print { @page { size: A4 portrait; margin: 6mm 6mm 10mm; @bottom-right { content: "Página " counter(page) " de " counter(pages); font-family: Arial, sans-serif; font-size: 7.5pt; color: #8a8a8a; vertical-align: middle; } } }</style>
 </head>
 <body>
-  <div id="app-shell">
+  <div class="brand-intro" id="brand-intro" aria-hidden="true">
+    <div class="brand-intro__halo"></div>
+    <div class="brand-intro__contenido">
+      <img class="brand-intro__logo" id="brand-intro-logo" alt="" />
+      <span class="brand-intro__regla"></span>
+      <span class="brand-intro__texto">Sistema de viáticos</span>
+    </div>
+  </div>  <div id="app-shell">
     <aside class="sidebar" id="sidebar"></aside>
     <div class="main-col">
       <header class="topbar" id="topbar"></header>
@@ -1137,6 +1197,9 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   "use strict";
   // Escapa texto del usuario antes de ponerlo en HTML (comillas, <, >, &): evita textos cortados al editar y código inyectado
   function esc(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function imagenDataSegura(s) {
+    return typeof s === 'string' && /^data:image\/(?:jpeg|png|gif|webp);base64,[A-Za-z0-9+/]+=*$/.test(s) ? s : null;
+  }
   // Fecha de hoy en hora LOCAL (Ecuador), no UTC: después de las 19:00 toISOString() ya daba el día siguiente
   // Lee montos escritos de cualquier forma: 11.50 · 11,50 · 1.250,00 · 1,250.00 · 1.250 → número
   function aNumeroMonetario(s) {
@@ -1343,6 +1406,16 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     const resultado = emparejar(partes.length ? partes : ['dashboard']);
     if (!contenedorVista) return;
 
+    // Cada pantalla se dibuja en un contenedor nuevo. Si la anterior aún estaba cargando
+    // (consultas lentas), termina en el contenedor viejo, ya fuera de la página, y no tapa
+    // a la pantalla nueva (antes: la barra decía "Proyectos" pero se veía Inicio).
+    if (contenedorVista.isConnected) {
+      const nuevo = contenedorVista.cloneNode(false);
+      nuevo.classList.remove('anim-adelante', 'anim-atras', 'anim-lado');
+      contenedorVista.replaceWith(nuevo);
+      contenedorVista = nuevo;
+    }
+
     if (!resultado) {
       contenedorVista.innerHTML = `<div class="empty-state"><p class="lead">Página no encontrada</p></div>`;
       return;
@@ -1485,7 +1558,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         `).join('')}
       </nav>
       <div class="sidebar-foot">
-        Almacenamiento local · v1.0
+        Almacenamiento local · v1.1
       </div>
     `;
   }
@@ -1676,6 +1749,23 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     async clear(storeName) {
       return conTransaccion(storeName, 'readwrite', (store) => store.clear());
     },
+
+    async reemplazarVarios(reemplazos) {
+      const nombres = Object.keys(reemplazos);
+      if (!nombres.length) return;
+      const db = await abrirConexion();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(nombres, 'readwrite');
+        for (const nombre of nombres) {
+          const store = tx.objectStore(nombre);
+          store.clear();
+          for (const registro of reemplazos[nombre]) store.put(registro);
+        }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error('No se pudo completar la importación.'));
+      });
+    },
   };
 
   // Si el navegador no permite guardar (vista previa, modo privado), la app sigue funcionando en memoria
@@ -1700,6 +1790,12 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     async getAllPorIndice(s, ind, val) { const c = CAMPO_INDICE[ind]; return [...memoria[s].values()].filter((x) => x[c] === val).map(clon); },
     async delete(s, k) { memoria[s].delete(k); },
     async clear(s) { memoria[s].clear(); },
+    async reemplazarVarios(reemplazos) {
+      for (const [nombre, registros] of Object.entries(reemplazos)) {
+        memoria[nombre].clear();
+        for (const registro of registros) memoria[nombre].set(registro[STORES[nombre]], clon(registro));
+      }
+    },
   };
   const db = {};
   Object.keys(dbIDB).forEach((m) => {
@@ -1805,6 +1901,10 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       comprobanteId: datos.comprobanteId || null,
       origenRegistro: datos.origenRegistro || 'manual', // 'manual' | 'foto' | 'kilometraje'
       kilometraje: datos.kilometraje || null, // { fotoSalidaId, fotoLlegadaId, kmSalida, kmLlegada, tarifaKm }
+      // Datos de la factura escritos o corregidos a mano (tienen prioridad sobre lo leído de la foto en los informes)
+      numeroFactura: datos.numeroFactura?.trim() || '',
+      ruc: datos.ruc?.trim() || '',
+      establecimiento: datos.establecimiento?.trim() || '',
       observaciones: datos.observaciones?.trim() || '',
       eliminado: false,
       creadoEn: new Date().toISOString(),
@@ -2055,14 +2155,32 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
 
   // ==== utils/format ====
   __modules__['utils/format'] = (function(){
-  function formatoMoneda(valor, moneda = 'USD') {
-    const num = Number(valor) || 0;
-    return num.toLocaleString('es-EC', {
-      style: 'currency',
-      currency: moneda,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const MONEDAS_DISPONIBLES = {
+    USD: 'Dólar estadounidense',
+    COP: 'Peso colombiano',
+    PEN: 'Sol peruano',
+    MXN: 'Peso mexicano',
+    EUR: 'Euro',
+  };
+  const SIMBOLOS_MONEDA = { USD: '$', COP: '$', PEN: 'S/', MXN: '$', EUR: '€' };
+  let monedaActual = 'USD';
+
+  function establecerMoneda(moneda) {
+    monedaActual = Object.prototype.hasOwnProperty.call(MONEDAS_DISPONIBLES, moneda) ? moneda : 'USD';
+    return monedaActual;
+  }
+
+  // Formato de montos: $1.234,56 (punto para miles, coma para decimales). Negativos: -$46,00.
+  const FORMATO_IMPORTE = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true });
+  function formatoMoneda(valor, moneda = monedaActual) {
+    const monedaValida = Object.prototype.hasOwnProperty.call(MONEDAS_DISPONIBLES, moneda) ? moneda : 'USD';
+    const numero = Number(valor);
+    // Se redondea antes de decidir el signo: así -0,001 se muestra como $0,00 y no como -$0,00
+    const redondeado = Number.isFinite(numero) ? Math.round(numero * 100) / 100 : 0;
+    const num = Object.is(redondeado, -0) ? 0 : redondeado;
+    const simbolo = SIMBOLOS_MONEDA[monedaValida] || '$';
+    const separador = simbolo.length > 1 ? ' ' : ''; // "S/ 12,00"; "$12,00"; "€12,00"
+    return `${num < 0 ? '-' : ''}${simbolo}${separador}${FORMATO_IMPORTE.format(Math.abs(num))}`;
   }
 
   function formatoFecha(fechaISO) {
@@ -2104,7 +2222,26 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     archivado: 'Archivado',
   };
 
-  return { formatoMoneda, formatoFecha, formatoFechaCorta, formatoFechaLarga, ETIQUETAS_ESTADO_COMPROBANTE, ETIQUETAS_ESTADO_PROYECTO };
+  function obtenerCodigoMoneda() { return monedaActual; }
+  function obtenerSimboloMoneda() { return SIMBOLOS_MONEDA[monedaActual] || '$'; }
+  function valorMonedaEditable(valor) {
+    if (valor == null || String(valor).trim() === '') return '';
+    const numero = Number(valor);
+    return Number.isFinite(numero) ? numero.toFixed(2) : '';
+  }
+
+  // En los importes editables, completa siempre los dos decimales al salir del campo.
+  // El navegador presenta el separador decimal según la configuración regional del dispositivo.
+  document.addEventListener('focusout', (evento) => {
+    const campo = evento.target;
+    if (!(campo instanceof HTMLInputElement) || campo.type !== 'number' || Number(campo.step) !== 0.01 || campo.value.trim() === '') return;
+    const numero = Number(campo.value);
+    if (!Number.isFinite(numero)) return;
+    campo.value = numero.toFixed(2);
+    campo.dispatchEvent(new Event('input', { bubbles: true }));
+  }, true);
+
+  return { formatoMoneda, establecerMoneda, obtenerCodigoMoneda, obtenerSimboloMoneda, valorMonedaEditable, MONEDAS_DISPONIBLES, SIMBOLOS_MONEDA, formatoFecha, formatoFechaCorta, formatoFechaLarga, ETIQUETAS_ESTADO_COMPROBANTE, ETIQUETAS_ESTADO_PROYECTO };
   })();
 
   // ==== modules/dashboard/dashboard.view ====
@@ -2201,7 +2338,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     try {
       [resumen, proyectos] = await Promise.all([resumenGlobal(), listarProyectos()]);
     } catch (err) {
-      contenedor.innerHTML = `<div class="empty-state"><p class="lead">No se pudo cargar el panel</p><p>${err.message}. Intenta recargar la página; si persiste, es posible que necesites actualizar la app.</p></div>`;
+      contenedor.innerHTML = `<div class="empty-state"><p class="lead">No se pudo cargar el panel</p><p>${esc(err?.message || 'Error desconocido')}. Intenta recargar la página; si persiste, es posible que necesites actualizar la app.</p></div>`;
       console.error(err);
       return;
     }
@@ -2214,62 +2351,69 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     const ultimoGasto = gastosOrdenados[0] || null;
 
     let nombre = '';
-    try { nombre = primerNombre((await db.get('configuracion', 'general'))?.nombreResponsable); } catch (e) { /* sin configuración */ }
+    let configGeneral = null;
+    try { configGeneral = await db.get('configuracion', 'general'); nombre = primerNombre(configGeneral?.nombreResponsable); } catch (e) { /* sin configuración */ }
 
-    // ---- Plata por justificar (todos los proyectos activos) ----
+    // Los datos viven solo en este dispositivo: si hay gastos y no hay un respaldo reciente, se recuerda exportarlo
+    const diasRespaldo = __modules__['storage/backup'].diasDesdeRespaldo(configGeneral);
+    const avisoRespaldo = resumen.gastos.length && (diasRespaldo == null || diasRespaldo > 14) ? `
+      <div class="aviso-respaldo" role="status">
+        <div>
+          <strong>${diasRespaldo == null ? 'Aún no tienes un respaldo de tus datos' : `Tu último respaldo fue hace ${diasRespaldo} días`}</strong>
+          <span>Los gastos y fotos se guardan solo en este dispositivo. Si se pierde o se borra el navegador, se pierden.</span>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-respaldo-rapido">Exportar respaldo</button>
+      </div>` : '';
+
+    // ---- Comprobantes pendientes de recibir (todos los proyectos activos) ----
     const idsActivos = new Set(activos.map((p) => p.id));
     const gastosActivos = resumen.gastos.filter((g) => idsActivos.has(g.proyectoId));
     const suma = (lista) => Number(lista.reduce((a, g) => a + (Number(g.valor) || 0), 0).toFixed(2));
     const pendientes = gastosActivos.filter((g) => g.estadoComprobante === ESTADOS_COMPROBANTE.PENDIENTE);
     const sinComp = gastosActivos.filter((g) => g.estadoComprobante === ESTADOS_COMPROBANTE.SIN);
     const montoPend = suma(pendientes);
-    const montoSin = suma(sinComp);
-    const porJustificar = Number((montoPend + montoSin).toFixed(2));
-    const nPorJustificar = pendientes.length + sinComp.length;
-    const proyConPendientes = new Set([...pendientes, ...sinComp].map((g) => g.proyectoId)).size;
+    const proyConPendientes = new Set(pendientes.map((g) => g.proyectoId)).size;
 
     let titular, detalle;
     if (!activos.length) {
       titular = 'Sin proyectos activos';
       detalle = 'Crea un proyecto para empezar a registrar su viático.';
-    } else if (!nPorJustificar) {
-      titular = '<span class="pos">Todo justificado</span>';
-      detalle = gastosActivos.length
-        ? `Los ${plural(gastosActivos.length, 'gasto', 'gastos')} de tus ${plural(activos.length, 'proyecto activo', 'proyectos activos')} tienen su comprobante.`
-        : `Aún no hay gastos registrados en tus ${plural(activos.length, 'proyecto activo', 'proyectos activos')}.`;
+    } else if (!pendientes.length) {
+      titular = '<span class="pos">Sin comprobantes pendientes</span>';
+      const cantidadSinComprobante = sinComp.length;
+      detalle = cantidadSinComprobante
+        ? `${plural(cantidadSinComprobante, 'gasto', 'gastos')} ${cantidadSinComprobante === 1 ? 'quedó registrado' : 'quedaron registrados'} válidamente como "Sin comprobante".`
+        : gastosActivos.length
+          ? 'Los gastos registrados ya tienen comprobante; no hay nada pendiente de recibir.'
+          : `Aún no hay gastos registrados en tus ${plural(activos.length, 'proyecto activo', 'proyectos activos')}.`;
     } else {
-      titular = `<span class="warn">${formatoMoneda(porJustificar)}</span> por justificar`;
-      detalle = `${plural(nPorJustificar, 'gasto', 'gastos')} sin factura entregada${activos.length > 1 ? `, en ${plural(proyConPendientes, 'proyecto', 'proyectos')} de ${activos.length}` : ` en <strong>${esc(activos[0].nombre)}</strong>`}.`;
+      titular = `<span class="warn">${formatoMoneda(montoPend)}</span> pendiente de comprobante`;
+      detalle = `${plural(pendientes.length, 'gasto', 'gastos')} ${pendientes.length === 1 ? 'espera' : 'esperan'} el comprobante${activos.length > 1 ? `, en ${plural(proyConPendientes, 'proyecto', 'proyectos')} de ${activos.length}` : ` en <strong>${esc(activos[0].nombre)}</strong>`}.`;
     }
 
-    const bloqueJustificar = activos.length && nPorJustificar ? `
+    const bloqueJustificar = activos.length && pendientes.length ? `
       <div class="dash-justificar">
         <div class="dj-item pend">
-          <span class="dj-lbl"><i></i>Pendiente de factura</span>
+          <span class="dj-lbl"><i></i>Pendiente de comprobante</span>
           <span class="dj-val">${formatoMoneda(montoPend)}</span>
           <span class="dj-sub">${pendientes.length ? plural(pendientes.length, 'gasto', 'gastos') : 'Ninguno'}</span>
-        </div>
-        <div class="dj-item sin">
-          <span class="dj-lbl"><i></i>Sin comprobante</span>
-          <span class="dj-val">${formatoMoneda(montoSin)}</span>
-          <span class="dj-sub">${sinComp.length ? plural(sinComp.length, 'gasto', 'gastos') : 'Ninguno'}</span>
         </div>
       </div>` : '';
 
     // ---- Resumen por proyecto ----
     const filas = activos.map((p, i) => {
       const r = resumenesActivos[i];
-      const pj = Number(((r.totalPendiente || 0) + (r.totalSinComprobante || 0)).toFixed(2));
+      const pj = Number((r.totalPendiente || 0).toFixed(2));
       return { p, r, pj };
     });
     const tot = filas.reduce((a, f) => ({ rec: a.rec + f.r.totalRecibido, gas: a.gas + f.r.totalGastado, pj: a.pj + f.pj }), { rec: 0, gas: 0, pj: 0 });
     const celdaSaldo = (v) => `<td class="num ${v < 0 ? 'neg' : 'pos'}" data-lbl="Saldo">${formatoMoneda(v)}</td>`;
-    const celdaPj = (v) => `<td class="num ${v > 0 ? 'warn' : 'muted'}" data-lbl="Por justificar">${v > 0 ? formatoMoneda(v) : '—'}</td>`;
+    const celdaPj = (v) => `<td class="num ${v > 0 ? 'warn' : 'muted'}" data-lbl="Pendiente">${v > 0 ? formatoMoneda(v) : '—'}</td>`;
     const tablaResumen = activos.length ? `
       <div class="section-title">Resumen por proyecto</div>
       <div class="dash-tabla-wrap">
         <table class="dash-tabla">
-          <thead><tr><th>Proyecto</th><th class="num">Recibido</th><th class="num">Gastado</th><th class="num">Saldo</th><th class="num">Por justificar</th></tr></thead>
+          <thead><tr><th>Proyecto</th><th class="num">Recibido</th><th class="num">Gastado</th><th class="num">Saldo</th><th class="num">Pendiente de comprobante</th></tr></thead>
           <tbody>
             ${filas.map(({ p, r, pj }) => `
               <tr data-href="#proyectos/${p.id}" tabindex="0" role="link">
@@ -2297,9 +2441,13 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           <div class="brand-plate"><img src="data:image/png;base64,${LOGO_COLINEAL_B64}" alt="Carpintería y Tapicería Internacional — Colineal" /></div>
         </div>
         ${bloqueJustificar}
-        <a href="#proyectos/nuevo" class="btn btn-primary" style="align-self:flex-start;">${icono('mas')} Nuevo proyecto</a>
+        <div class="dash-acciones">
+          ${activos.length ? `<button type="button" class="btn btn-primary" id="btn-gasto-rapido">${icono('mas')} Registrar gasto</button>` : ''}
+          <a href="#proyectos/nuevo" class="btn ${activos.length ? 'btn-secondary' : 'btn-primary'}">${icono(activos.length ? 'proyectos' : 'mas')} Nuevo proyecto</a>
+        </div>
       </header>
 
+      ${avisoRespaldo}
       ${tablaResumen}
 
       <div class="section-title" style="margin-top:var(--sp-6);">Actividad</div>
@@ -2333,6 +2481,37 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       </div>
 
     `;
+
+    // Registrar un gasto desde Inicio sin entrar al proyecto (antes: 4 toques)
+    const abrirGasto = (proyectoId) => __modules__['modules/gastos/gastos.form'].abrirFormularioGasto({
+      proyectoId, onGuardado: () => { if (contenedor.isConnected) renderDashboard(contenedor); },
+    });
+    contenedor.querySelector('#btn-gasto-rapido')?.addEventListener('click', () => {
+      if (activos.length === 1) { abrirGasto(activos[0].id); return; }
+      const { abrirModal } = __modules__['components/modal'];
+      const modal = abrirModal({
+        titulo: '¿En qué proyecto es el gasto?',
+        contenidoHtml: `<div class="lista-eleccion">${activos.map((p) => `
+          <button type="button" class="eleccion" data-proyecto="${p.id}">
+            <strong>${esc(p.nombre)}</strong><span>${esc(p.ciudad || 'Sin ciudad')}${p.cliente ? ' · ' + esc(p.cliente) : ''}</span>
+          </button>`).join('')}</div>`,
+        botones: [{ texto: 'Cancelar', clase: 'btn-secondary' }],
+      });
+      modal.querySelectorAll('[data-proyecto]').forEach((b) => b.addEventListener('click', () => abrirGasto(b.dataset.proyecto)));
+    });
+    contenedor.querySelector('#btn-respaldo-rapido')?.addEventListener('click', async (ev) => {
+      const boton = ev.currentTarget;
+      boton.disabled = true;
+      const { mostrarToast } = __modules__['components/toast'];
+      try {
+        await __modules__['storage/backup'].exportarRespaldo();
+        mostrarToast('Respaldo descargado. Guárdalo fuera del celular (Drive, correo o computadora).', 5000);
+        contenedor.querySelector('.aviso-respaldo')?.remove();
+      } catch (err) {
+        boton.disabled = false;
+        mostrarToast('No se pudo generar el respaldo: ' + ((err && err.message) || 'error desconocido'), 7000, 'error');
+      }
+    });
 
     // Toda la fila de la tabla abre el proyecto
     contenedor.querySelectorAll('.dash-tabla tbody tr[data-href]').forEach((tr) => {
@@ -2477,6 +2656,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   // ==== utils/validate ====
   __modules__['utils/validate'] = (function(){
   function esValorMonetarioValido(valor) {
+    if (valor == null || String(valor).trim() === '') return false;
     const num = Number(valor);
     return !Number.isNaN(num) && Number.isFinite(num) && num >= 0;
   }
@@ -2484,48 +2664,104 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   /** Igual que esValorMonetarioValido pero exige un monto mayor a cero
    * (para ingresos, donde un monto de $0 no tiene sentido de negocio). */
   function esValorMonetarioPositivo(valor) {
+    if (valor == null || String(valor).trim() === '') return false;
     const num = Number(valor);
     return !Number.isNaN(num) && Number.isFinite(num) && num > 0;
   }
 
   function esFechaValida(fechaStr) {
     if (!fechaStr) return false;
-    const fecha = new Date(fechaStr);
-    return !Number.isNaN(fecha.getTime());
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(fechaStr));
+    if (!match) return false;
+    const [, anio, mes, dia] = match;
+    const fecha = new Date(Date.UTC(Number(anio), Number(mes) - 1, Number(dia)));
+    return fecha.getUTCFullYear() === Number(anio)
+      && fecha.getUTCMonth() === Number(mes) - 1
+      && fecha.getUTCDate() === Number(dia);
   }
 
   function validarProyecto(datos) {
     const errores = {};
     if (!datos.nombre || !datos.nombre.trim()) errores.nombre = 'El nombre del proyecto es obligatorio.';
-    if (datos.fechaInicio && datos.fechaFinEstimada) {
-      if (new Date(datos.fechaFinEstimada) < new Date(datos.fechaInicio)) {
-        errores.fechaFinEstimada = 'La fecha estimada de fin no puede ser anterior al inicio.';
-      }
+    else if (datos.nombre.trim().length > 120) errores.nombre = 'El nombre no puede superar 120 caracteres.';
+    for (const [campo, etiqueta] of [['fechaInicio', 'inicio'], ['fechaFinEstimada', 'fin estimada']]) {
+      if (datos[campo] && !esFechaValida(datos[campo])) errores[campo] = `La fecha de ${etiqueta} no es válida.`;
     }
-    if (datos.numeroPersonas !== undefined && Number(datos.numeroPersonas) < 1) {
-      errores.numeroPersonas = 'Debe haber al menos 1 persona.';
+    if (datos.fechaInicio && datos.fechaFinEstimada && datos.fechaInicio > datos.fechaFinEstimada) {
+      errores.fechaFinEstimada = 'La fecha estimada de fin no puede ser anterior al inicio.';
+    }
+    if (datos.numeroPersonas !== undefined) {
+      const personas = Number(datos.numeroPersonas);
+      if (!Number.isInteger(personas) || personas < 1) errores.numeroPersonas = 'Ingresa un número entero de personas igual o mayor que 1.';
     }
     return { valido: Object.keys(errores).length === 0, errores };
   }
 
-  return { esValorMonetarioValido, esValorMonetarioPositivo, esFechaValida, validarProyecto };
+  /**
+   * Valida un RUC de Ecuador según las reglas del SRI.
+   * Devuelve { ok, tipo, error, advertencia }:
+   *  - error: el RUC no puede existir (longitud, provincia, tipo, establecimiento o cédula inválida).
+   *  - advertencia: sociedad o entidad pública cuyo dígito verificador no cuadra. Existen RUC
+   *    reales emitidos así, por eso se permite guardarlo tras confirmar.
+   */
+  function validarRucEcuador(valor) {
+    const ruc = String(valor ?? '').replace(/\s+/g, '');
+    if (!ruc) return { ok: true, vacio: true };
+    if (!/^\d{13}$/.test(ruc)) return { ok: false, error: 'El RUC debe tener exactamente 13 números.' };
+    const d = ruc.split('').map(Number);
+    const provincia = Number(ruc.slice(0, 2));
+    if (!((provincia >= 1 && provincia <= 24) || provincia === 30)) return { ok: false, error: 'Los dos primeros dígitos del RUC deben ser un código de provincia válido (01 a 24, o 30).' };
+    const tercero = d[2];
+    const mod11 = (coef, posVerificador) => {
+      const suma = coef.reduce((a, c, i) => a + c * d[i], 0);
+      const resto = suma % 11;
+      const esperado = resto === 0 ? 0 : 11 - resto;
+      return esperado === d[posVerificador];
+    };
+    if (tercero <= 5) {
+      // Persona natural: cédula (10 dígitos, módulo 10) + establecimiento
+      const suma = [2, 1, 2, 1, 2, 1, 2, 1, 2].reduce((a, c, i) => { let x = c * d[i]; if (x > 9) x -= 9; return a + x; }, 0);
+      const verificador = (10 - (suma % 10)) % 10;
+      if (verificador !== d[9]) return { ok: false, error: 'El RUC no es válido: la cédula que contiene (10 primeros dígitos) no es correcta.' };
+      if (ruc.slice(10) === '000') return { ok: false, error: 'El RUC debe terminar en 001 (o en el número de establecimiento), no en 000.' };
+      return { ok: true, tipo: 'persona natural' };
+    }
+    if (tercero === 6) {
+      if (ruc.slice(9) === '0000') return { ok: false, error: 'El RUC de una entidad pública debe terminar en 0001 (o su establecimiento).' };
+      return mod11([3, 2, 7, 6, 5, 4, 3, 2], 8) ? { ok: true, tipo: 'entidad pública' }
+        : { ok: true, tipo: 'entidad pública', advertencia: 'El dígito verificador de este RUC no coincide. Revísalo con la factura.' };
+    }
+    if (tercero === 9) {
+      if (ruc.slice(10) === '000') return { ok: false, error: 'El RUC de una sociedad debe terminar en 001 (o su establecimiento), no en 000.' };
+      return mod11([4, 3, 2, 7, 6, 5, 4, 3, 2], 9) ? { ok: true, tipo: 'sociedad' }
+        : { ok: true, tipo: 'sociedad', advertencia: 'El dígito verificador de este RUC no coincide. Revísalo con la factura.' };
+    }
+    return { ok: false, error: 'El tercer dígito del RUC no es válido (debe ser de 0 a 6, o 9).' };
+  }
+
+  return { esValorMonetarioValido, esValorMonetarioPositivo, esFechaValida, validarProyecto, validarRucEcuador };
   })();
 
   // ==== components/toast ====
   __modules__['components/toast'] = (function(){
-  function mostrarToast(mensaje, duracionMs = 3200) {
+  // tipo: '' (informativo) | 'error'. Tocar el aviso lo cierra.
+  function mostrarToast(mensaje, duracionMs = 3200, tipo = '') {
     const region = document.getElementById('toast-region');
     if (!region) return;
     const el = document.createElement('div');
-    el.className = 'toast';
-    el.setAttribute('role', 'status');
+    el.className = 'toast' + (tipo === 'error' ? ' toast-error' : '');
+    el.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
     el.textContent = mensaje;
     region.appendChild(el);
-    setTimeout(() => {
+    let cerrado = false;
+    const cerrar = () => {
+      if (cerrado) return; cerrado = true;
       if (MOVIMIENTO_REDUCIDO) { el.remove(); return; }
       el.classList.add('saliendo');
       setTimeout(() => el.remove(), 320);
-    }, duracionMs);
+    };
+    el.addEventListener('click', cerrar);
+    setTimeout(cerrar, duracionMs);
   }
 
   return { mostrarToast };
@@ -2571,7 +2807,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       </div>
 
       <form id="form-proyecto" class="card card-elevated" style="max-width:720px; display:flex; flex-direction:column; gap:var(--sp-4);">
-        ${campo('Nombre del proyecto *', 'nombre', 'text', d.nombre)}
+        ${campo('Nombre del proyecto *', 'nombre', 'text', d.nombre, 'required maxlength="120"')}
         <div class="field-row">
           ${campo('Cliente', 'cliente', 'text', d.cliente)}
           ${campo('Responsable', 'responsable', 'text', d.responsable)}
@@ -2601,7 +2837,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           <label for="f-obs">Observaciones</label>
           <textarea id="f-obs" name="observaciones" rows="2">${esc(d.observaciones || '')}</textarea>
         </div>
-        <div id="errores-form" style="color:var(--danger); font-size:var(--fs-sm);"></div>
+        <div id="errores-form" role="alert" aria-live="polite" style="color:var(--danger); font-size:var(--fs-sm);"></div>
         <div class="modal-actions" style="justify-content:flex-start;">
           <button type="submit" class="btn btn-primary">${editando ? 'Guardar cambios' : 'Crear proyecto'}</button>
           <a href="#proyectos" class="btn btn-secondary">Cancelar</a>
@@ -2618,20 +2854,31 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       const { valido, errores } = validarProyecto(datos);
       const boxErrores = contenedor.querySelector('#errores-form');
       if (!valido) {
-        boxErrores.innerHTML = Object.values(errores).map((m) => `<div>${m}</div>`).join('');
+        boxErrores.replaceChildren(...Object.values(errores).map((mensaje) => {
+          const linea = document.createElement('div');
+          linea.textContent = mensaje;
+          return linea;
+        }));
         return;
       }
-      boxErrores.innerHTML = '';
+      boxErrores.replaceChildren();
       e.target.dataset.enviando = '1';
 
-      if (editando) {
-        await guardarProyectoEditado(proyecto, datos);
-        mostrarToast('Proyecto actualizado.');
-        irA(`proyectos/${proyecto.id}`);
-      } else {
-        const nuevo = await guardarProyectoNuevo(datos);
-        mostrarToast('Proyecto creado.');
-        irA(`proyectos/${nuevo.id}`);
+      try {
+        if (editando) {
+          await guardarProyectoEditado(proyecto, datos);
+          mostrarToast('Proyecto actualizado.');
+          irA(`proyectos/${proyecto.id}`);
+        } else {
+          const nuevo = await guardarProyectoNuevo(datos);
+          mostrarToast('Proyecto creado.');
+          irA(`proyectos/${nuevo.id}`);
+        }
+      } catch (err) {
+        // Antes quedaba bloqueado (sin poder reintentar) y sin decir nada
+        e.target.dataset.enviando = '';
+        console.error(err);
+        boxErrores.textContent = `No se pudo guardar el proyecto: ${(err && err.message) || 'error desconocido'}. Intenta de nuevo.`;
       }
     });
   }
@@ -2750,8 +2997,13 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           if (sigueAbierta && btn.cerrar !== false) cerrarModal();
           else if (sigueAbierta) restaurar(textoOriginal);
         } catch (err) {
+          // La ventana sigue abierta con lo escrito, para corregir o reintentar
           restaurar(textoOriginal);
-          throw err;
+          console.error(err);
+          const espacio = err && (err.name === 'QuotaExceededError' || /quota/i.test(err.message || ''));
+          __modules__['components/toast'].mostrarToast(espacio
+            ? 'No hay espacio suficiente en el dispositivo para guardar. Libera espacio o exporta un respaldo y elimina proyectos antiguos.'
+            : `No se pudo completar: ${(err && err.message) || 'error desconocido'}. Revisa los datos e intenta de nuevo.`, 7000, 'error');
         }
       });
       acciones.appendChild(b);
@@ -2784,6 +3036,14 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       ],
     });
   }
+
+  // Escape cierra la ventana abierta (igual que tocar fuera de ella), salvo mientras se está guardando
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !backdropActual) return;
+    if (backdropActual.querySelector('.modal-actions button:disabled')) return;
+    e.preventDefault();
+    cerrarModal();
+  });
 
   return { cerrarModal, abrirModal, confirmarEliminacionGasto };
   })();
@@ -2846,7 +3106,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   // ==== modules/ingresos/ingresos.view ====
   __modules__['modules/ingresos/ingresos.view'] = (function(){
   const { listarIngresos, listarIngresosEnPapelera, crearNuevoIngreso, editarIngreso, enviarIngresoAPapelera, restaurarIngresoDePapelera, eliminarIngresoDefinitivamente } = __modules__['modules/ingresos/ingresos.repo'];
-  const { formatoMoneda, formatoFecha } = __modules__['utils/format'];
+  const { formatoMoneda, formatoFecha, obtenerSimboloMoneda, valorMonedaEditable } = __modules__['utils/format'];
   const { esValorMonetarioPositivo, esFechaValida } = __modules__['utils/validate'];
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
@@ -2866,7 +3126,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         <form id="form-ingreso" style="display:flex; flex-direction:column; gap:var(--sp-4);">
           <div class="field-row">
             <div class="field"><label>Fecha *</label><input type="date" name="fecha" required value="${d.fecha || hoyLocal()}" /></div>
-            <div class="field"><label>Valor (USD)</label><input type="number" inputmode="decimal" name="valor" step="0.01" min="0" value="${d.valor ?? ''}" /></div>
+            <div class="field"><label>Valor (${obtenerSimboloMoneda()}) *</label><input type="number" inputmode="decimal" name="valor" step="0.01" min="0.01" required value="${valorMonedaEditable(d.valor)}" /></div>
           </div>
           <div class="field"><label>Concepto</label><input type="text" name="concepto" value="${esc(d.concepto || '')}" placeholder="Ej. Anticipo inicial" /></div>
           <div class="field"><label>Observaciones</label><textarea name="observaciones" rows="2">${esc(d.observaciones || '')}</textarea></div>
@@ -2916,6 +3176,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     });
 
     modal.querySelectorAll('[data-restaurar]').forEach((btn) => btn.addEventListener('click', async () => {
+      if (btn.disabled) return; btn.disabled = true; // doble toque
       await restaurarIngresoDePapelera(btn.dataset.restaurar);
       mostrarToast('Ingreso restaurado.');
       cerrarModal();
@@ -3040,6 +3301,9 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       actualizadoEn: new Date().toISOString(),
     };
     actualizado.valor = Number(actualizado.valor) || 0;
+    for (const campo of ['descripcion', 'observaciones', 'numeroFactura', 'ruc', 'establecimiento']) {
+      if (typeof actualizado[campo] === 'string') actualizado[campo] = actualizado[campo].trim();
+    }
     await db.put('gastos', actualizado);
     return actualizado;
   }
@@ -3724,13 +3988,13 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
   const { ESTADOS_COMPROBANTE, ESTADO_INTERPRETACION } = __modules__['core/models'];
-  const { esValorMonetarioValido, esFechaValida } = __modules__['utils/validate'];
+  const { esValorMonetarioPositivo, esFechaValida, validarRucEcuador } = __modules__['utils/validate'];
   const { listarCategorias, opcionesCategoriaHTML } = __modules__['core/categorias.repo'];
   const { crearNuevoGasto, editarGasto, vincularComprobante } = __modules__['modules/gastos/gastos.repo'];
   const { interpretarEntradaRapida } = __modules__['modules/gastos/gastos.parser'];
   const { renderBotonesCaptura } = __modules__['modules/comprobantes/captura'];
   const { blobAUrl } = __modules__['modules/comprobantes/imagen.util'];
-  const { formatoMoneda } = __modules__['utils/format'];
+  const { formatoMoneda, obtenerSimboloMoneda, valorMonedaEditable } = __modules__['utils/format'];
   const { db } = __modules__['storage/db'];
 
 
@@ -3757,13 +4021,21 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     return `
       <div class="field-row">
         <div class="field"><label>Fecha *</label><input type="date" name="fecha" required value="${d.fecha || hoyLocal()}" /></div>
-        <div class="field"><label>Valor (USD) *</label><input type="number" inputmode="decimal" name="valor" step="0.01" min="0" required value="${d.valor ?? ''}" /></div>
+        <div class="field"><label>Valor (${obtenerSimboloMoneda()}) *</label><input type="number" inputmode="decimal" name="valor" step="0.01" min="0.01" required value="${valorMonedaEditable(d.valor)}" /></div>
       </div>
       <div class="field"><label>Descripción</label><input type="text" name="descripcion" value="${esc(d.descripcion || '')}" placeholder="Ej. Almuerzo equipo obra" /></div>
       <div class="field-row">
         <div class="field"><label>Categoría</label><select name="categoria">${opcionesCategoriaHTML(categorias, d.categoria || 'otros')}</select></div>
         <div class="field"><label>Estado del comprobante</label><select name="estadoComprobante">${opcionesEstadoComprobante(d.estadoComprobante || ESTADOS_COMPROBANTE.SIN)}</select></div>
       </div>
+      <details class="grupo-factura" ${d.numeroFactura || d.ruc || d.establecimiento ? 'open' : ''}>
+        <summary>Datos de la factura <span>(N.º, RUC y proveedor para el informe)</span></summary>
+        <div class="field-row">
+          <div class="field"><label>N.º de factura</label><input type="text" name="numeroFactura" value="${esc(d.numeroFactura || '')}" placeholder="001-001-000012345" autocomplete="off" /></div>
+          <div class="field"><label>RUC del proveedor</label><input type="text" name="ruc" inputmode="numeric" maxlength="13" value="${esc(d.ruc || '')}" placeholder="13 dígitos" autocomplete="off" aria-describedby="ruc-ayuda" /><div class="ruc-ayuda" id="ruc-ayuda" aria-live="polite"></div></div>
+        </div>
+        <div class="field"><label>Establecimiento / proveedor</label><input type="text" name="establecimiento" value="${esc(d.establecimiento || '')}" placeholder="Ej. Restaurante El Puerto" /></div>
+      </details>
       <div class="field"><label>Observaciones</label><textarea name="observaciones" rows="2">${esc(d.observaciones || '')}</textarea></div>
     `;
   }
@@ -3772,18 +4044,35 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
    * Abre el modal de registro/edición de gasto.
    * @param {{proyectoId: string, gastoExistente?: object, onGuardado: function, estadoInicial?: string}} opts
    */
+  // Mensaje bajo el campo RUC del formulario de gasto abierto
+  function mostrarAyudaRuc(r) {
+    const ayuda = document.querySelector('.modal #ruc-ayuda');
+    if (!ayuda) return;
+    ayuda.className = 'ruc-ayuda' + (r.error ? ' error' : r.advertencia ? ' aviso' : r.vacio ? '' : ' ok');
+    ayuda.textContent = r.error || r.advertencia || (r.vacio ? '' : `RUC válido (${r.tipo}).`);
+  }
+
   async function abrirFormularioGasto({ proyectoId, gastoExistente, onGuardado, estadoInicial }) {
     const categorias = await listarCategorias();
     const editando = Boolean(gastoExistente);
     let modo = 'manual'; // 'manual' | 'rapida' | 'foto'
     let comprobantePendiente = null; // { id, imagenBlob, datosDetectados, estadoInterpretacion }
 
-    const datosIniciales = estadoInicial ? { ...gastoExistente, estadoComprobante: estadoInicial } : gastoExistente;
+    let datosIniciales = estadoInicial ? { ...gastoExistente, estadoComprobante: estadoInicial } : gastoExistente;
 
     // Si se está editando un gasto que ya tiene una foto adjunta, mostrarla como referencia junto con todos los datos leídos
     let comprobanteExistenteHtml = '';
     if (editando && gastoExistente.comprobanteId) {
       const compExistente = await db.get('comprobantes', gastoExistente.comprobanteId);
+      const leidos = compExistente?.datosDetectados;
+      if (leidos) { // los datos de factura leídos de la foto aparecen en el formulario para confirmarlos o corregirlos
+        datosIniciales = {
+          ...datosIniciales,
+          numeroFactura: datosIniciales.numeroFactura || leidos.numeroFactura || '',
+          ruc: datosIniciales.ruc || leidos.ruc || '',
+          establecimiento: datosIniciales.establecimiento || leidos.establecimiento || '',
+        };
+      }
       if (compExistente?.imagenBlob) {
         const d = compExistente.datosDetectados;
         let fichaHtml = '';
@@ -3803,7 +4092,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
               <div class="deteccion-card" style="margin-top:var(--sp-3);">
                 <h3>Datos leídos del comprobante ${d.metodo === 'ocr_local' ? '(lectura gratuita)' : d.metodo === 'ia' ? '(IA)' : ''}</h3>
                 <div class="deteccion-grid">
-                  ${filas.map(([lbl, val]) => `<div><div class="lbl" style="font-size:var(--fs-xs); color:var(--text-500); text-transform:uppercase; letter-spacing:0.03em;">${lbl}</div><div style="font-size:var(--fs-sm);">${val}</div></div>`).join('')}
+                  ${filas.map(([lbl, val]) => `<div><div class="lbl" style="font-size:var(--fs-xs); color:var(--text-500); text-transform:uppercase; letter-spacing:0.03em;">${lbl}</div><div style="font-size:var(--fs-sm);">${esc(val)}</div></div>`).join('')}
                 </div>
               </div>
             `;
@@ -3848,9 +4137,27 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
               mostrarToast('Escribe una descripción para el gasto.');
               return;
             }
-            if (String(datos.valor ?? '').trim() === '' || !esValorMonetarioValido(datos.valor)) { // vacío = Number('') = 0: antes se guardaba $0 sin avisar
-              mostrarToast('Ingresa el valor del gasto (ej. 12.50).');
+            if (!esValorMonetarioPositivo(datos.valor)) {
+              mostrarToast('Ingresa un valor del gasto mayor que cero (ej. 12.50).');
               modal.querySelector('[name="valor"]')?.focus();
+              return;
+            }
+            // RUC del proveedor: si se escribe, tiene que ser un RUC válido del SRI
+            datos.ruc = String(datos.ruc || '').replace(/\s+/g, '');
+            const revisionRuc = validarRucEcuador(datos.ruc);
+            const campoRuc = modal.querySelector('[name="ruc"]');
+            if (!revisionRuc.ok) {
+              modal.querySelector('.grupo-factura').open = true;
+              mostrarAyudaRuc(revisionRuc);
+              mostrarToast(revisionRuc.error, 5000, 'error');
+              campoRuc?.focus();
+              return;
+            }
+            if (revisionRuc.advertencia && form.dataset.rucConfirmado !== datos.ruc) {
+              modal.querySelector('.grupo-factura').open = true;
+              form.dataset.rucConfirmado = datos.ruc;
+              mostrarAyudaRuc({ ...revisionRuc, advertencia: revisionRuc.advertencia + ' Si está bien escrito, toca otra vez el botón de guardar para guardarlo igual.' });
+              campoRuc?.focus();
               return;
             }
 
@@ -3881,6 +4188,19 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
 
     const zonaEspecial = modal.querySelector('#zona-modo-especial');
     const formEl = modal.querySelector('#form-gasto');
+    // RUC: solo números mientras se escribe y revisión al salir del campo
+    const campoRucEl = formEl.querySelector('[name="ruc"]');
+    if (campoRucEl) {
+      campoRucEl.addEventListener('input', () => {
+        const limpio = campoRucEl.value.replace(/\D/g, '').slice(0, 13);
+        if (limpio !== campoRucEl.value) campoRucEl.value = limpio;
+        delete formEl.dataset.rucConfirmado;
+        if (limpio.length === 13) mostrarAyudaRuc(validarRucEcuador(limpio));
+        else mostrarAyudaRuc({ ok: true, vacio: true });
+      });
+      campoRucEl.addEventListener('blur', () => mostrarAyudaRuc(validarRucEcuador(campoRucEl.value)));
+      if (campoRucEl.value) mostrarAyudaRuc(validarRucEcuador(campoRucEl.value));
+    }
 
     function pintarZonaEspecial() {
       if (modo === 'manual') { zonaEspecial.innerHTML = ''; return; }
@@ -3929,11 +4249,8 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           // tiene que acordarse de cambiarlo manualmente de "Pendiente"/"Sin
           // comprobante" a "Con comprobante".
           const selectEstado = formEl.querySelector('[name="estadoComprobante"]');
-          if (selectEstado) {
-            selectEstado.value = comprobante.estadoInterpretacion === ESTADO_INTERPRETACION.PENDIENTE_CONEXION
-              ? ESTADOS_COMPROBANTE.PENDIENTE
-              : ESTADOS_COMPROBANTE.CON;
-          }
+          // Al guardar, un gasto con foto siempre queda "Con comprobante" (también si la lectura espera internet)
+          if (selectEstado) selectEstado.value = ESTADOS_COMPROBANTE.CON;
 
           if (comprobante.estadoInterpretacion === ESTADO_INTERPRETACION.LISTO && comprobante.datosDetectados) {
             const d = comprobante.datosDetectados;
@@ -3948,7 +4265,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
                   ${d.establecimiento ? `${esc(d.establecimiento)}<br>` : ''}
                   ${d.ciudad ? `${esc(d.ciudad)}<br>` : ''}
                   ${d.ruc ? `RUC: ${esc(d.ruc)}<br>` : ''}
-                  ${d.fecha ? `Fecha: ${d.fecha}<br>` : ''}
+                  ${d.fecha ? `Fecha: ${esc(d.fecha)}<br>` : ''}
                   ${d.numeroFactura ? `N.º factura: ${esc(d.numeroFactura)}<br>` : ''}
                   ${d.subtotal != null ? `Subtotal: ${formatoMoneda(d.subtotal)}<br>` : ''}
                   ${d.iva != null ? `IVA: ${formatoMoneda(d.iva)}<br>` : ''}
@@ -3962,12 +4279,17 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
             if (d.total != null) formEl.querySelector('[name="valor"]').value = d.total;
             if (d.fecha) formEl.querySelector('[name="fecha"]').value = d.fecha;
             if (d.categoriaProbable) formEl.querySelector('[name="categoria"]').value = d.categoriaProbable;
+            // N.º de factura, RUC y proveedor quedan en el formulario para revisarlos antes de guardar
+            const factura = { numeroFactura: d.numeroFactura, ruc: d.ruc, establecimiento: d.establecimiento };
+            Object.entries(factura).forEach(([campo, valor]) => { if (valor) formEl.querySelector(`[name="${campo}"]`).value = valor; });
+            if (Object.values(factura).some(Boolean)) formEl.querySelector('.grupo-factura').open = true;
+            if (factura.ruc) mostrarAyudaRuc(validarRucEcuador(formEl.querySelector('[name="ruc"]').value)); // el RUC leído de la foto también se revisa
           } else if (comprobante.estadoInterpretacion === ESTADO_INTERPRETACION.PENDIENTE_CONEXION) {
             zonaDeteccion.innerHTML = `
               <img src="${url}" class="comprobante-preview" style="margin-top:var(--sp-3);" />
               <div class="deteccion-card">
                 <h3>Sin conexión — foto guardada</h3>
-                <p style="font-size:var(--fs-sm);">Se interpretará automáticamente cuando vuelva el internet. Por ahora completa el gasto manualmente abajo; el estado quedará como "Pendiente de comprobante".</p>
+                <p style="font-size:var(--fs-sm);">La foto ya es tu comprobante: el gasto se guardará como "Con comprobante". Completa los datos arriba; la lectura automática se hará cuando vuelva el internet.</p>
               </div>
             `;
           } else {
@@ -4167,10 +4489,16 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     { id: 'sin_comprobante', label: 'Sin comprobante' },
   ];
 
+  // Texto en el que busca el buscador: descripción, categoría, proveedor, N.º de factura y RUC
+  function textoBusquedaGasto(g, categorias) {
+    return [g.descripcion, nombreDeCategoria(categorias, g.categoria), g.establecimiento, g.numeroFactura, g.ruc, g.observaciones]
+      .filter(Boolean).join(' ').toLowerCase();
+  }
+
   function filaGasto(g, categorias) {
     const estado = ETIQUETAS_ESTADO_COMPROBANTE[g.estadoComprobante];
     return `
-      <div class="gasto-row">
+      <div class="gasto-row" data-busqueda="${esc(textoBusquedaGasto(g, categorias))}" data-valor="${Number(g.valor) || 0}">
         <div class="mono tabular" style="color:var(--text-500);">${formatoFecha(g.fecha)}</div>
         <div>
           <div class="desc">${esc(g.descripcion || '(sin descripción)')}</div>
@@ -4221,32 +4549,31 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           </p>
         </div>
       `;
-    } else if (gasto.comprobanteId) {
-      const comp = await db.get('comprobantes', gasto.comprobanteId);
+    } else {
+      const comp = gasto.comprobanteId ? await db.get('comprobantes', gasto.comprobanteId) : null;
       if (comp?.imagenBlob) imgHtml = `<img src="${blobAUrl(comp.imagenBlob)}" class="comprobante-preview" />`;
-      const d = comp?.datosDetectados;
-      if (d) {
-        const filas = [
-          d.itemPrincipal && ['Ítem comprado', d.itemPrincipal],
-          d.establecimiento && ['Establecimiento', d.establecimiento],
-          d.ciudad && ['Ciudad', d.ciudad],
-          d.ruc && ['RUC', d.ruc],
-          d.numeroFactura && ['N.º de factura', d.numeroFactura],
-          d.fecha && ['Fecha en el comprobante', formatoFecha(d.fecha)],
-          d.subtotal != null && ['Subtotal', formatoMoneda(d.subtotal)],
-          d.iva != null && ['IVA', formatoMoneda(d.iva)],
-          d.total != null && ['Total en el comprobante', formatoMoneda(d.total)],
-        ].filter(Boolean);
-        if (filas.length) {
-          datosDetectadosHtml = `
-            <div class="deteccion-card" style="margin-top:var(--sp-3);">
-              <h3>Datos leídos del comprobante ${d.metodo === 'ocr_local' ? '(lectura gratuita)' : d.metodo === 'ia' ? '(IA)' : ''}</h3>
-              <div class="deteccion-grid">
-                ${filas.map(([lbl, val]) => `<div><div class="lbl" style="font-size:var(--fs-xs); color:var(--text-500); text-transform:uppercase; letter-spacing:0.03em;">${lbl}</div><div style="font-size:var(--fs-sm);">${val}</div></div>`).join('')}
-              </div>
+      const d = comp?.datosDetectados || {};
+      // Lo escrito a mano en el gasto manda sobre lo leído de la foto (igual que en los informes)
+      const filas = [
+        d.itemPrincipal && ['Ítem comprado', d.itemPrincipal],
+        (gasto.establecimiento || d.establecimiento) && ['Establecimiento', gasto.establecimiento || d.establecimiento],
+        d.ciudad && ['Ciudad', d.ciudad],
+        (gasto.ruc || d.ruc) && ['RUC', gasto.ruc || d.ruc],
+        (gasto.numeroFactura || d.numeroFactura) && ['N.º de factura', gasto.numeroFactura || d.numeroFactura],
+        d.fecha && ['Fecha en el comprobante', formatoFecha(d.fecha)],
+        d.subtotal != null && ['Subtotal', formatoMoneda(d.subtotal)],
+        d.iva != null && ['IVA', formatoMoneda(d.iva)],
+        d.total != null && ['Total en el comprobante', formatoMoneda(d.total)],
+      ].filter(Boolean);
+      if (filas.length) {
+        datosDetectadosHtml = `
+          <div class="deteccion-card" style="margin-top:var(--sp-3);">
+            <h3>Datos de la factura ${d.metodo === 'ocr_local' ? '(lectura gratuita)' : d.metodo === 'ia' ? '(IA)' : ''}</h3>
+            <div class="deteccion-grid">
+              ${filas.map(([lbl, val]) => `<div><div class="lbl" style="font-size:var(--fs-xs); color:var(--text-500); text-transform:uppercase; letter-spacing:0.03em;">${lbl}</div><div style="font-size:var(--fs-sm); overflow-wrap:anywhere;">${esc(val)}</div></div>`).join('')}
             </div>
-          `;
-        }
+          </div>
+        `;
       }
     }
     const estado = ETIQUETAS_ESTADO_COMPROBANTE[gasto.estadoComprobante];
@@ -4288,6 +4615,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     });
 
     modal.querySelectorAll('[data-restaurar]').forEach((btn) => btn.addEventListener('click', async () => {
+      if (btn.disabled) return; btn.disabled = true; // doble toque
       await restaurarDePapelera(btn.dataset.restaurar);
       mostrarToast('Gasto restaurado.');
       cerrarModal();
@@ -4321,9 +4649,13 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       ]);
       const filtrados = todos.filter((g) => {
         const pasaFiltro = filtro === 'todos' || g.estadoComprobante === filtro;
-        const pasaBusqueda = !busqueda || (g.descripcion || '').toLowerCase().includes(busqueda.toLowerCase());
+        const pasaBusqueda = !busqueda || textoBusquedaGasto(g, categorias).includes(busqueda.toLowerCase());
         return pasaFiltro && pasaBusqueda;
       });
+      const resumenVisible = (lista) => {
+        const total = lista.reduce((a, v) => a + v, 0);
+        return lista.length ? `<strong>${lista.length}</strong> ${lista.length === 1 ? 'gasto' : 'gastos'} · Total <strong class="tabular">${formatoMoneda(total)}</strong>` : '';
+      };
 
       contenedor.innerHTML = `
         <div class="toolbar">
@@ -4339,10 +4671,14 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           <div class="toolbar-filters">
             ${FILTROS.map((f) => `<button class="chip ${f.id === filtro ? 'active' : ''}" data-filtro="${f.id}">${f.label}</button>`).join('')}
           </div>
-          <input type="search" id="buscar-gasto" placeholder="Buscar por descripción…" value="${esc(busqueda)}" style="padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:var(--surface-600); color:var(--text-100);" />
+          <input type="search" id="buscar-gasto" aria-label="Buscar gastos" placeholder="Buscar: descripción, proveedor, factura…" value="${esc(busqueda)}" style="padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:var(--surface-600); color:var(--text-100); min-width:240px; font-size:16px;" />
         </div>
+        <p class="resumen-filtro" id="resumen-gastos" aria-live="polite">${resumenVisible(filtrados.map((g) => Number(g.valor) || 0))}</p>
         <div class="card card-elevated">
-          ${filtrados.length ? filtrados.map((g) => filaGasto(g, categorias)).join('') : `<div class="empty-state"><p class="lead">No hay gastos que coincidan</p></div>`}
+          ${filtrados.length ? filtrados.map((g) => filaGasto(g, categorias)).join('') : todos.length
+            ? `<div class="empty-state"><p class="lead">No hay gastos que coincidan</p><p>Cambia el filtro o la búsqueda.</p></div>`
+            : `<div class="empty-state"><p class="lead">Aún no hay gastos</p><p>Toca «Registrar gasto» para anotar el primero; puedes tomar foto de la factura.</p></div>`}
+          <div class="empty-state" id="sin-coincidencias" hidden><p class="lead">No hay gastos que coincidan</p><p>Prueba con otra palabra.</p></div>
         </div>
       `;
 
@@ -4362,8 +4698,16 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       const buscador = contenedor.querySelector('#buscar-gasto');
       // Filtra las filas en la misma pantalla (sin volver a dibujar el buscador): en iPhone el teclado ya no se cierra a cada letra
       buscador.addEventListener('input', (e) => {
-        busqueda = e.target.value; const q = busqueda.toLowerCase();
-        contenedor.querySelectorAll('.gasto-row').forEach((r) => { r.style.display = (q && !(r.querySelector('.desc')?.textContent || '').toLowerCase().includes(q)) ? 'none' : ''; });
+        busqueda = e.target.value; const q = busqueda.trim().toLowerCase();
+        const visibles = [];
+        const filas = contenedor.querySelectorAll('.gasto-row[data-busqueda]');
+        filas.forEach((r) => {
+          const ver = !q || r.dataset.busqueda.includes(q);
+          r.style.display = ver ? '' : 'none';
+          if (ver) visibles.push(Number(r.dataset.valor) || 0);
+        });
+        contenedor.querySelector('#resumen-gastos').innerHTML = resumenVisible(visibles);
+        contenedor.querySelector('#sin-coincidencias').hidden = !(filas.length && !visibles.length);
       });
 
       contenedor.querySelectorAll('[data-ver]').forEach((btn) => btn.addEventListener('click', () => abrirVistaGasto(btn.dataset.ver, categorias)));
@@ -4512,9 +4856,10 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   // ==== modules/proyeccion/proyeccion.solicitudes.view ====
   __modules__['modules/proyeccion/proyeccion.solicitudes.view'] = (function(){
   const { db } = __modules__['storage/db'];
+  const { esFechaValida } = __modules__['utils/validate'];
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
-  const { formatoMoneda, formatoFecha } = __modules__['utils/format'];
+  const { formatoMoneda, formatoFecha, obtenerSimboloMoneda, valorMonedaEditable } = __modules__['utils/format'];
   const { obtenerSolicitud, guardarSolicitud } = __modules__['modules/proyeccion/solicitudes.repo'];
   const { guardarEnHistorial } = __modules__['core/historial.repo'];
   const { generarId } = __modules__['storage/db'];
@@ -4543,8 +4888,10 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     return Math.max(dias, 0);
   }
 
-  function imprimirEnZona(html) {
+  // Las solicitudes se imprimen en A4 horizontal; los informes, siempre en A4 vertical.
+  function imprimirEnZona(html, orientacion = 'horizontal') {
     const zona = document.getElementById('zona-impresion');
+    document.documentElement.dataset.orientacionPdf = orientacion === 'vertical' ? 'vertical' : 'horizontal';
     zona.innerHTML = html;
     animarGeneracionInforme(() => window.print());
   }
@@ -4558,10 +4905,10 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
      1) MI SOLICITUD (JEFE DE INSTALACIÓN)
      ============================================================ */
 
-  async function abrirSolicitudJefe({ proyecto, onGuardado }) {
+  async function abrirSolicitudJefe({ proyecto, onGuardado, onVistaPrevia, datosIniciales }) {
     const config = await obtenerEmpresa();
     const previa = await obtenerSolicitud(proyecto.id, 'jefe');
-    const datos = previa || {
+    const datos = datosIniciales || previa || {
       fechaInicio: proyecto.fechaInicio || hoyLocal(),
       fechaFin: proyecto.fechaFinEstimada || proyecto.fechaInicio || hoyLocal(),
       hospedaje: 'SI',
@@ -4576,21 +4923,21 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       titulo: 'Mi solicitud de viáticos (jefe de instalación)',
       contenidoHtml: `
         <div class="field-row">
-          <div class="field"><label>Fecha inicio</label><input type="date" id="s1-inicio" value="${datos.fechaInicio}" /></div>
-          <div class="field"><label>Fecha fin</label><input type="date" id="s1-fin" value="${datos.fechaFin}" /></div>
+          <div class="field"><label>Fecha inicio</label><input type="date" id="s1-inicio" required value="${esc(datos.fechaInicio)}" /></div>
+          <div class="field"><label>Fecha fin</label><input type="date" id="s1-fin" required value="${esc(datos.fechaFin)}" /></div>
         </div>
         <div class="field">
           <label>¿Requiere hospedaje?</label>
           <select id="s1-hospedaje"><option value="SI" ${datos.hospedaje === 'SI' ? 'selected' : ''}>Sí</option><option value="NO" ${datos.hospedaje === 'NO' ? 'selected' : ''}>No</option></select>
         </div>
-        <div class="field"><label>Alimentación por día (se multiplica × días)</label><input type="number" step="0.01" min="0" id="s1-alim" value="${datos.tarifaAlimentacionDia}" /></div>
+        <div class="field"><label>Alimentación por día (${obtenerSimboloMoneda()}; se multiplica × días)</label><input type="number" step="0.01" min="0" required id="s1-alim" value="${valorMonedaEditable(datos.tarifaAlimentacionDia)}" /></div>
         <div class="field-row">
-          <div class="field"><label>Movilización (total)</label><input type="number" step="0.01" min="0" id="s1-mov" value="${datos.movilizacion}" /></div>
-          <div class="field"><label>Caja chica (total)</label><input type="number" step="0.01" min="0" id="s1-caja" value="${datos.cajaChica}" /></div>
+          <div class="field"><label>Movilización (total, ${obtenerSimboloMoneda()})</label><input type="number" step="0.01" min="0" required id="s1-mov" value="${valorMonedaEditable(datos.movilizacion)}" /></div>
+          <div class="field"><label>Caja chica (total, ${obtenerSimboloMoneda()})</label><input type="number" step="0.01" min="0" required id="s1-caja" value="${valorMonedaEditable(datos.cajaChica)}" /></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Gastos instalación (total)</label><input type="number" step="0.01" min="0" id="s1-inst" value="${datos.gastosInstalacion}" /></div>
-          <div class="field"><label>Gastos materiales (total)</label><input type="number" step="0.01" min="0" id="s1-mat" value="${datos.gastosMateriales}" /></div>
+          <div class="field"><label>Gastos instalación (total, ${obtenerSimboloMoneda()})</label><input type="number" step="0.01" min="0" required id="s1-inst" value="${valorMonedaEditable(datos.gastosInstalacion)}" /></div>
+          <div class="field"><label>Gastos materiales (total, ${obtenerSimboloMoneda()})</label><input type="number" step="0.01" min="0" required id="s1-mat" value="${valorMonedaEditable(datos.gastosMateriales)}" /></div>
         </div>
         <div class="deteccion-card" id="s1-resultado"><h3>Total</h3><p style="font-size:var(--fs-sm);">—</p></div>
       `,
@@ -4598,20 +4945,24 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         { texto: 'Cancelar', clase: 'btn-secondary' },
         {
           texto: 'Guardar', clase: 'btn-secondary', cerrar: false,
-          onClick: async () => { await guardarDatos1(); mostrarToast('Solicitud guardada.'); },
+          onClick: async () => { const guardado = await guardarDatos1(); if (guardado) mostrarToast('Solicitud guardada.'); },
         },
         {
-          texto: 'Guardar y generar PDF', clase: 'btn-primary', cerrar: false,
+          texto: 'Vista previa', clase: 'btn-primary', cerrar: false,
           onClick: async () => {
-            const guardado = await guardarDatos1();
-            if (guardado.fechaInicio && guardado.fechaFin && guardado.fechaFin < guardado.fechaInicio) { mostrarToast('La fecha fin no puede ser anterior a la de inicio.'); return; }
-            const html = construirHTMLJefe(proyecto, guardado, config);
-            const dias = diasEntre(guardado.fechaInicio, guardado.fechaFin);
-            const totalAlim = guardado.tarifaAlimentacionDia * dias;
-            const total = totalAlim + guardado.movilizacion + guardado.gastosInstalacion + guardado.gastosMateriales + guardado.cajaChica;
-            await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_jefe', titulo: 'Solicitud de viáticos — Jefe de instalación', htmlSnapshot: html, resumen: { total } });
-            cerrarModal(); onGuardado?.(); // el historial se actualiza al instante
-            imprimirEnZona(html);
+            const borrador = leerValores();
+            if (!validarDatos1(borrador)) return;
+            const html = construirHTMLJefe(proyecto, borrador, config);
+            const dias = diasEntre(borrador.fechaInicio, borrador.fechaFin);
+            const totalAlim = borrador.tarifaAlimentacionDia * dias;
+            const total = totalAlim + borrador.movilizacion + borrador.gastosInstalacion + borrador.gastosMateriales + borrador.cajaChica;
+            cerrarModal();
+            if (onVistaPrevia) onVistaPrevia({
+              html, tipo: 'solicitud_jefe', titulo: 'Solicitud de viáticos — Jefe de instalación', total,
+              guardar: () => guardarSolicitud(proyecto.id, 'jefe', borrador),
+              onVolver: () => abrirSolicitudJefe({ proyecto, onGuardado, onVistaPrevia, datosIniciales: borrador }),
+            });
+            else { await guardarSolicitud(proyecto.id, 'jefe', borrador); await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_jefe', titulo: 'Solicitud de viáticos — Jefe de instalación', htmlSnapshot: html, resumen: { total } }); onGuardado?.(); imprimirEnZona(html); }
           },
         },
       ],
@@ -4640,8 +4991,26 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       `;
     };
 
+    function validarDatos1(v) {
+      const campos = ['#s1-inicio', '#s1-fin', '#s1-alim', '#s1-mov', '#s1-inst', '#s1-mat', '#s1-caja'];
+      const invalido = campos.map((selector) => modal.querySelector(selector)).find((el) => !el.checkValidity());
+      if (invalido) { invalido.reportValidity(); invalido.focus(); return false; }
+      if (!esFechaValida(v.fechaInicio) || !esFechaValida(v.fechaFin)) {
+        mostrarToast('Ingresa las fechas de inicio y fin del viaje.');
+        modal.querySelector('#s1-inicio').focus();
+        return false;
+      }
+      if (v.fechaFin < v.fechaInicio) {
+        mostrarToast('La fecha fin no puede ser anterior a la de inicio.');
+        modal.querySelector('#s1-fin').focus();
+        return false;
+      }
+      return true;
+    }
+
     async function guardarDatos1() {
       const v = leerValores();
+      if (!validarDatos1(v)) return null;
       return guardarSolicitud(proyecto.id, 'jefe', v);
     }
 
@@ -4656,7 +5025,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     return `
       <div class="hoja-informe">
         <div class="hoja-header">
-          <div class="hoja-header-marca"><img src="${config.logo || ('data:image/png;base64,' + LOGO_COLINEAL_B64)}" style="max-height:52px; max-width:180px; object-fit:contain;" /></div>
+          <div class="hoja-header-marca"><img src="${esc(imagenDataSegura(config.logo) || ('data:image/png;base64,' + LOGO_COLINEAL_B64))}" style="max-height:52px; max-width:180px; object-fit:contain;" /></div>
           <div class="hoja-header-doc">
             <div class="hoja-titulo">Solicitud de viáticos — Jefe de instalación</div>
             <div class="meta">Generado: ${formatoFecha(hoyLocal())}</div>
@@ -4686,7 +5055,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
                 <td>${formatoFecha(datos.fechaInicio)}</td>
                 <td>${formatoFecha(datos.fechaFin)}</td>
                 <td>${dias}</td>
-                <td>${datos.hospedaje}</td>
+                <td>${esc(datos.hospedaje)}</td>
                 <td class="num">${formatoMoneda(totalAlim)}</td>
                 <td class="num">${formatoMoneda(datos.movilizacion)}</td>
                 <td class="num">${formatoMoneda(datos.gastosInstalacion)}</td>
@@ -4720,11 +5089,11 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     return { id, nombre: p.nombre || '', diasNecesarios: p.diasNecesarios ?? 0, costoPorDia: p.costoPorDia ?? 0 };
   }
 
-  async function abrirSolicitudPersonal({ proyecto, onGuardado }) {
+  async function abrirSolicitudPersonal({ proyecto, onGuardado, onVistaPrevia, datosIniciales }) {
     const config = await obtenerEmpresa();
     const previa = await obtenerSolicitud(proyecto.id, 'personal');
-    let equipo = (previa?.equipo || []).map(filaEquipo);
-    let externos = (previa?.externos || []).map(filaExterno);
+    let equipo = (datosIniciales?.equipo || previa?.equipo || []).map(filaEquipo);
+    let externos = (datosIniciales?.externos || previa?.externos || []).map(filaExterno);
     if (!equipo.length) equipo = [filaEquipo({ fechaInicio: proyecto.fechaInicio, fechaFin: proyecto.fechaFinEstimada, tarifaAlimentacionDia: ((config.tarifaAlimentacionPersonal === '' || config.tarifaAlimentacionPersonal == null) ? 20 : config.tarifaAlimentacionPersonal) })];
 
     const modal = abrirModal({
@@ -4746,18 +5115,23 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       `,
       botones: [
         { texto: 'Cancelar', clase: 'btn-secondary' },
-        { texto: 'Guardar', clase: 'btn-secondary', cerrar: false, onClick: async () => { await guardarDatos2(); mostrarToast('Solicitud guardada.'); } },
+        { texto: 'Guardar', clase: 'btn-secondary', cerrar: false, onClick: async () => { const guardado = await guardarDatos2(); if (guardado) mostrarToast('Solicitud guardada.'); } },
         {
-          texto: 'Guardar y generar PDF', clase: 'btn-primary', cerrar: false,
+          texto: 'Vista previa', clase: 'btn-primary', cerrar: false,
           onClick: async () => {
-            const guardado = await guardarDatos2();
-            if (guardado.equipo.some((p) => p.fechaInicio && p.fechaFin && p.fechaFin < p.fechaInicio)) { mostrarToast('Revisa las fechas: alguna persona tiene fecha fin anterior a la de inicio.'); return; }
-            const html = construirHTMLPersonal(proyecto, guardado, config);
-            const totalEquipo = guardado.equipo.reduce((a, p) => a + (p.tarifaAlimentacionDia * diasEntre(p.fechaInicio, p.fechaFin)) + p.moviViaje + p.moviInterna, 0);
-            const totalExterno = guardado.externos.reduce((a, p) => a + (p.diasNecesarios * p.costoPorDia), 0);
-            await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_personal', titulo: 'Solicitud de viáticos — Personal de campo', htmlSnapshot: html, resumen: { total: totalEquipo + totalExterno } });
-            cerrarModal(); onGuardado?.();
-            imprimirEnZona(html);
+            const borrador = validarDatos2();
+            if (!borrador) return;
+            const html = construirHTMLPersonal(proyecto, borrador, config);
+            const totalEquipo = borrador.equipo.reduce((a, p) => a + (p.tarifaAlimentacionDia * diasEntre(p.fechaInicio, p.fechaFin)) + p.moviViaje + p.moviInterna, 0);
+            const totalExterno = borrador.externos.reduce((a, p) => a + (p.diasNecesarios * p.costoPorDia), 0);
+            const total = totalEquipo + totalExterno;
+            cerrarModal();
+            if (onVistaPrevia) onVistaPrevia({
+              html, tipo: 'solicitud_personal', titulo: 'Solicitud de viáticos — Personal de campo', total,
+              guardar: () => guardarSolicitud(proyecto.id, 'personal', borrador),
+              onVolver: () => abrirSolicitudPersonal({ proyecto, onGuardado, onVistaPrevia, datosIniciales: borrador }),
+            });
+            else { await guardarSolicitud(proyecto.id, 'personal', borrador); await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_personal', titulo: 'Solicitud de viáticos — Personal de campo', htmlSnapshot: html, resumen: { total } }); onGuardado?.(); imprimirEnZona(html); }
           },
         },
       ],
@@ -4767,20 +5141,20 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       return `
         <div class="card" style="padding:10px; margin-bottom:8px;" data-fila-equipo="${p.id}">
           <div class="field-row">
-            <div class="field"><label>Nombre</label><input type="text" class="eq-nombre" value="${esc(p.nombre)}" /></div>
+          <div class="field"><label>Nombre *</label><input type="text" class="eq-nombre" required maxlength="120" value="${esc(p.nombre)}" /></div>
             <div class="field"><label>Cargo</label><input type="text" class="eq-cargo" value="${esc(p.cargo)}" /></div>
           </div>
           <div class="field-row">
-            <div class="field"><label>Fecha inicio</label><input type="date" class="eq-inicio" value="${p.fechaInicio}" /></div>
-            <div class="field"><label>Fecha fin</label><input type="date" class="eq-fin" value="${p.fechaFin}" /></div>
+            <div class="field"><label>Fecha inicio *</label><input type="date" class="eq-inicio" required value="${esc(p.fechaInicio)}" /></div>
+            <div class="field"><label>Fecha fin *</label><input type="date" class="eq-fin" required value="${esc(p.fechaFin)}" /></div>
           </div>
           <div class="field-row">
             <div class="field"><label>Hospedaje</label><select class="eq-hospedaje"><option value="SI" ${p.hospedaje === 'SI' ? 'selected' : ''}>Sí</option><option value="NO" ${p.hospedaje === 'NO' ? 'selected' : ''}>No</option></select></div>
-            <div class="field"><label>Alimentación/día</label><input type="number" step="0.01" min="0" class="eq-alim" value="${p.tarifaAlimentacionDia}" /></div>
+            <div class="field"><label>Alimentación/día (${obtenerSimboloMoneda()})</label><input type="number" step="0.01" min="0" required class="eq-alim" value="${valorMonedaEditable(p.tarifaAlimentacionDia)}" /></div>
           </div>
           <div class="field-row">
-            <div class="field"><label>Movilización viaje (total)</label><input type="number" step="0.01" min="0" class="eq-movi" value="${p.moviViaje}" /></div>
-            <div class="field"><label>Movilización interna (total)</label><input type="number" step="0.01" min="0" class="eq-movint" value="${p.moviInterna}" /></div>
+            <div class="field"><label>Movilización viaje (total, ${obtenerSimboloMoneda()})</label><input type="number" step="0.01" min="0" required class="eq-movi" value="${valorMonedaEditable(p.moviViaje)}" /></div>
+            <div class="field"><label>Movilización interna (total, ${obtenerSimboloMoneda()})</label><input type="number" step="0.01" min="0" required class="eq-movint" value="${valorMonedaEditable(p.moviInterna)}" /></div>
           </div>
           <button type="button" class="btn btn-ghost btn-sm eq-eliminar" style="color:var(--danger);">Quitar</button>
         </div>
@@ -4790,9 +5164,9 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       return `
         <div class="card" style="padding:10px; margin-bottom:8px;" data-fila-externo="${p.id}">
           <div class="field-row">
-            <div class="field"><label>Nombre</label><input type="text" class="ex-nombre" value="${esc(p.nombre)}" /></div>
-            <div class="field"><label>Días necesarios</label><input type="number" step="1" min="0" class="ex-dias" value="${p.diasNecesarios}" /></div>
-            <div class="field"><label>Costo por día</label><input type="number" step="0.01" min="0" class="ex-costo" value="${p.costoPorDia}" /></div>
+          <div class="field"><label>Nombre *</label><input type="text" class="ex-nombre" required maxlength="120" value="${esc(p.nombre)}" /></div>
+          <div class="field"><label>Días necesarios *</label><input type="number" step="1" min="1" required class="ex-dias" value="${p.diasNecesarios}" /></div>
+          <div class="field"><label>Costo por día (${obtenerSimboloMoneda()}) *</label><input type="number" step="0.01" min="0" required class="ex-costo" value="${valorMonedaEditable(p.costoPorDia)}" /></div>
           </div>
           <button type="button" class="btn btn-ghost btn-sm ex-eliminar" style="color:var(--danger);">Quitar</button>
         </div>
@@ -4871,9 +5245,32 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       repintar();
     });
 
-    async function guardarDatos2() {
+    function validarDatos2() {
       sincronizarDesdeD0M();
-      return guardarSolicitud(proyecto.id, 'personal', { equipo, externos });
+      const campos = Array.from(modal.querySelectorAll('input'));
+      const invalido = campos.find((el) => !el.checkValidity());
+      if (invalido) { invalido.reportValidity(); invalido.focus(); return null; }
+      for (const persona of equipo) {
+        const tieneInicio = Boolean(persona.fechaInicio);
+        const tieneFin = Boolean(persona.fechaFin);
+        if (!persona.nombre.trim() || tieneInicio !== tieneFin || !tieneInicio || !esFechaValida(persona.fechaInicio) || !esFechaValida(persona.fechaFin)) {
+          mostrarToast('Completa el nombre y las dos fechas de cada persona del equipo.');
+          return null;
+        }
+        if (tieneInicio && persona.fechaFin < persona.fechaInicio) {
+          mostrarToast('Revisa las fechas: la fecha fin de una persona es anterior a la de inicio.');
+          return null;
+        }
+      }
+      const filaConDiasInvalidos = externos.find((persona) => !Number.isInteger(persona.diasNecesarios) || persona.diasNecesarios < 0);
+      if (filaConDiasInvalidos) { mostrarToast('Los días de personal externo deben ser un número entero igual o mayor que cero.'); return null; }
+      return { equipo: equipo.map(filaEquipo), externos: externos.map(filaExterno) };
+    }
+
+    async function guardarDatos2() {
+      const v = validarDatos2();
+      if (!v) return null;
+      return guardarSolicitud(proyecto.id, 'personal', v);
     }
 
     repintar();
@@ -4888,7 +5285,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     return `
       <div class="hoja-informe">
         <div class="hoja-header">
-          <div class="hoja-header-marca"><img src="${config.logo || ('data:image/png;base64,' + LOGO_COLINEAL_B64)}" style="max-height:52px; max-width:180px; object-fit:contain;" /></div>
+          <div class="hoja-header-marca"><img src="${esc(imagenDataSegura(config.logo) || ('data:image/png;base64,' + LOGO_COLINEAL_B64))}" style="max-height:52px; max-width:180px; object-fit:contain;" /></div>
           <div class="hoja-header-doc">
             <div class="hoja-titulo">Solicitud de viáticos — Personal de campo</div>
             <div class="meta">Generado: ${formatoFecha(hoyLocal())}</div>
@@ -4915,7 +5312,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
                   return `<tr>
                     <td>${esc(p.nombre || '—')}</td><td>${esc(p.cargo || '—')}</td>
                     <td><span class="hoja-nowrap">${formatoFecha(p.fechaInicio)}</span></td><td><span class="hoja-nowrap">${formatoFecha(p.fechaFin)}</span></td><td>${dias}</td>
-                    <td>${p.hospedaje}</td><td class="num">${formatoMoneda(totalAlim)}</td>
+                    <td>${esc(p.hospedaje)}</td><td class="num">${formatoMoneda(totalAlim)}</td>
                     <td class="num">${formatoMoneda(p.moviViaje)}</td><td class="num">${formatoMoneda(p.moviInterna)}</td>
                     <td class="num" style="font-weight:700;">${formatoMoneda(subtotal)}</td>
                   </tr>`;
@@ -4959,7 +5356,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
      3) SOLICITUD FORMAL (documento oficial)
      ============================================================ */
 
-  async function abrirSolicitudFormal({ proyecto, onGuardado }) {
+  async function abrirSolicitudFormal({ proyecto, onGuardado, onVistaPrevia, datosIniciales }) {
     const config = await obtenerEmpresa();
     const previa = await obtenerSolicitud(proyecto.id, 'formal');
 
@@ -4975,7 +5372,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       sugerido += (solPersonal.externos || []).reduce((a, p) => a + (p.diasNecesarios * p.costoPorDia), 0);
     }
 
-    const datos = previa || {
+    const datos = datosIniciales || previa || {
       fechaSolicitud: hoyLocal(),
       motivoDelViaje: proyecto.motivoViaje || '',
       terrestre: true, aereo: false, propio: false,
@@ -4996,7 +5393,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     const modal = abrirModal({
       titulo: 'Solicitud formal de viáticos',
       contenidoHtml: `
-        <div class="field"><label>Fecha de la solicitud</label><input type="date" id="s3-fecha" value="${datos.fechaSolicitud}" /></div>
+        <div class="field"><label>Fecha de la solicitud</label><input type="date" id="s3-fecha" value="${esc(datos.fechaSolicitud)}" /></div>
         <div class="field"><label>Motivo del viaje</label><input type="text" id="s3-motivo" value="${esc(datos.motivoDelViaje)}" /></div>
         <div class="field">
           <label>Transporte</label>
@@ -5010,14 +5407,14 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           <div class="field"><label>Nombre del solicitante</label><input type="text" id="s3-nombre" value="${esc(datos.nombreSolicitante)}" /></div>
           <div class="field"><label>C.I.</label><input type="text" id="s3-cedula" value="${esc(datos.cedula)}" /></div>
         </div>
-        <div class="field"><label>Departamento</label><input type="text" id="s3-depto" value="${datos.departamento}" /></div>
+        <div class="field"><label>Departamento</label><input type="text" id="s3-depto" value="${esc(datos.departamento)}" /></div>
         <div class="field-row">
-          <div class="field"><label>Fecha de salida</label><input type="date" id="s3-fsalida" value="${datos.fechaSalida}" /></div>
-          <div class="field"><label>Hora</label><input type="time" id="s3-hsalida" value="${datos.horaSalida}" /></div>
+          <div class="field"><label>Fecha de salida</label><input type="date" id="s3-fsalida" value="${esc(datos.fechaSalida)}" /></div>
+          <div class="field"><label>Hora</label><input type="time" id="s3-hsalida" value="${esc(datos.horaSalida)}" /></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Fecha de regreso</label><input type="date" id="s3-fregreso" value="${datos.fechaRegreso}" /></div>
-          <div class="field"><label>Hora</label><input type="time" id="s3-hregreso" value="${datos.horaRegreso}" /></div>
+          <div class="field"><label>Fecha de regreso</label><input type="date" id="s3-fregreso" value="${esc(datos.fechaRegreso)}" /></div>
+          <div class="field"><label>Hora</label><input type="time" id="s3-hregreso" value="${esc(datos.horaRegreso)}" /></div>
         </div>
         <div class="field"><label>Destino</label><input type="text" id="s3-destino" value="${esc(datos.destino)}" /></div>
         <div class="field-row">
@@ -5025,23 +5422,28 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           <div class="field"><label>¿Requiere hotel?</label><select id="s3-hotel"><option value="SI" ${datos.requiereHotel === 'SI' ? 'selected' : ''}>Sí</option><option value="NO" ${datos.requiereHotel === 'NO' ? 'selected' : ''}>No</option></select></div>
         </div>
         <div class="field">
-          <label>Gastos de viaje solicitados (USD)</label>
-          <input type="number" step="0.01" min="0" id="s3-gasto" value="${datos.gastoSolicitado}" />
+          <label>Gastos de viaje solicitados (${obtenerSimboloMoneda()})</label>
+          <input type="number" step="0.01" min="0" id="s3-gasto" value="${valorMonedaEditable(datos.gastoSolicitado) || '0.00'}" />
           ${sugerido > 0 ? `<p style="font-size:var(--fs-xs); color:var(--text-500); margin-top:4px;">Sugerido según tus otras solicitudes: ${formatoMoneda(sugerido)}</p>` : ''}
         </div>
         <div class="field"><label>Observaciones (detalle de gastos e itinerario)</label><textarea id="s3-obs" rows="3">${esc(datos.observaciones)}</textarea></div>
       `,
       botones: [
         { texto: 'Cancelar', clase: 'btn-secondary' },
-        { texto: 'Guardar', clase: 'btn-secondary', cerrar: false, onClick: async () => { await guardarDatos3(); mostrarToast('Solicitud guardada.'); } },
+        { texto: 'Guardar', clase: 'btn-secondary', cerrar: false, onClick: async () => { if (!validarDatos3(leerValores3())) return; await guardarDatos3(); mostrarToast('Solicitud guardada.'); } },
         {
-          texto: 'Guardar y generar PDF', clase: 'btn-primary', cerrar: false,
+          texto: 'Vista previa', clase: 'btn-primary', cerrar: false,
           onClick: async () => {
-            const guardado = await guardarDatos3();
-            const html = construirHTMLFormal(proyecto, guardado, config);
-            await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_formal', titulo: 'Solicitud formal de viáticos', htmlSnapshot: html, resumen: { total: guardado.gastoSolicitado } });
-            cerrarModal(); onGuardado?.();
-            imprimirEnZona(html);
+            const borrador = leerValores3();
+            if (!validarDatos3(borrador)) return;
+            const html = construirHTMLFormal(proyecto, borrador, config);
+            cerrarModal();
+            if (onVistaPrevia) onVistaPrevia({
+              html, tipo: 'solicitud_formal', titulo: 'Solicitud formal de viáticos', total: borrador.gastoSolicitado,
+              guardar: () => guardarSolicitud(proyecto.id, 'formal', borrador),
+              onVolver: () => abrirSolicitudFormal({ proyecto, onGuardado, onVistaPrevia, datosIniciales: borrador }),
+            });
+            else { await guardarDatos3(); await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_formal', titulo: 'Solicitud formal de viáticos', htmlSnapshot: html, resumen: { total: borrador.gastoSolicitado } }); onGuardado?.(); imprimirEnZona(html); }
           },
         },
       ],
@@ -5069,6 +5471,17 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       };
     }
 
+    function validarDatos3(v) {
+      if (v.fechaSalida && v.fechaRegreso && v.fechaRegreso < v.fechaSalida) {
+        mostrarToast('La fecha de regreso no puede ser anterior a la de salida.');
+        modal.querySelector('#s3-fregreso').focus();
+        return false;
+      }
+      const gasto = modal.querySelector('#s3-gasto');
+      if (!gasto.checkValidity()) { gasto.reportValidity(); gasto.focus(); return false; }
+      return true;
+    }
+
     async function guardarDatos3() {
       return guardarSolicitud(proyecto.id, 'formal', leerValores3());
     }
@@ -5079,7 +5492,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     return `
       <div class="hoja-informe">
         <div class="hoja-header">
-          <div class="hoja-header-marca"><img src="${config.logo || ('data:image/png;base64,' + LOGO_COLINEAL_B64)}" style="max-height:52px; max-width:180px; object-fit:contain;" /></div>
+          <div class="hoja-header-marca"><img src="${esc(imagenDataSegura(config.logo) || ('data:image/png;base64,' + LOGO_COLINEAL_B64))}" style="max-height:52px; max-width:180px; object-fit:contain;" /></div>
           <div class="hoja-header-doc">
             <div class="hoja-titulo">Proyección de gastos de viaje</div>
             <div class="meta">Fecha de la solicitud: ${formatoFecha(datos.fechaSolicitud)}</div>
@@ -5102,12 +5515,12 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           <div class="hoja-datos-grid">
             <div><div class="lbl">Nombre del solicitante</div><div>${esc(datos.nombreSolicitante || '—')}</div></div>
             <div><div class="lbl">C.I.</div><div>${esc(datos.cedula || '—')}</div></div>
-            <div><div class="lbl">Departamento</div><div>${datos.departamento || '—'}</div></div>
+            <div><div class="lbl">Departamento</div><div>${esc(datos.departamento || '—')}</div></div>
             <div><div class="lbl">Destino</div><div>${esc(datos.destino || '—')}</div></div>
-            <div><div class="lbl">Fecha de salida</div><div>${formatoFecha(datos.fechaSalida)} ${datos.horaSalida || ''}</div></div>
-            <div><div class="lbl">Fecha de regreso</div><div>${formatoFecha(datos.fechaRegreso)} ${datos.horaRegreso || ''}</div></div>
-            <div><div class="lbl">Ida y vuelta</div><div>${datos.idaYVuelta}</div></div>
-            <div><div class="lbl">Requiere hotel</div><div>${datos.requiereHotel}</div></div>
+            <div><div class="lbl">Fecha de salida</div><div>${formatoFecha(datos.fechaSalida)} ${esc(datos.horaSalida || '')}</div></div>
+            <div><div class="lbl">Fecha de regreso</div><div>${formatoFecha(datos.fechaRegreso)} ${esc(datos.horaRegreso || '')}</div></div>
+            <div><div class="lbl">Ida y vuelta</div><div>${esc(datos.idaYVuelta)}</div></div>
+            <div><div class="lbl">Requiere hotel</div><div>${esc(datos.requiereHotel)}</div></div>
           </div>
         </div>
 
@@ -5137,11 +5550,11 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   // ==== modules/proyeccion/proyeccion.view ====
   __modules__['modules/proyeccion/proyeccion.view'] = (function(){
   const { listarProyeccion, crearItemProyeccion, editarItemProyeccion, eliminarItemProyeccion } = __modules__['modules/proyeccion/proyeccion.repo'];
-  const { gastosDeProyecto, obtenerProyecto } = __modules__['core/repositorio'];
+  const { obtenerProyecto, gastosDeProyecto } = __modules__['core/repositorio'];
   const { agruparGastosPorCategoria } = __modules__['core/finanzas'];
   const { totalProyeccionItem } = __modules__['core/models'];
   const { listarCategorias, nombreDeCategoria, opcionesCategoriaHTML } = __modules__['core/categorias.repo'];
-  const { formatoMoneda, formatoFecha } = __modules__['utils/format'];
+  const { formatoMoneda, formatoFecha, obtenerSimboloMoneda, valorMonedaEditable } = __modules__['utils/format'];
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
   const { mostrarToast } = __modules__['components/toast'];
   const { icono } = __modules__['components/icons'];
@@ -5164,7 +5577,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   function construirSolicitudHTML(proyecto, items, categorias, empresa) {
     const total = items.reduce((a, i) => a + totalProyeccionItem(i), 0);
     const fechaGeneracion = new Date().toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
-    const logoHtml = `<img src="${empresa.logo || ('data:image/png;base64,' + LOGO_COLINEAL_B64)}" alt="Logo" style="max-height:52px; max-width:180px; object-fit:contain;" />`;
+    const logoHtml = `<img src="${esc(imagenDataSegura(empresa.logo) || ('data:image/png;base64,' + LOGO_COLINEAL_B64))}" alt="Logo" style="max-height:52px; max-width:180px; object-fit:contain;" />`;
 
     return `
       <div class="hoja-informe">
@@ -5223,8 +5636,10 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     `;
   }
 
-  function imprimirEnZona(html) {
+  // Las solicitudes se imprimen en A4 horizontal; los informes, siempre en A4 vertical.
+  function imprimirEnZona(html, orientacion = 'horizontal') {
     const zona = document.getElementById('zona-impresion');
+    document.documentElement.dataset.orientacionPdf = orientacion === 'vertical' ? 'vertical' : 'horizontal';
     zona.innerHTML = html;
     animarGeneracionInforme(() => window.print());
   }
@@ -5239,9 +5654,9 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           <div class="field"><label>Categoría</label><select name="categoria">${opcionesCategoriaHTML(categorias, d.categoria || 'hospedaje')}</select></div>
           <div class="field-row">
             <div class="field"><label>Cantidad</label><input type="number" name="cantidad" min="0" step="1" value="${d.cantidad ?? 1}" /></div>
-            <div class="field"><label>Precio unitario (USD)</label><input type="number" name="precioUnitario" min="0" step="0.01" value="${d.precioUnitario ?? ''}" /></div>
+            <div class="field"><label>Precio unitario (${obtenerSimboloMoneda()})</label><input type="number" name="precioUnitario" min="0" step="0.01" value="${valorMonedaEditable(d.precioUnitario)}" /></div>
           </div>
-          <p style="font-size:var(--fs-xs); color:var(--text-500);">Ej. 5 noches × $40 = $200 de hospedaje proyectado.</p>
+          <p style="font-size:var(--fs-xs); color:var(--text-500);">Ejemplo: 5 noches × ${formatoMoneda(40)} = ${formatoMoneda(200)} de hospedaje proyectado.</p>
         </form>
       `,
       botones: [
@@ -5266,19 +5681,47 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     });
   }
 
-  async function renderProyeccion(contenedor, proyectoId) {
+  async function renderProyeccion(contenedor, proyectoId, onVolver) {
+    const { renderVistaPreviaDocumento } = __modules__['modules/informes/informes.view'];
+    const mostrarPrevia = (proyecto, documento) => renderVistaPreviaDocumento(contenedor, {
+      html: documento.html,
+      titulo: documento.titulo,
+      orientacion: 'horizontal',
+      pendienteGuardar: Boolean(documento.guardar),
+      textoVolver: documento.onVolver ? 'Editar solicitud' : 'Volver',
+      // Volver a editar: primero se pinta la pantalla de solicitudes y encima se reabre el formulario
+      // con lo escrito. Si en el formulario se toca «Cancelar», se queda en las opciones de solicitud.
+      onVolver: async () => {
+        document.documentElement.dataset.orientacionPdf = 'vertical';
+        await pintar();
+        documento.onVolver?.();
+      },
+      // Salir sin guardar: regresa directo a las opciones (jefe, personal de campo, formal)
+      onSalir: documento.onVolver ? async () => {
+        document.documentElement.dataset.orientacionPdf = 'vertical';
+        await pintar();
+        mostrarToast('No se guardó la solicitud.');
+      } : undefined,
+      onGenerar: async () => {
+        if (documento.guardar) await documento.guardar();
+        await guardarEnHistorial(proyecto.id, {
+          tipo: documento.tipo,
+          titulo: documento.titulo,
+          htmlSnapshot: documento.html,
+          resumen: { total: documento.total },
+        });
+        imprimirEnZona(documento.html);
+        mostrarToast('Documento listo para guardar o imprimir en PDF.');
+      },
+    });
     const pintar = async () => {
-      const [items, gastos, categorias, proyecto, config, historial] = await Promise.all([
+      const [items, categorias, proyecto, config] = await Promise.all([
         listarProyeccion(proyectoId),
-        gastosDeProyecto(proyectoId),
         listarCategorias(),
         obtenerProyecto(proyectoId),
         db.get('configuracion', 'general'),
-        listarHistorial(proyectoId),
       ]);
-      const realPorCategoria = agruparGastosPorCategoria(gastos);
       const totalProyectado = items.reduce((a, i) => a + totalProyeccionItem(i), 0);
-      const totalReal = Object.values(realPorCategoria).reduce((a, v) => a + v, 0);
       const empresa = {
         nombre: config?.nombreEmpresa || '',
         responsable: proyecto.responsable || config?.nombreResponsable || '',
@@ -5286,19 +5729,14 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         logo: config?.logo || null,
       };
 
-      // Unir categorías que tienen proyección y/o gasto real, para la tabla comparativa
-      const categoriasUnicas = Array.from(new Set([
-        ...items.map((i) => i.categoria),
-        ...Object.keys(realPorCategoria),
-      ]));
-
       contenedor.innerHTML = `
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-volver-proyecto" style="margin-bottom:var(--sp-3);">${icono('flechaAtras')} Volver al proyecto</button>
         <div class="toolbar">
-          <div class="section-title" style="margin-bottom:0;">Solicitudes de viáticos (planificación)</div>
+          <div class="section-title" style="margin-bottom:0;">Presupuesto estimado para solicitar</div>
         </div>
         <div class="card card-elevated" style="margin-bottom:var(--sp-5);">
           <p style="font-size:var(--fs-sm); color:var(--ink-500); margin-bottom:var(--sp-3);">
-            Genera estos documentos para pedir el anticipo a la empresa, antes de que el proyecto pase a activo.
+            Calcula lo que se solicitará a la empresa antes de iniciar el viaje. Al activar el proyecto, esta planificación queda como referencia y aquí verás los documentos guardados.
           </p>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn btn-secondary" id="btn-sol-jefe">1. Mi solicitud (jefe)</button>
@@ -5339,89 +5777,21 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           ` : ''}
         </div>
 
-        <div class="section-title">Proyectado vs. real</div>
-        <div class="card card-elevated">
-          ${categoriasUnicas.length ? `
-            <div class="gasto-row" style="grid-template-columns: 1.2fr 1fr 1fr 1fr; font-weight:700; color:var(--text-500); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:0.04em;">
-              <div>Categoría</div><div>Proyectado</div><div>Real</div><div>Diferencia</div>
-            </div>
-            ${categoriasUnicas.map((cat) => {
-              const proy = items.filter((i) => i.categoria === cat).reduce((a, i) => a + totalProyeccionItem(i), 0);
-              const real = realPorCategoria[cat] || 0;
-              const diferencia = Number((proy - real).toFixed(2));
-              const colorDif = diferencia < 0 ? 'var(--danger)' : 'var(--state-ok)';
-              return `
-                <div class="gasto-row" style="grid-template-columns: 1.2fr 1fr 1fr 1fr;">
-                  <div class="desc">${esc(nombreDeCategoria(categorias, cat))}</div>
-                  <div class="tabular">${formatoMoneda(proy)}</div>
-                  <div class="tabular">${formatoMoneda(real)}</div>
-                  <div class="tabular" style="color:${colorDif}; font-weight:600;">${diferencia >= 0 ? '+' : ''}${formatoMoneda(diferencia)}</div>
-                </div>
-              `;
-            }).join('')}
-            <div class="gasto-row" style="grid-template-columns: 1.2fr 1fr 1fr 1fr; border-top:1px solid var(--line-strong); font-weight:700;">
-              <div>Total</div>
-              <div class="tabular">${formatoMoneda(totalProyectado)}</div>
-              <div class="tabular">${formatoMoneda(totalReal)}</div>
-              <div class="tabular" style="color:${Number((totalProyectado - totalReal).toFixed(2)) < 0 ? 'var(--danger)' : 'var(--state-ok)'};">${Number((totalProyectado - totalReal).toFixed(2)) >= 0 ? '+' : ''}${formatoMoneda(Number((totalProyectado - totalReal).toFixed(2)))}</div>
-            </div>
-          ` : `<div class="empty-state"><p class="lead">Sin datos aún</p><p>La comparación aparecerá cuando exista proyección y/o gastos registrados.</p></div>`}
-        </div>
-
-        <div class="toolbar" style="margin-top:var(--sp-5);">
-          <div class="section-title" style="margin-bottom:0;">Historial de solicitudes e informes</div>
-        </div>
-        <div class="card card-elevated" style="margin-bottom:var(--sp-5);">
-          <p style="font-size:var(--fs-sm); color:var(--ink-500); margin-bottom:var(--sp-3);">
-            Queda un respaldo permanente de todo lo generado — se conserva aunque cierres o archives el proyecto.
-          </p>
-          ${historial.length ? historial.map((h) => `
-            <div class="proj-row">
-              <div>
-                <div class="proj-name">${esc(h.titulo)}</div>
-                <div class="proj-meta">${new Date(h.fechaGeneracion).toLocaleString('es-EC', { dateStyle: 'medium', timeStyle: 'short' })}${h.resumen?.total != null ? ` · ${formatoMoneda(h.resumen.total)}` : ''}</div>
-              </div>
-              <div style="display:flex; gap:6px;">
-                <button class="btn btn-secondary btn-sm" data-ver-historial="${h.id}">Ver / Reimprimir</button>
-                <button class="btn btn-ghost btn-sm" data-eliminar-historial="${h.id}" style="color:var(--danger);">Eliminar</button>
-              </div>
-            </div>
-          `).join('') : `<div class="empty-state"><p class="lead">Aún no has generado nada</p><p>Cuando generes una solicitud o un informe, va a quedar guardado aquí.</p></div>`}
-        </div>
-
-        <div class="empty-state" style="margin-top:var(--sp-5);">
-          <p class="lead">Historial de proyectos anteriores — integración pendiente</p>
-          <p>Usar promedios de proyectos previos (ej. hospedaje en Manta) para sugerir la proyección automáticamente se implementará más adelante. Hoy no existe ninguna función simulada de esto.</p>
-        </div>
+        <p style="font-size:var(--fs-xs); color:var(--text-500); margin-top:var(--sp-3);">Las solicitudes y los informes que generes se guardan en la pestaña Documentos.</p>
       `;
 
-      contenedor.querySelectorAll('[data-ver-historial]').forEach((btn) => btn.addEventListener('click', async () => {
-        const registro = historial.find((h) => h.id === btn.dataset.verHistorial);
-        if (registro) imprimirEnZona(registro.htmlSnapshot);
-      }));
-      contenedor.querySelectorAll('[data-eliminar-historial]').forEach((btn) => btn.addEventListener('click', async () => {
-        abrirModal({
-          titulo: '¿Eliminar este documento del historial?',
-          contenidoHtml: `<p>Esta acción no se puede deshacer.</p>`,
-          botones: [
-            { texto: 'Cancelar', clase: 'btn-secondary' },
-            { texto: 'Eliminar', clase: 'btn-danger', onClick: async () => { await eliminarDelHistorial(btn.dataset.eliminarHistorial); mostrarToast('Eliminado del historial.'); pintar(); } },
-          ],
-        });
-      }));
-
-      contenedor.querySelector('#btn-sol-jefe').addEventListener('click', () => abrirSolicitudJefe({ proyecto, onGuardado: pintar }));
-      contenedor.querySelector('#btn-sol-personal').addEventListener('click', () => abrirSolicitudPersonal({ proyecto, onGuardado: pintar }));
-      contenedor.querySelector('#btn-sol-formal').addEventListener('click', () => abrirSolicitudFormal({ proyecto, onGuardado: pintar }));
+      contenedor.querySelector('#btn-volver-proyecto').addEventListener('click', () => onVolver?.());
+      const onVistaPrevia = (documento) => mostrarPrevia(proyecto, documento);
+      contenedor.querySelector('#btn-sol-jefe').addEventListener('click', () => abrirSolicitudJefe({ proyecto, onGuardado: pintar, onVistaPrevia }));
+      contenedor.querySelector('#btn-sol-personal').addEventListener('click', () => abrirSolicitudPersonal({ proyecto, onGuardado: pintar, onVistaPrevia }));
+      contenedor.querySelector('#btn-sol-formal').addEventListener('click', () => abrirSolicitudFormal({ proyecto, onGuardado: pintar, onVistaPrevia }));
       contenedor.querySelector('#btn-nueva-linea').addEventListener('click', () => formularioItem(categorias, proyectoId, null, pintar));
       contenedor.querySelector('#btn-solicitud-pdf')?.addEventListener('click', async (ev) => {
         const btn = ev.currentTarget; if (btn.disabled) return; btn.disabled = true; // doble toque = doble registro en el historial
         try {
           const html = construirSolicitudHTML(proyecto, items, categorias, empresa);
           const total = Number(items.reduce((a, i) => a + totalProyeccionItem(i), 0).toFixed(2));
-          await guardarEnHistorial(proyecto.id, { tipo: 'solicitud_presupuesto', titulo: 'Solicitud de viáticos (proyección por categoría)', htmlSnapshot: html, resumen: { total } });
-          imprimirEnZona(html);
-          setTimeout(() => pintar(), 600); // que aparezca en el historial
+          mostrarPrevia(proyecto, { html, tipo: 'solicitud_presupuesto', titulo: 'Solicitud de viáticos (proyección por categoría)', total });
         } finally { btn.disabled = false; }
       });
       contenedor.querySelectorAll('[data-editar]').forEach((btn) => btn.addEventListener('click', () => {
@@ -5443,7 +5813,116 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     await pintar();
   }
 
-  return { renderProyeccion };
+  /** Consulta (solo lectura) de la proyección de un proyecto ya activado, comparada con lo gastado. */
+  async function renderProyeccionConsulta(contenedor, proyectoId) {
+    const [items, gastos, categorias] = await Promise.all([
+      listarProyeccion(proyectoId),
+      gastosDeProyecto(proyectoId),
+      listarCategorias(),
+    ]);
+    const realPorCategoria = agruparGastosPorCategoria(gastos);
+    const totalProyectado = Number(items.reduce((a, i) => a + totalProyeccionItem(i), 0).toFixed(2));
+    const totalReal = Number(Object.values(realPorCategoria).reduce((a, v) => a + v, 0).toFixed(2));
+    const categoriasUnicas = Array.from(new Set([...items.map((i) => i.categoria), ...Object.keys(realPorCategoria)]));
+    const dif = (proy, real) => {
+      const d = Number((proy - real).toFixed(2));
+      return `<div class="tabular" style="color:${d < 0 ? 'var(--danger)' : 'var(--state-ok)'}; font-weight:600;">${d > 0 ? '+' : ''}${formatoMoneda(d)}</div>`;
+    };
+    const fila = 'grid-template-columns: 1.2fr 1fr 1fr 1fr;';
+    contenedor.innerHTML = `
+      <div class="toolbar"><div class="section-title" style="margin-bottom:0;">Proyección planificada</div></div>
+      <div class="card card-elevated" style="margin-bottom:var(--sp-5);">
+        <p style="font-size:var(--fs-sm); color:var(--ink-500); margin-bottom:var(--sp-3);">Es la estimación que se preparó antes del viaje. Queda como referencia y ya no se modifica.</p>
+        ${items.length ? items.map((i) => `
+          <div class="proj-row">
+            <div>
+              <div class="proj-name">${esc(nombreDeCategoria(categorias, i.categoria))}</div>
+              <div class="proj-meta">${esc(i.cantidad)} × ${formatoMoneda(i.precioUnitario)}</div>
+            </div>
+            <span class="tabular" style="font-weight:600;">${formatoMoneda(totalProyeccionItem(i))}</span>
+          </div>`).join('') + `
+          <div class="proj-row" style="border-top:1px solid var(--line-strong); margin-top:4px;">
+            <div class="proj-name">Total proyectado</div>
+            <span class="tabular" style="font-weight:700; font-size:var(--fs-md);">${formatoMoneda(totalProyectado)}</span>
+          </div>` : `<div class="empty-state"><p class="lead">Sin proyección</p><p>Este proyecto se activó sin una proyección de gastos.</p></div>`}
+      </div>
+
+      <div class="section-title">Proyectado vs. real</div>
+      <div class="card card-elevated">
+        ${categoriasUnicas.length ? `
+          <div class="gasto-row" style="${fila} font-weight:700; color:var(--text-500); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:0.04em;">
+            <div>Categoría</div><div>Proyectado</div><div>Real</div><div>Diferencia</div>
+          </div>
+          ${categoriasUnicas.map((cat) => {
+            const proy = items.filter((i) => i.categoria === cat).reduce((a, i) => a + totalProyeccionItem(i), 0);
+            const real = realPorCategoria[cat] || 0;
+            return `
+              <div class="gasto-row" style="${fila}">
+                <div class="desc">${esc(nombreDeCategoria(categorias, cat))}</div>
+                <div class="tabular">${formatoMoneda(proy)}</div>
+                <div class="tabular">${formatoMoneda(real)}</div>
+                ${dif(proy, real)}
+              </div>`;
+          }).join('')}
+          <div class="gasto-row" style="${fila} border-top:1px solid var(--line-strong); font-weight:700;">
+            <div>Total</div>
+            <div class="tabular">${formatoMoneda(totalProyectado)}</div>
+            <div class="tabular">${formatoMoneda(totalReal)}</div>
+            ${dif(totalProyectado, totalReal)}
+          </div>
+        ` : `<div class="empty-state"><p class="lead">Sin datos aún</p><p>La comparación aparecerá cuando exista proyección y/o gastos registrados.</p></div>`}
+      </div>
+    `;
+  }
+
+  async function renderHistorialDocumentos(contenedor, proyectoId) {
+    const historial = await listarHistorial(proyectoId);
+    contenedor.innerHTML = `
+      <div class="toolbar"><div class="section-title" style="margin-bottom:0;">Solicitudes e informes guardados</div></div>
+      <div class="card card-elevated">
+        <p style="font-size:var(--fs-sm); color:var(--ink-500); margin-bottom:var(--sp-3);">Aquí puedes consultar y volver a imprimir los documentos generados para este proyecto.</p>
+        ${historial.length ? historial.map((h) => `
+          <div class="proj-row">
+            <div>
+              <div class="proj-name">${esc(h.titulo)}</div>
+              <div class="proj-meta">${new Date(h.fechaGeneracion).toLocaleString('es-EC', { dateStyle: 'medium', timeStyle: 'short' })}${h.resumen?.total != null ? ` · ${formatoMoneda(h.resumen.total)}` : ''}</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-secondary btn-sm" data-ver-historial="${esc(h.id)}">Ver / Reimprimir</button>
+              <button class="btn btn-ghost btn-sm" data-eliminar-historial="${esc(h.id)}" style="color:var(--danger);">Eliminar</button>
+            </div>
+          </div>
+        `).join('') : `<div class="empty-state"><p class="lead">Aún no hay documentos</p><p>Las solicitudes y los informes que generes aparecerán aquí.</p></div>`}
+      </div>
+    `;
+    contenedor.querySelectorAll('[data-ver-historial]').forEach((btn) => btn.addEventListener('click', () => {
+      const registro = historial.find((h) => h.id === btn.dataset.verHistorial);
+      if (registro) {
+        if (String(registro.tipo || '').startsWith('solicitud_')) {
+          const { renderVistaPreviaDocumento } = __modules__['modules/informes/informes.view'];
+          renderVistaPreviaDocumento(contenedor, {
+            html: registro.htmlSnapshot,
+            titulo: registro.titulo,
+            orientacion: 'horizontal',
+            onVolver: () => { document.documentElement.dataset.orientacionPdf = 'vertical'; renderHistorialDocumentos(contenedor, proyectoId); },
+            onGenerar: async () => imprimirEnZona(registro.htmlSnapshot),
+          });
+        } else imprimirEnZona(registro.htmlSnapshot, 'vertical'); // informe: siempre A4 vertical
+      }
+    }));
+    contenedor.querySelectorAll('[data-eliminar-historial]').forEach((btn) => btn.addEventListener('click', () => {
+      abrirModal({
+        titulo: '¿Eliminar este documento del historial?',
+        contenidoHtml: '<p>Esta acción no se puede deshacer.</p>',
+        botones: [
+          { texto: 'Cancelar', clase: 'btn-secondary' },
+          { texto: 'Eliminar', clase: 'btn-danger', onClick: async () => { await eliminarDelHistorial(btn.dataset.eliminarHistorial); mostrarToast('Documento eliminado.'); renderHistorialDocumentos(contenedor, proyectoId); } },
+        ],
+      });
+    }));
+  }
+
+  return { renderProyeccion, renderHistorialDocumentos, renderProyeccionConsulta };
   })();
 
   // ==== modules/proyectos/proyectos.detail ====
@@ -5456,7 +5935,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   const { irA } = __modules__['core/router'];
   const { renderIngresos } = __modules__['modules/ingresos/ingresos.view'];
   const { renderGastos } = __modules__['modules/gastos/gastos.view'];
-  const { renderProyeccion } = __modules__['modules/proyeccion/proyeccion.view'];
+  const { renderProyeccion, renderHistorialDocumentos, renderProyeccionConsulta } = __modules__['modules/proyeccion/proyeccion.view'];
 
 
 
@@ -5467,16 +5946,24 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
 
 
 
-  const TABS = [
+  const TABS_BASE = [
     { id: 'resumen', label: 'Resumen' },
     { id: 'ingresos', label: 'Ingresos' },
     { id: 'gastos', label: 'Gastos' },
-    { id: 'proyeccion', label: 'Proyección' },
   ];
+
+  function tabsDeProyecto(proyecto) {
+    // Tras activar, la proyección se puede consultar (solo lectura) junto con la comparación contra lo gastado.
+    const consulta = proyecto.estado !== 'planificado' ? [{ id: 'proyeccion', label: 'Proyección' }] : [];
+    return [...TABS_BASE, ...consulta, { id: 'documentos', label: 'Documentos' }];
+  }
 
   function botonesDeEstado(proyecto) {
     const botones = [];
-    if (proyecto.estado === 'planificado' || proyecto.estado === 'activo') {
+    if (proyecto.estado === 'planificado') {
+      botones.push({ label: 'Activar proyecto', accion: 'activo', clase: 'btn-primary' });
+    }
+    if (proyecto.estado === 'activo') {
       botones.push({ label: 'Cerrar viático', accion: 'finalizado', clase: 'btn-success' });
     }
     if (proyecto.estado === 'finalizado') {
@@ -5502,7 +5989,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         <div class="kpi-card"><span class="kpi-icon">${icono('informes')}</span><span class="kpi-label">N.º de gastos</span><span class="kpi-value small tabular">${resumen.cantidadGastos}</span></div>
         <div class="kpi-card"><span class="kpi-icon">${icono('check')}</span><span class="kpi-label">Con comprobante</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalConComprobante)}</span></div>
         <div class="kpi-card"><span class="kpi-icon">${icono('alerta')}</span><span class="kpi-label">Pendiente</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalPendiente)}</span></div>
-        <div class="kpi-card"><span class="kpi-icon">${icono('alerta')}</span><span class="kpi-label">Sin comprobante</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalSinComprobante)}</span></div>
+        <div class="kpi-card"><span class="kpi-icon">${icono('informes')}</span><span class="kpi-label">Sin comprobante (válido)</span><span class="kpi-value small tabular">${formatoMoneda(resumen.totalSinComprobante)}</span></div>
       </div>
     `;
   }
@@ -5513,6 +6000,18 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       contenedor.innerHTML = `<div class="empty-state"><p class="lead">Proyecto no encontrado</p></div>`;
       return;
     }
+
+    const tabs = tabsDeProyecto(proyecto);
+    const tabVisible = tabs.some((t) => t.id === tabInicial) ? tabInicial : 'resumen';
+    const bloquePlanificacion = proyecto.estado === 'planificado' ? `
+      <section class="card card-elevated" id="bloque-solicitud" style="display:flex; align-items:center; justify-content:space-between; gap:var(--sp-4); flex-wrap:wrap; margin-bottom:var(--sp-5); border-color:var(--gold-400);">
+        <div>
+          <div class="proj-card-title">Antes de iniciar el viaje</div>
+          <p style="font-size:var(--fs-sm); color:var(--text-500); margin-top:4px;">Prepara el presupuesto y los documentos para solicitar los viáticos a la empresa.</p>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-abrir-solicitud">Preparar solicitud de viáticos</button>
+      </section>
+    ` : '';
 
     contenedor.innerHTML = `
       <a href="#proyectos" class="btn btn-ghost btn-sm" style="margin-bottom:var(--sp-3);">${icono('flechaAtras')} Volver a proyectos</a>
@@ -5536,8 +6035,10 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         </div>
       </div>
 
+      ${bloquePlanificacion}
+
       <div class="tabs">
-        ${TABS.map((t) => `<button class="tab-btn ${t.id === tabInicial ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>`).join('')}
+        ${tabs.map((t) => `<button class="tab-btn ${t.id === tabVisible ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>`).join('')}
       </div>
       <div id="tab-contenido"></div>
     `;
@@ -5564,10 +6065,32 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         await renderGastos(contenido, proyecto.id);
       } else if (tabId === 'proyeccion') {
         contenido.innerHTML = '';
-        await renderProyeccion(contenido, proyecto.id);
+        await renderProyeccionConsulta(contenido, proyecto.id);
+      } else if (tabId === 'documentos') {
+        contenido.innerHTML = '';
+        await renderHistorialDocumentos(contenido, proyecto.id);
       }
     };
-    pintarTab(tabInicial);
+    pintarTab(tabVisible);
+
+    if (proyecto.estado === 'planificado') {
+      const bloque = contenedor.querySelector('#bloque-solicitud');
+      const pestanas = contenedor.querySelector('.tabs');
+      contenedor.querySelector('#btn-abrir-solicitud').addEventListener('click', async () => {
+        bloque.hidden = true;
+        bloque.style.display = 'none';
+        pestanas.hidden = true;
+        pestanas.style.display = 'none';
+        contenido.innerHTML = '';
+        await renderProyeccion(contenido, proyecto.id, () => {
+          bloque.hidden = false;
+          bloque.style.display = 'flex';
+          pestanas.hidden = false;
+          pestanas.style.display = 'flex';
+          pintarTab('resumen');
+        });
+      });
+    }
 
     contenedor.querySelectorAll('.tab-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -5580,7 +6103,9 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         const nuevoEstado = btn.dataset.accion;
         const etiquetasAccion = {
           finalizado: { titulo: '¿Cerrar este viático?', texto: 'El proyecto pasará a estado Finalizado. Podrás reabrirlo después si es necesario. Lo verás en la sección "Finalizados" al volver a Proyectos.' },
-          activo: { titulo: '¿Reabrir este proyecto?', texto: 'El proyecto volverá a estado Activo.' },
+          activo: proyecto.estado === 'planificado'
+            ? { titulo: '¿Activar este proyecto?', texto: 'La etapa de planificación y solicitud de viáticos quedará cerrada. La proyección y los documentos se conservarán para consultarlos; desde ahora podrás registrar los ingresos recibidos y los gastos reales del viaje.' }
+            : { titulo: '¿Reabrir este proyecto?', texto: 'El proyecto volverá a estado Activo.' },
           archivado: { titulo: '¿Archivar este proyecto?', texto: 'El proyecto pasará a estado Archivado.' },
         };
         const info = etiquetasAccion[nuevoEstado];
@@ -5681,7 +6206,12 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   }
 
   function base64ABlob(dataUrl) {
-    return fetch(dataUrl).then((r) => r.blob());
+    const match = /^data:(image\/(?:jpeg|png|gif|webp));base64,([A-Za-z0-9+/]+=*)$/.exec(String(dataUrl || ''));
+    if (!match) throw new Error('Una imagen del respaldo no tiene un formato válido.');
+    const binario = atob(match[2]);
+    const bytes = new Uint8Array(binario.length);
+    for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+    return Promise.resolve(new Blob([bytes], { type: match[1] }));
   }
 
   /**
@@ -5691,7 +6221,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
    * computadora) mediante AirDrop, correo, Drive, etc. — no hay sincronización
    * automática en la nube porque esta app no tiene servidor propio.
    */
-  async function exportarRespaldo() {
+  async function exportarRespaldo({ nombreArchivo, registrar = true } = {}) {
     const datos = {};
     for (const store of STORES_A_RESPALDAR) {
       const registros = await db.getAll(store);
@@ -5701,6 +6231,9 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           imagenBlob: r.imagenBlob ? await blobABase64(r.imagenBlob) : null,
           miniaturaBlob: r.miniaturaBlob ? await blobABase64(r.miniaturaBlob) : null,
         })));
+      } else if (store === 'configuracion') {
+        // La clave de la API es un secreto: no viaja en el archivo de respaldo.
+        datos[store] = registros.map(({ claveApiAnthropic, ...resto }) => resto);
       } else {
         datos[store] = registros;
       }
@@ -5717,11 +6250,22 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `viaticos-respaldo-${hoyLocal()}.json`;
+    a.download = nombreArchivo || `viaticos-respaldo-${hoyLocal()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 30000); // Safari de iPhone necesita la URL viva mientras descarga
+    // Se recuerda la fecha para avisar en Inicio cuando haga falta un respaldo nuevo
+    if (registrar) {
+      const actual = (await db.get('configuracion', 'general')) || { clave: 'general' };
+      await db.put('configuracion', { ...actual, clave: 'general', ultimoRespaldo: new Date().toISOString() });
+    }
+  }
+
+  /** Días desde el último respaldo exportado (null si nunca se exportó). */
+  function diasDesdeRespaldo(config) {
+    const t = config?.ultimoRespaldo ? new Date(config.ultimoRespaldo).getTime() : NaN;
+    return Number.isFinite(t) ? Math.floor((Date.now() - t) / 86400000) : null;
   }
 
   /**
@@ -5735,28 +6279,73 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     if (paquete?.tipo !== 'respaldo-viaticos') {
       throw new Error('Este archivo no parece ser un respaldo válido de Viáticos.');
     }
+    if (paquete.version != null && paquete.version !== 1) {
+      throw new Error('Esta versión del respaldo no es compatible con esta aplicación.');
+    }
+    if (!paquete.datos || typeof paquete.datos !== 'object' || Array.isArray(paquete.datos)) {
+      throw new Error('El respaldo no contiene una sección de datos válida.');
+    }
 
     // 1) Preparar TODO primero (convertir fotos). Si algo falla aquí, no se ha borrado nada.
     const listos = {};
+    const clavePrimaria = (store) => store === 'configuracion' ? 'clave' : 'id';
     for (const store of STORES_A_RESPALDAR) {
       if (!paquete.datos || !(store in paquete.datos)) continue; // respaldo antiguo sin este grupo: se conservan los datos actuales
       const registros = paquete.datos[store] || [];
+      if (!Array.isArray(registros)) throw new Error(`La sección "${store}" no contiene una lista válida.`);
+      const vistos = new Set();
+      for (const registro of registros) {
+        if (!registro || typeof registro !== 'object' || Array.isArray(registro)) throw new Error(`Hay un registro inválido en "${store}".`);
+        const clave = registro[clavePrimaria(store)];
+        if (typeof clave !== 'string' || !/^[A-Za-z0-9_-]{1,160}$/.test(clave)) throw new Error(`Hay un registro sin identificador válido en "${store}".`);
+        if (vistos.has(clave)) throw new Error(`Hay identificadores repetidos en "${store}".`);
+        vistos.add(clave);
+        if (store === 'proyectos' && registro.estado != null && !['planificado', 'activo', 'finalizado', 'archivado'].includes(registro.estado)) {
+          throw new Error('El respaldo contiene un estado de proyecto no reconocido.');
+        }
+        if (['gastos', 'papelera'].includes(store) && registro.estadoComprobante != null && !['con_comprobante', 'pendiente_comprobante', 'sin_comprobante'].includes(registro.estadoComprobante)) {
+          throw new Error('El respaldo contiene un estado de comprobante no reconocido.');
+        }
+        if (store === 'comprobantes') {
+          for (const campo of ['imagenBlob', 'miniaturaBlob']) {
+            if (registro[campo] != null && (typeof registro[campo] !== 'string' || !/^data:image\/(?:jpeg|png|gif|webp);base64,[A-Za-z0-9+/]+=*$/.test(registro[campo]))) {
+              throw new Error('Una imagen del respaldo no tiene un formato válido.');
+            }
+          }
+        }
+        if (store === 'configuracion' && registro.logo != null && imagenDataSegura(registro.logo) == null) {
+          throw new Error('El logo del respaldo no tiene un formato de imagen compatible.');
+        }
+      }
       listos[store] = store !== 'comprobantes' ? registros : await Promise.all(registros.map(async (registro) => ({
         ...registro,
         imagenBlob: registro.imagenBlob ? await base64ABlob(registro.imagenBlob) : null,
         miniaturaBlob: registro.miniaturaBlob ? await base64ABlob(registro.miniaturaBlob) : null,
       })));
     }
-    // 2) Reemplazar
-    for (const [store, registros] of Object.entries(listos)) {
-      await db.clear(store);
-      for (const registro of registros) await db.put(store, registro);
+    // La clave de la API no viene en los respaldos: se conserva la que ya tenía este dispositivo.
+    if (Array.isArray(listos.configuracion)) {
+      const claveActual = (await db.get('configuracion', 'general'))?.claveApiAnthropic;
+      if (claveActual) listos.configuracion = listos.configuracion.map((r) => (r.clave === 'general' && !r.claveApiAnthropic ? { ...r, claveApiAnthropic: claveActual } : r));
     }
+
+    // Tras importar, el dispositivo tiene exactamente los datos de ese respaldo: se toma su fecha
+    // como "último respaldo" (antes quedaba la fecha vieja del archivo o ninguna y avisaba sin motivo).
+    const fechaRespaldo = Date.parse(paquete.generadoEn);
+    if (Array.isArray(listos.configuracion) && Number.isFinite(fechaRespaldo)) {
+      const existeGeneral = listos.configuracion.some((r) => r.clave === 'general');
+      listos.configuracion = existeGeneral
+        ? listos.configuracion.map((r) => (r.clave === 'general' ? { ...r, ultimoRespaldo: new Date(fechaRespaldo).toISOString() } : r))
+        : [...listos.configuracion, { clave: 'general', ultimoRespaldo: new Date(fechaRespaldo).toISOString() }];
+    }
+
+    // 2) Reemplazar todas las secciones incluidas en una sola transacción.
+    await db.reemplazarVarios(listos);
 
     return paquete.generadoEn;
   }
 
-  return { exportarRespaldo, importarRespaldo };
+  return { exportarRespaldo, importarRespaldo, diasDesdeRespaldo };
   })();
 
   // ==== modules/configuracion/configuracion.view ====
@@ -5765,7 +6354,8 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   const { mostrarToast } = __modules__['components/toast'];
   const { listarCategorias, crearCategoria, eliminarCategoria } = __modules__['core/categorias.repo'];
   const { abrirModal, cerrarModal } = __modules__['components/modal'];
-  const { exportarRespaldo, importarRespaldo } = __modules__['storage/backup'];
+  const { exportarRespaldo, importarRespaldo, diasDesdeRespaldo } = __modules__['storage/backup'];
+  const { MONEDAS_DISPONIBLES, SIMBOLOS_MONEDA, valorMonedaEditable } = __modules__['utils/format'];
 
 
 
@@ -5798,8 +6388,10 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   async function renderConfiguracion(contenedor) {
     const pintar = async () => {
       const [config, categorias] = await Promise.all([obtenerConfig(), listarCategorias()]);
+      const monedaSeleccionada = config.moneda || 'USD';
       const personalizadas = categorias.filter((c) => c.personalizada && !c.eliminada);
       const porDefecto = categorias.filter((c) => !c.personalizada);
+      const diasRespaldo = diasDesdeRespaldo(config);
 
       contenedor.innerHTML = `
         <h1 style="font-family:var(--font-display); font-size:var(--fs-xl); font-weight:600; margin-bottom:var(--sp-2);">Configuración</h1>
@@ -5814,8 +6406,8 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
           <div class="field">
             <label>Logo de la empresa (aparece en los informes)</label>
             <div style="display:flex; align-items:center; gap:var(--sp-3);">
-              ${config.logo ? `<img src="${config.logo}" alt="Logo actual" style="height:48px; max-width:140px; object-fit:contain; background:#fff; border-radius:4px; padding:4px;" />` : `<span style="font-size:var(--fs-xs); color:var(--text-500);">Sin logo aún</span>`}
-              <input type="file" id="c-logo" accept="image/*" style="display:none;" />
+              ${imagenDataSegura(config.logo) ? `<img src="${esc(imagenDataSegura(config.logo))}" alt="Logo actual" style="height:48px; max-width:140px; object-fit:contain; background:#fff; border-radius:4px; padding:4px;" />` : `<span style="font-size:var(--fs-xs); color:var(--text-500);">Sin logo aún</span>`}
+              <input type="file" id="c-logo" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" />
               <button type="button" class="btn btn-secondary btn-sm" id="btn-subir-logo">Subir logo</button>
               ${config.logo ? `<button type="button" class="btn btn-ghost btn-sm" id="btn-quitar-logo" style="color:var(--danger);">Quitar</button>` : ''}
             </div>
@@ -5836,32 +6428,33 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
             <input id="c-cedula" name="cedulaResponsable" value="${esc(config.cedulaResponsable || '')}" placeholder="Ej. 1103760250" />
           </div>
           <div class="field">
-            <label for="c-tarifa-km">Tarifa por kilómetro (vehículo propio, USD)</label>
-            <input id="c-tarifa-km" name="tarifaKm" type="number" step="0.01" min="0" value="${((config.tarifaKm === '' || config.tarifaKm == null) ? 0.35 : config.tarifaKm)}" />
+            <label for="c-tarifa-km">Tarifa por kilómetro (vehículo propio, ${SIMBOLOS_MONEDA[monedaSeleccionada] || '$'})</label>
+            <input id="c-tarifa-km" name="tarifaKm" type="number" step="0.01" min="0" value="${valorMonedaEditable((config.tarifaKm === '' || config.tarifaKm == null) ? 0.35 : config.tarifaKm)}" />
           </div>
           <div class="field">
             <label for="c-departamento">Departamento (para solicitudes formales de viáticos)</label>
-            <input id="c-departamento" name="departamento" value="${config.departamento || ''}" placeholder="Ej. Departamento técnico" />
+            <input id="c-departamento" name="departamento" value="${esc(config.departamento || '')}" placeholder="Ej. Departamento técnico" />
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="c-tarifa-alim-jefe">Tarifa alimentación tuya / día (USD)</label>
-              <input id="c-tarifa-alim-jefe" name="tarifaAlimentacionJefe" type="number" step="0.01" min="0" value="${((config.tarifaAlimentacionJefe === '' || config.tarifaAlimentacionJefe == null) ? 10 : config.tarifaAlimentacionJefe)}" />
+              <label for="c-tarifa-alim-jefe">Tarifa alimentación tuya / día (${SIMBOLOS_MONEDA[monedaSeleccionada] || '$'})</label>
+              <input id="c-tarifa-alim-jefe" name="tarifaAlimentacionJefe" type="number" step="0.01" min="0" value="${valorMonedaEditable((config.tarifaAlimentacionJefe === '' || config.tarifaAlimentacionJefe == null) ? 10 : config.tarifaAlimentacionJefe)}" />
             </div>
             <div class="field">
-              <label for="c-tarifa-alim-personal">Tarifa alimentación personal / día (USD)</label>
-              <input id="c-tarifa-alim-personal" name="tarifaAlimentacionPersonal" type="number" step="0.01" min="0" value="${((config.tarifaAlimentacionPersonal === '' || config.tarifaAlimentacionPersonal == null) ? 20 : config.tarifaAlimentacionPersonal)}" />
+              <label for="c-tarifa-alim-personal">Tarifa alimentación personal / día (${SIMBOLOS_MONEDA[monedaSeleccionada] || '$'})</label>
+              <input id="c-tarifa-alim-personal" name="tarifaAlimentacionPersonal" type="number" step="0.01" min="0" value="${valorMonedaEditable((config.tarifaAlimentacionPersonal === '' || config.tarifaAlimentacionPersonal == null) ? 20 : config.tarifaAlimentacionPersonal)}" />
             </div>
           </div>
           <div class="field">
             <label for="c-moneda">Moneda</label>
             <select id="c-moneda" name="moneda">
-              <option value="USD" ${config.moneda === 'USD' ? 'selected' : ''}>USD — Dólar</option>
+              ${Object.entries(MONEDAS_DISPONIBLES).map(([codigo, nombre]) => `<option value="${codigo}" ${monedaSeleccionada === codigo ? 'selected' : ''}>${codigo} — ${nombre} (${SIMBOLOS_MONEDA[codigo]})</option>`).join('')}
             </select>
+            <span style="font-size:var(--fs-xs); color:var(--text-500);">La moneda elegida se usa para mostrar todos los importes. Cambiarla no convierte los valores ya registrados; usa una sola moneda para los datos de este dispositivo.</span>
           </div>
           <div class="field">
             <label for="c-clave-api">Clave de API de Anthropic (opcional — lectura de fotos más precisa, con costo)</label>
-            <input id="c-clave-api" name="claveApiAnthropic" type="password" value="${config.claveApiAnthropic || ''}" placeholder="sk-ant-…" autocomplete="off" />
+            <input id="c-clave-api" name="claveApiAnthropic" type="password" value="${esc(config.claveApiAnthropic || '')}" placeholder="sk-ant-…" autocomplete="off" />
           </div>
           <p style="font-size:var(--fs-xs); color:var(--text-500); margin-top:-8px;">
             Sin esta clave, la app ya lee tus comprobantes automáticamente de forma <strong>gratuita</strong> (lectura de texto local, menos precisa).
@@ -5896,8 +6489,12 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
             Para mover todo (proyectos, gastos, fotos) a otro dispositivo: exporta el respaldo aquí, transfiere el archivo
             (AirDrop, correo, Drive, USB) y ábrelo en la app instalada en el otro equipo con "Importar respaldo".
           </p>
+          <p style="font-size:var(--fs-sm); margin-bottom:var(--sp-3); color:${diasRespaldo == null || diasRespaldo > 14 ? 'var(--state-pending)' : 'var(--state-ok)'};">
+            ${diasRespaldo == null ? 'Aún no has exportado ningún respaldo en este dispositivo.'
+              : `Último respaldo: ${new Date(config.ultimoRespaldo).toLocaleString('es-EC', { dateStyle: 'medium', timeStyle: 'short' })}${diasRespaldo > 0 ? ` (hace ${diasRespaldo} ${diasRespaldo === 1 ? 'día' : 'días'})` : ' (hoy)'}.`}
+          </p>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="btn btn-secondary" id="btn-exportar">Exportar respaldo</button>
+            <button class="btn btn-primary" id="btn-exportar">Exportar respaldo</button>
             <button class="btn btn-secondary" id="btn-importar">Importar respaldo</button>
             <input type="file" id="input-importar" accept="application/json" style="display:none;" />
           </div>
@@ -5914,6 +6511,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         const actual = await obtenerConfig();
         Object.assign(config, actual, datos, { clave: CLAVE }); // la pantalla queda con lo recién guardado (el logo ya no pisa estos cambios)
         await db.put('configuracion', { ...config });
+        __modules__['utils/format'].establecerMoneda(config.moneda || 'USD');
         mostrarToast('Configuración guardada.');
       });
 
@@ -5921,6 +6519,11 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       contenedor.querySelector('#c-logo').addEventListener('change', async (e) => {
         const archivo = e.target.files[0];
         if (!archivo) return;
+        if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(archivo.type) || archivo.size > 5 * 1024 * 1024) {
+          mostrarToast('El logo debe ser PNG, JPG, GIF o WebP y no superar 5 MB.');
+          e.target.value = '';
+          return;
+        }
         const base64 = await archivoABase64(archivo);
         await db.put('configuracion', { ...(await obtenerConfig()), logo: base64, clave: CLAVE });
         mostrarToast('Logo guardado.');
@@ -5935,6 +6538,12 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       contenedor.querySelector('#btn-agregar-categoria').addEventListener('click', async () => {
         const input = contenedor.querySelector('#input-nueva-categoria');
         if (!input.value.trim()) { mostrarToast('Escribe un nombre de categoría.'); return; }
+        const normalizar = (t) => t.trim().toLocaleLowerCase('es').normalize('NFD').replace(/[̀-ͯ]/g, '');
+        if (categorias.some((c) => !c.eliminada && normalizar(c.nombre) === normalizar(input.value))) {
+          mostrarToast('Esa categoría ya existe.');
+          input.focus();
+          return;
+        }
         await crearCategoria(input.value);
         mostrarToast('Categoría agregada.');
         pintar();
@@ -5950,27 +6559,42 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         });
       }));
 
-      contenedor.querySelector('#btn-exportar').addEventListener('click', async () => {
+      contenedor.querySelector('#btn-exportar').addEventListener('click', async (ev) => {
+        const boton = ev.currentTarget;
+        if (boton.disabled) return;
+        boton.disabled = true;
         mostrarToast('Generando respaldo…');
-        await exportarRespaldo();
-        mostrarToast('Respaldo descargado.');
+        try {
+          await exportarRespaldo();
+          mostrarToast('Respaldo descargado. Guárdalo fuera del celular (Drive, correo o computadora).', 5000);
+          pintar();
+        } catch (err) {
+          console.error(err);
+          mostrarToast('No se pudo generar el respaldo: ' + ((err && err.message) || 'error desconocido'), 7000, 'error');
+          boton.disabled = false;
+        }
       });
       contenedor.querySelector('#btn-importar').addEventListener('click', () => contenedor.querySelector('#input-importar').click());
       contenedor.querySelector('#input-importar').addEventListener('change', async (e) => {
         const archivo = e.target.files[0];
         if (!archivo) return;
+        e.target.value = ''; // permite volver a elegir el mismo archivo si se cancela
+        const hayDatos = (await db.getAll('proyectos')).length > 0;
         abrirModal({
           titulo: '¿Importar este respaldo?',
-          contenidoHtml: `<p style="color:var(--danger);">Esto reemplazará todos los datos actuales de este dispositivo con los del archivo. Esta acción no se puede deshacer.</p>`,
+          contenidoHtml: `<p style="color:var(--danger);">Esto reemplazará todos los datos actuales de este dispositivo con los del archivo «${esc(archivo.name)}».</p>
+            ${hayDatos ? '<p style="font-size:var(--fs-sm); color:var(--text-500); margin-top:8px;">Por seguridad, antes de importar se descargará una copia de tus datos actuales («viaticos-antes-de-importar…»). Si algo sale mal, puedes volver a importarla.</p>' : ''}`,
           botones: [
             { texto: 'Cancelar', clase: 'btn-secondary' },
             { texto: 'Sí, importar', clase: 'btn-danger', onClick: async () => {
               try {
+                if (hayDatos) await exportarRespaldo({ nombreArchivo: `viaticos-antes-de-importar-${hoyLocal()}.json`, registrar: false });
                 await importarRespaldo(archivo);
+                __modules__['utils/format'].establecerMoneda((await obtenerConfig()).moneda || 'USD');
                 mostrarToast('Respaldo importado correctamente.');
                 pintar();
               } catch (err) {
-                mostrarToast('No se pudo importar: ' + err.message);
+                mostrarToast('No se pudo importar: ' + ((err && err.message) || 'error desconocido') + '. Tus datos actuales no se modificaron.', 8000, 'error');
               }
             } },
           ],
@@ -6022,10 +6646,11 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       if (!d) return g;
       return {
         ...g,
-        establecimiento: d.establecimiento || null,
+        // Lo escrito o corregido a mano en el gasto tiene prioridad sobre lo leído de la foto
+        establecimiento: g.establecimiento || d.establecimiento || null,
         ciudad: d.ciudad || null,
-        ruc: d.ruc || null,
-        numeroFactura: d.numeroFactura || null,
+        ruc: g.ruc || d.ruc || null,
+        numeroFactura: g.numeroFactura || d.numeroFactura || null,
         subtotalComprobante: d.subtotal ?? null,
         ivaComprobante: d.iva ?? null,
         totalComprobante: d.total ?? null,
@@ -6743,7 +7368,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
 
     const tituloTipo = { resumido: 'Informe resumido de viáticos', detallado: 'Informe detallado de viáticos', personalizado: 'Informe de viáticos' }[config.tipo];
 
-    const logoHtml = `<img src="${empresa.logo || ('data:image/png;base64,' + LOGO_COLINEAL_B64)}" alt="Logo" style="max-height:52px; max-width:180px; object-fit:contain;" />`;
+    const logoHtml = `<img src="${esc(imagenDataSegura(empresa.logo) || ('data:image/png;base64,' + LOGO_COLINEAL_B64))}" alt="Logo" style="max-height:52px; max-width:180px; object-fit:contain;" />`;
 
     return `
       <div class="hoja-informe" id="hoja-informe-render">
@@ -6944,6 +7569,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   /** Imprime (y por tanto permite "Guardar en PDF" / compartir) el contenido dado, usando la zona de impresión dedicada. */
   function imprimirContenido(html) {
     const zona = document.getElementById('zona-impresion');
+    document.documentElement.dataset.orientacionPdf = 'vertical'; // los informes siempre en A4 vertical
     zona.innerHTML = html;
     // La animación de "documento listo" también da tiempo a que el navegador
     // pinte las imágenes antes de abrir el diálogo de impresión.
@@ -6951,7 +7577,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   }
 
   /** Escala la hoja (ancho fijo de página PDF) para que quepa en pantalla, con botones de zoom. */
-  function activarVisorInforme(contenedor) {
+  function activarVisorInforme(contenedor, orientacionInicial = 'vertical') {
     const visor = contenedor.querySelector('#visor-informe');
     const medida = contenedor.querySelector('#visor-medida');
     const lienzo = contenedor.querySelector('#visor-lienzo');
@@ -6960,8 +7586,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     // Hoja A4 completa a 96 ppp (incluye los márgenes de impresión como relleno de la hoja).
     const ANCHOS = { horizontal: 1123, vertical: 794 };
     const ALTOS = { horizontal: 794, vertical: 1123 };
-    // Los informes se generan solo en A4 vertical.
-    let orientacion = 'vertical';
+    let orientacion = orientacionInicial === 'horizontal' ? 'horizontal' : 'vertical';
     let ANCHO_PAGINA = ANCHOS[orientacion];
     const ponerOrientacion = (o) => {
       orientacion = o;
@@ -7126,6 +7751,43 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     aplicarAhora();
   }
 
+  function renderVistaPreviaDocumento(contenedor, { html, titulo, orientacion = 'vertical', pendienteGuardar = false, onVolver, onGenerar, onSalir, textoVolver = 'Volver' }) {
+    const horizontal = orientacion === 'horizontal';
+    contenedor.innerHTML = `
+      <div class="toolbar">
+        <div class="section-title" style="margin-bottom:0;">Vista previa de ${esc(titulo || 'documento')}</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          ${onSalir ? '<button class="btn btn-ghost" id="btn-salir-documento">Salir sin guardar</button>' : ''}
+          <button class="btn btn-secondary" id="btn-volver-documento">${esc(textoVolver)}</button>
+          <button class="btn btn-primary" id="btn-generar-documento">${pendienteGuardar ? 'Guardar y generar PDF' : 'Generar PDF'}</button>
+        </div>
+      </div>
+      ${pendienteGuardar ? '<p class="text-muted" style="margin:0 0 10px;">Revisa el documento. No se guarda nada hasta que toques «Guardar y generar PDF». Puedes corregir los datos con «Editar solicitud» o salir sin guardar.</p>' : ''}
+      <div class="visor-informe-controles">
+        <span class="visor-informe-formato">A4 ${horizontal ? 'horizontal' : 'vertical'}</span>
+        <button class="btn btn-secondary btn-sm" id="visor-menos" aria-label="Alejar">−</button>
+        <span class="visor-informe-zoom" id="visor-zoom">100%</span>
+        <button class="btn btn-secondary btn-sm" id="visor-mas" aria-label="Acercar">+</button>
+        <button class="btn btn-secondary btn-sm" id="visor-ajustar">Ajustar</button>
+      </div>
+      <div class="visor-informe" id="visor-informe" data-orientacion="${horizontal ? 'horizontal' : 'vertical'}">
+        <div class="visor-informe-medida" id="visor-medida">
+          <div class="visor-informe-lienzo" id="visor-lienzo">${html}</div>
+        </div>
+      </div>
+    `;
+    contenedor.querySelector('#btn-volver-documento').addEventListener('click', () => onVolver?.());
+    contenedor.querySelector('#btn-salir-documento')?.addEventListener('click', () => onSalir?.());
+    activarVisorInforme(contenedor, horizontal ? 'horizontal' : 'vertical');
+    contenedor.querySelector('#btn-generar-documento').addEventListener('click', async (event) => {
+      const boton = event.currentTarget;
+      if (!onGenerar || boton.disabled) return;
+      boton.disabled = true;
+      try { await onGenerar(); }
+      finally { if (boton.isConnected) boton.disabled = false; }
+    });
+  }
+
   function renderPasoVistaPrevia(contenedor, { datos, config, onVolverConfig }) {
     contenedor.innerHTML = `
       <div class="toolbar">
@@ -7254,7 +7916,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     irAPasoTipo();
   }
 
-  return { renderInformes };
+  return { renderInformes, renderVistaPreviaDocumento };
   })();
 
   // ==== app ====
@@ -7266,6 +7928,8 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
   const { renderConfiguracion } = __modules__['modules/configuracion/configuracion.view'];
   const { renderInformes } = __modules__['modules/informes/informes.view'];
   const { iniciarEscuchaDeConexion } = __modules__['modules/comprobantes/cola.service'];
+  const { db } = __modules__['storage/db'];
+  const { establecerMoneda } = __modules__['utils/format'];
 
 
 
@@ -7284,27 +7948,53 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     const [izq, centro] = hoja ? textosPiePagina(hoja) : ['', ''];
     const css = (t) => '"' + String(t).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ') + '"';
     const caja = 'font-family: Arial, sans-serif; font-size: 7.5pt; color: #8a8a8a; vertical-align: middle;';
-    estilo.textContent = `@media print { @page { size: A4 portrait; margin: 6mm 6mm 10mm;
+    const orientacion = document.documentElement.dataset.orientacionPdf === 'horizontal' ? 'landscape' : 'portrait';
+    estilo.textContent = `@media print { @page { size: A4 ${orientacion}; margin: 6mm 6mm 10mm;
       @bottom-left { content: ${css(izq)}; ${caja} text-align: left; }
       @bottom-center { content: ${css(centro)}; ${caja} text-align: center; }
       @bottom-right { content: "Página " counter(page) " de " counter(pages); ${caja} text-align: right; } } }`;
   }
   window.addEventListener('beforeprint', actualizarPiePaginaImpresion);
+  // Al cerrar el diálogo de impresión, la orientación vuelve a la de los informes (vertical),
+  // para que una solicitud horizontal no deje "pegada" la orientación.
+  window.addEventListener('afterprint', () => {
+    if (!document.querySelector('.visor-informe[data-orientacion="horizontal"]')) document.documentElement.dataset.orientacionPdf = 'vertical';
+  });
 
+  let appIniciada = false;
+  const introMarca = document.getElementById('brand-intro');
+  function mostrarIntroMarca(logoPersonalizado) {
+    if (!introMarca) return;
+    if (MOVIMIENTO_REDUCIDO) { introMarca.remove(); return; }
+    const imagen = document.getElementById('brand-intro-logo');
+    if (imagen) imagen.src = imagenDataSegura(logoPersonalizado) || `data:image/png;base64,${LOGO_COLINEAL_B64}`;
+    introMarca.classList.add('listo');
+  }
+  function ocultarIntroMarca() {
+    if (!introMarca || !introMarca.isConnected) return;
+    introMarca.classList.add('salir');
+    window.setTimeout(() => introMarca.remove(), 460);
+  }
   function mostrarErrorFatal(err) {
     console.error('Error fatal al iniciar la app', err);
     const vista = document.getElementById('vista') || document.body;
     vista.innerHTML = `
       <div class="empty-state" style="padding:48px 16px;">
         <p class="lead" style="color:var(--danger, #e0685f);">La aplicación no pudo iniciar correctamente</p>
-        <p>${(err && err.message) || 'Error desconocido'}</p>
+        <p id="detalle-error-fatal"></p>
         <p style="font-size:0.75rem; color:var(--text-500, #888); margin-top:12px;">Toma una captura de esta pantalla completa (incluyendo este mensaje) para reportarlo.</p>
       </div>
     `;
+    vista.querySelector('#detalle-error-fatal').textContent = (err && err.message) || 'Error desconocido';
   }
 
-  function iniciar() {
+  async function iniciar() {
     try {
+      mostrarIntroMarca();
+      const configGeneral = await db.get('configuracion', 'general');
+      establecerMoneda(configGeneral?.moneda || 'USD');
+      mostrarIntroMarca(configGeneral?.logo);
+
       // La app siempre debe abrir en "Inicio" (Dashboard), nunca quedarse en la
       // última pantalla donde estaba antes de cerrarla — así que se reinicia el
       // hash de la URL en cada carga completa de la app (no afecta la navegación
@@ -7327,7 +8017,14 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       registrarRuta('informes/:id', renderInformes);
 
       iniciarRouter();
+      await new Promise((resolver) => window.setTimeout(resolver, 520));
+      ocultarIntroMarca();
       iniciarEscuchaDeConexion();
+      appIniciada = true;
+
+      // Pide al navegador que no borre los datos por falta de espacio o inactividad
+      // (Safari puede limpiar el almacenamiento de sitios poco usados).
+      try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
 
       // Nunca se llegó a desplegar un archivo service-worker.js real junto con la app,
       // así que este registro no debería haber tenido efecto — pero si en algún momento
@@ -7351,19 +8048,30 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
         }
       } catch (e) { /* vista incrustada sin acceso a la caché */ }
     } catch (err) {
+      ocultarIntroMarca();
       mostrarErrorFatal(err);
     }
   }
 
   // Red de seguridad: cualquier error no capturado en cualquier parte de la app
-  // (incluyendo promesas rechazadas sin .catch) se muestra en pantalla en vez
-  // de dejar la app en blanco silenciosamente.
+  // (incluyendo promesas rechazadas sin .catch) se informa en vez de fallar en silencio.
+  // Mientras la app arranca se muestra la pantalla de error; ya iniciada, solo un aviso:
+  // antes un fallo al guardar borraba la pantalla (y lo escrito) con "no pudo iniciar".
+  let ultimoAvisoError = 0;
+  function informarError(err) {
+    if (!appIniciada) { mostrarErrorFatal(err); return; }
+    console.error('Error no controlado', err);
+    if (Date.now() - ultimoAvisoError < 1500) return; // un solo aviso por ráfaga
+    ultimoAvisoError = Date.now();
+    const detalle = (err && err.message) || 'Error desconocido';
+    __modules__['components/toast'].mostrarToast(`Algo salió mal: ${detalle}. Lo que ya estaba guardado no se perdió; intenta de nuevo.`, 7000, 'error');
+  }
   window.addEventListener('error', (event) => {
     // Aviso inofensivo del navegador al redimensionar; no es un error real de la app.
     if (/ResizeObserver loop/i.test(event.message || '')) { event.stopImmediatePropagation(); return; }
-    mostrarErrorFatal(event.error || new Error(event.message));
+    informarError(event.error || new Error(event.message));
   });
-  window.addEventListener('unhandledrejection', (event) => mostrarErrorFatal(event.reason || new Error('Promesa rechazada sin manejar')));
+  window.addEventListener('unhandledrejection', (event) => informarError(event.reason || new Error('Promesa rechazada sin manejar')));
 
   document.addEventListener('DOMContentLoaded', iniciar);
 
