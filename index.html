@@ -8017,7 +8017,7 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
       registrarRuta('informes/:id', renderInformes);
 
       iniciarRouter();
-      await new Promise((resolver) => window.setTimeout(resolver, 520));
+      await new Promise((resolver) => window.setTimeout(resolver, 2520)); // pantalla de entrada: ~3 s en total
       ocultarIntroMarca();
       iniciarEscuchaDeConexion();
       appIniciada = true;
