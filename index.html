@@ -111,8 +111,11 @@ html, body {
   text-size-adjust: 100%;
 }
 
+/* Sin "rebote" al llegar arriba o abajo (iPhone): el rebote estiraba la barra superior y
+   arrastraba la barra inferior hacia arriba al deslizar el dedo. */
+html { overscroll-behavior: none; }
 body {
-  overscroll-behavior-y: contain;
+  overscroll-behavior: none;
   background-image:
     radial-gradient(ellipse 900px 500px at 15% -10%, rgba(227,49,29,0.05), transparent),
     radial-gradient(ellipse 700px 500px at 100% 0%, rgba(95,196,138,0.04), transparent);
@@ -561,6 +564,7 @@ a { color: inherit; text-decoration: none; }
 
   .field-row { grid-template-columns: 1fr; }
 
+  body { background-attachment: scroll; } /* el fondo "fijo" provoca saltos al desplazar en iPhone */
   body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--bg-950, #050507); z-index: 45; pointer-events: none; }
   .bottom-nav {
     display: flex;
@@ -8077,12 +8081,16 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
 
   // En iPhone, una barra "position: fixed" puede quedar a media pantalla después de que la página
   // cambia de alto o se cierra el teclado. Se mide dónde quedó y se devuelve al borde inferior visible.
+  // Solo se corrige cuando cambia el tamaño visible (teclado, giro, cambio de pantalla), NUNCA mientras
+  // se desliza el dedo: medir durante el desplazamiento movía la barra junto con el dedo.
   let _barraPendiente = false;
+  let _tocando = false;
   function ajustarBarraInferior() {
     if (_barraPendiente) return; _barraPendiente = true;
     requestAnimationFrame(() => {
       _barraPendiente = false;
       const n = document.getElementById('bottom-nav'); if (!n) return;
+      if (_tocando) return;
       if (getComputedStyle(n).display === 'none') { n.style.transform = ''; return; }
       n.style.transform = '';
       const r = n.getBoundingClientRect();
@@ -8093,8 +8101,12 @@ html[data-orientacion-pdf="vertical"] .hoja-tabla th, html[data-orientacion-pdf=
     });
   }
   window.ajustarBarraInferior = ajustarBarraInferior;
-  ['scroll', 'resize', 'orientationchange', 'hashchange', 'pageshow', 'focusout'].forEach((ev) => window.addEventListener(ev, ajustarBarraInferior, { passive: true }));
-  if (window.visualViewport) { visualViewport.addEventListener('resize', ajustarBarraInferior); visualViewport.addEventListener('scroll', ajustarBarraInferior); }
+  ['resize', 'orientationchange', 'hashchange', 'pageshow', 'focusout'].forEach((ev) => window.addEventListener(ev, ajustarBarraInferior, { passive: true }));
+  if (window.visualViewport) visualViewport.addEventListener('resize', ajustarBarraInferior);
+  // Mientras el dedo está sobre la pantalla la barra se queda quieta en su sitio
+  window.addEventListener('touchstart', () => { _tocando = true; }, { passive: true });
+  window.addEventListener('touchend', () => { _tocando = false; setTimeout(ajustarBarraInferior, 400); }, { passive: true });
+  window.addEventListener('touchcancel', () => { _tocando = false; }, { passive: true });
   document.addEventListener('click', () => setTimeout(ajustarBarraInferior, 350), true);
 
   })();
